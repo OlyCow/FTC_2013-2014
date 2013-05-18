@@ -7,17 +7,23 @@ An explanation of the code will be added shortly--of course, it would help to ac
 Also, our code is pretty specific to our robot, but the #pragma motor/servo assignments should make it reasonably clear.
 If you dare to read on, remember that this is all still very preliminary :)
 
--------------------------
-In our "\RobotC\" folder, there are 4 sub-folders: Documentation, Headers, Libraries, and Resources.
+//TODO: update README.md
 
-# "\Documentation\"
+-------------------------
+The "\Competition\" folder contains the ".rxe"s which should be loaded during competition if something goes wrong.
+ONLY working stuff gets to go in here. And no modifying code during competition (of course there are exceptions ;).
+
+In our "\RobotC\" folder, there are 4 sub-folders: Documentation, Headers, Libraries, and Resources.
+All the "main" programs (teleop/autonomous) are just floating around in this folder as well.
+
+## "\Documentation\"
 Includes documentation on what everything does -  so when you're done reading this, go take a look at that :)
 
-# "\Headers\"
+## "\Headers\"
 Includes headers that some (or all) programs may use; if you don't want to read documentation you can try reading this.
 
-# "\Libraries\"
+## "\Libraries\"
 Includes the actual ".c" files which some of the headers are for. I think they should compile?
 
-# "\Resources\"
+## "\Resources\"
 Includes some sound files (".rso") that we might attempt to play. However, competitions are usually too noisy :(

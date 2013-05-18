@@ -106,7 +106,7 @@ void Joystick_UpdateData()
 }
 
 bool Joystick_Button(	JoystickButton button,
-						JoystickController controller = CONTROLLER_1)
+						Controller controller = CONTROLLER_1)
 {
 	bool isPressed = false;
 
@@ -125,9 +125,9 @@ bool Joystick_Button(	JoystickButton button,
 
 // Takes an input of "Joystick" instead of "joystick" to
 // avoid conflict with name of built-in struct "joystick";
-int Joystick_Joystick(	JoystickJoystick Joystick,	//best line of code ever
-						JoystickAxis axis,
-						JoystickController controller = CONTROLLER_1)
+int Joystick_Joystick(	Joystick Joystick,	//Still a relatively good line of code
+						Axis axis,
+						Controller controller = CONTROLLER_1)
 {
 	int axisValue = 0;
 
@@ -195,18 +195,18 @@ int Joystick_Joystick(	JoystickJoystick Joystick,	//best line of code ever
 	return axisValue;
 }
 
-JoystickDirection Joystick_Direction(JoystickController controller =
+JoystickDirection Joystick_Direction(Controller controller =
 															CONTROLLER_1)
 {
-	JoystickDirection direction = DIRECTION_NONE;
+	Direction direction = DIRECTION_NONE;
 
 	switch (controller)
 	{
 		case CONTROLLER_1:
-			direction = (JoystickDirection)joystick.joy1_TopHat;
+			direction = (Direction)joystick.joy1_TopHat;
 			break;
 		case CONTROLLER_2:
-			direction = (JoystickDirection)joystick.joy2_TopHat;
+			direction = (Direction)joystick.joy2_TopHat;
 			break;
 	}
 

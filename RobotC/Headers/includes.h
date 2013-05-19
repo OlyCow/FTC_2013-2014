@@ -12,6 +12,9 @@
 
 #include "enums.h"
 #include "global vars.h"
+#include "RobotC encapsulation.h"
+
+#include "..\Libraries\RobotC encapsulation.c"
 
 
 

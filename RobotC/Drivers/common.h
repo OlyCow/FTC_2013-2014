@@ -1,7 +1,5 @@
 // This header provides some functions frequently used in drivers.
 // Version 0.16, made by Xander Soldaat.
-
-
 #ifndef __COMMON_H__
 #define __COMMON_H__
 

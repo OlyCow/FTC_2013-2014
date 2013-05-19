@@ -2,14 +2,10 @@
 // Version 0.1, made by Xander Soldaat.
 #ifndef __HTSMUX_H__
 #define __HTSMUX_H__
-
 #pragma systemFile
+#include "..\Headers\includes.h"
 
 
-
-#ifndef __COMMON_H__
-#include "common.h"
-#endif
 
 #define __HTSMUX_SUPPORT__
 

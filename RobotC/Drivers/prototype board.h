@@ -2,14 +2,10 @@
 // Version 0.1, made by Xander Soldaat.
 #ifndef __HTSPB_H__
 #define __HTSPB_H__
-
 #pragma systemFile
+#include "..\Headers\includes.h"
 
 
-
-#ifndef __COMMON_H__
-#include "common.h"
-#endif
 
 #define HTSPB_I2C_ADDR	0x10	// Protoboard I2C device address
 #define HTSPB_OFFSET	0x42

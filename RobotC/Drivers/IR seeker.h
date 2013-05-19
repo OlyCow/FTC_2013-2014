@@ -2,14 +2,10 @@
 // version 0.5, made by Xander Soldaat.
 #ifndef __HTIRS2_H__
 #define __HTIRS2_H__
-
 #pragma systemFile
+#include "..\Headers\includes.h"
 
 
-
-#ifndef __COMMON_H__
-#include "common.h"
-#endif
 
 #define HTIRS2_I2C_ADDR		0x10	// IR Seeker I2C device address
 #define HTIRS2_DSP_MODE		0x41	// AC DSP mode: 0 = 1200Hz, 1 = 600Hz

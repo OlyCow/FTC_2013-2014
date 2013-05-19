@@ -13,14 +13,15 @@
 #pragma config(Servo,  srvo_S2_C1_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_5,    servo5,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_6,    servo6,               tServoNone)
-#include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
+
+#include "Headers\includes.h"
 
 task main()
 {
 	servoChangeRate[servo_cow]=5;
 
 	float servoPosition=127; //servo value ranges from 0 to 255
-	float motorPower=0; //we want to be safe here
+	float motorPower=0; //safe initialization
 
 	waitForStart();
 

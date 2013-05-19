@@ -1,5 +1,7 @@
-#ifndef LOW_LEVEL_FUNCTIONS_H
-#define LOW_LEVEL_FUNCTIONS_H
+#ifndef ROBOTC_ENCAPSULATION_H
+#define ROBOTC_ENCAPSULATION_H
+#pragma systemFile
+
 
 
 /////////////////////////////
@@ -319,26 +321,11 @@ void Task_AbortAll()
 //     "namespace" Math    //
 /////////////////////////////
 
-// TODO: make it actually convert to logarithmic values.
-// For converting joystick input to logarithmic values.
-int Math_ToLogarithmic(int input)
-{
-	int convertedInput = 0;
-	if (input >= 0)
-	{
-		convertedInput = input;
-	}
-	else if (input < 0)
-	{
-		convertedInput = input;
-	}
-	return convertedInput;
-}
-
 
 /////////////////////////////
 //     "namespace" Misc    //
 /////////////////////////////
 
 
-#endif
+
+#endif // ROBOTC_ENCAPSULATION_H

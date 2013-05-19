@@ -1,9 +1,11 @@
 // This header provides some functions frequently used in drivers.
-// version 0.16, made by Xander Soldaat.
-#pragma systemFile
+// Version 0.16, made by Xander Soldaat.
+
 
 #ifndef __COMMON_H__
 #define __COMMON_H__
+
+#pragma systemFile
 
 
 
@@ -71,8 +73,8 @@ bool writeI2C(tSensors link, tByteArray &request);
 */
 void clearI2CError(tSensors link, ubyte address) {
 	ubyte error_array[2];
-	error_array[0] = 1;           // Message size
-	error_array[1] = address; // I2C Address
+	error_array[0] = 1; 		// Message size
+	error_array[1] = address;	// I2C Address
 
 	#ifdef __COMMON_H_DEBUG__
 	eraseDisplay();
@@ -130,12 +132,12 @@ bool writeI2C(tSensors link, tByteArray &request) {
 
 	switch (SensorType[link])
 	{
-	case sensorI2CCustom:                 break;
-	case sensorI2CCustom9V:               break;
-	case sensorI2CCustomFast:             break;
-	case sensorI2CCustomFast9V:           break;
-	case sensorI2CCustomFastSkipStates9V: break;
-	case sensorI2CCustomFastSkipStates:   break;
+	case sensorI2CCustom:					break;
+	case sensorI2CCustom9V:					break;
+	case sensorI2CCustomFast:				break;
+	case sensorI2CCustomFast9V:				break;
+	case sensorI2CCustomFastSkipStates9V:	break;
+	case sensorI2CCustomFastSkipStates:		break;
 	default:
 		hogCPU();
 		PlaySound(soundException);

@@ -5,6 +5,7 @@
 
 
 
+//NOT final! (not sure if using joy1Btn() or not)
 typedef enum JoystickButton
 {
 	BUTTON_A = 2,
@@ -17,8 +18,8 @@ typedef enum JoystickButton
 	BUTTON_RT = 8,
 	BUTTON_BACK = 9,
 	BUTTON_START = 10,
-	BUTTON_JOYL = 11,	//the "joystick button"
-	BUTTON_JOYR = 12,	//the "joystick button"
+	BUTTON_JOYL = 11,	//button on the joystick
+	BUTTON_JOYR = 12,	//button on the joystick
 };
 
 typedef enum Controller
@@ -39,7 +40,7 @@ typedef enum Joystick
 	JOYSTICK_R = 1,
 };
 
-typedef enum Direction	//still needs a definitive test
+typedef enum Direction //still needs a definitive test
 {
 	DIRECTION_NONE = -1,
 	DIRECTION_F = 0,
@@ -84,4 +85,4 @@ typedef enum SoundNotes
 
 
 
-#endif
+#endif // ENUMS_H

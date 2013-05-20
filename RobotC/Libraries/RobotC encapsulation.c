@@ -198,8 +198,7 @@ int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of co
 	return axisValue;
 }
 
-Direction Joystick_Direction(Controller controller =
-															CONTROLLER_1)
+Direction Joystick_Direction(Controller controller = CONTROLLER_1)
 {
 	Direction direction = DIRECTION_NONE;
 

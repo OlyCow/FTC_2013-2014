@@ -1,5 +1,8 @@
-#ifndef LOW_LEVEL_FUNCTIONS_H
-#define LOW_LEVEL_FUNCTIONS_H
+#ifndef ROBOTC_ENCAPSULATION_H
+#define ROBOTC_ENCAPSULATION_H
+#pragma systemFile
+#include "..\Headers\includes.h"
+
 
 
 /////////////////////////////
@@ -125,8 +128,8 @@ bool Joystick_Button(	JoystickButton button,
 
 // Takes an input of "Joystick" instead of "joystick" to
 // avoid conflict with name of built-in struct "joystick";
-int Joystick_Joystick(	Joystick Joystick,	//Still a relatively good line of code
-						Axis axis,
+int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of code
+						JoystickAxis axis,
 						Controller controller = CONTROLLER_1)
 {
 	int axisValue = 0;
@@ -195,8 +198,7 @@ int Joystick_Joystick(	Joystick Joystick,	//Still a relatively good line of code
 	return axisValue;
 }
 
-JoystickDirection Joystick_Direction(Controller controller =
-															CONTROLLER_1)
+Direction Joystick_Direction(Controller controller = CONTROLLER_1)
 {
 	Direction direction = DIRECTION_NONE;
 
@@ -319,26 +321,11 @@ void Task_AbortAll()
 //     "namespace" Math    //
 /////////////////////////////
 
-// TODO: make it actually convert to logarithmic values.
-// For converting joystick input to logarithmic values.
-int Math_ToLogarithmic(int input)
-{
-	int convertedInput = 0;
-	if (input >= 0)
-	{
-		convertedInput = input;
-	}
-	else if (input < 0)
-	{
-		convertedInput = input;
-	}
-	return convertedInput;
-}
-
 
 /////////////////////////////
 //     "namespace" Misc    //
 /////////////////////////////
 
 
-#endif
+
+#endif // ROBOTC_ENCAPSULATION_H

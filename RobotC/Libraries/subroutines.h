@@ -3,7 +3,7 @@
 
 
 
- void sub_LiftToHeight(int height)
+void sub_LiftToHeight(int height)
 {
 	// Version 1 ("Theoretical Form")
 	//int Kp = 1;

@@ -1,6 +1,7 @@
 #ifndef ROBOTC_ENCAPSULATION_H
 #define ROBOTC_ENCAPSULATION_H
 #pragma systemFile
+#include "..\Headers\includes.h"
 #include "..\Libraries\RobotC encapsulation.c"
 
 
@@ -46,10 +47,10 @@ bool Joystick_Button(	JoystickButton button,
 
 // Takes an input of "Joystick" instead of "joystick" to
 // avoid conflict with name of built-in struct "joystick";
-int Joystick_Joystick(	Joystick Joystick,	//Still a relatively good line of code
-						Axis axis,
+int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of code
+						JoystickAxis axis,
 						Controller controller = CONTROLLER_1);
-JoystickDirection Joystick_Direction(Controller controller = CONTROLLER_1);
+Direction Joystick_Direction(Controller controller = CONTROLLER_1);
 
 
 /////////////////////////////

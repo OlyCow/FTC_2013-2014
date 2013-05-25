@@ -18,8 +18,6 @@
 ### Compiler Warning
 * Treat ':' for ';' and other similar substitutions as errors rather than warnings (check)
 
-### Include Directories
-
 -------------------------
 ## Text Editing
 * View -> Preferences -> Detailed Preferences... -> Text Editing...
@@ -39,8 +37,6 @@
 * Platform Type (select "LEGO Mindstorms -> LEGO NXT + TETRIX/MATRIX")
 * Power Down Delay (select "Never")
 
-### Features
-
 ### Environment
 * Show Splash Screen on Startup (uncheck)
 * Splash Screen Display Time (change to 0)
@@ -56,4 +52,3 @@
 
 ### Directories
 
-### Sounds

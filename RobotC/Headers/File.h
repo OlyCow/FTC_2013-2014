@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef FILE_H
+#define FILE_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\File.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // FILE_H

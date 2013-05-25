@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef MOTOR_H
+#define MOTOR_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Motor.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // MOTOR_H

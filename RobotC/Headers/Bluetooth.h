@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef BLUETOOTH_H
+#define BLUETOOTH_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Bluetooth.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // BLUETOOTH_H

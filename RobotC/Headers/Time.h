@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef TIME_H
+#define TIME_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Time.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // TIME_H

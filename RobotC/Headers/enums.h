@@ -1,6 +1,7 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 #pragma systemFile
+#include "..\Headers\includes.h"
 
 
 
@@ -33,7 +34,7 @@ typedef enum JoystickAxis
 	AXIS_Y = 1,
 };
 
-typedef enum Joystick
+typedef enum JoystickLR
 {
 	JOYSTICK_L = 0,
 	JOYSTICK_R = 1,

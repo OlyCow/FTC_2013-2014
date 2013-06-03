@@ -27,19 +27,15 @@ motorData g_motorData[4];
 
 
 
-void initializeVariables()
+void initializeGlobalVariables()
 {
 	g_motorData[MOTOR_FR].angleOffset = 45;
-	g_motorData[MOTOR_FR].power = 0;
 
 	g_motorData[MOTOR_FL].angleOffset = 135;
-	g_motorData[MOTOR_FL].power = 0;
 
 	g_motorData[MOTOR_BL].angleOffset = 225;
-	g_motorData[MOTOR_BL].power = 0;
 
 	g_motorData[MOTOR_BR].angleOffset = 315;
-	g_motorData[MOTOR_BR].power = 0;
 }
 
 

@@ -11,10 +11,21 @@
 #include "..\Drivers\sensor multiplexer.h"
 
 #include "enums.h"
+#include "structs.h"
 #include "global vars.h"
-#include "RobotC encapsulation.h"
-
-#include "..\Libraries\RobotC encapsulation.c"
+#include "Motor.h"
+#include "Servo.h"
+#include "Sensor.h"
+#include "Joystick.h"
+#include "File.h"
+#include "Task.h"
+#include "Time.h"
+#include "Bluetooth.h"
+#include "Buttons.h"
+#include "Display.h"
+#include "Sound.h"
+#include "Math.h"
+#include "Semaphore.h"
 
 
 

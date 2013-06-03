@@ -5,6 +5,21 @@
 
 
 
+typedef enum Motor
+{
+	MOTOR_FR = 0,
+	MOTOR_FL = 1,
+	MOTOR_BL = 2,
+	MOTOR_BR = 3,
+};
+
+typedef enum MotorType
+{
+	MOTORTYPE_NXT	= 0,
+	MOTORTYPE_12V	= 1,
+	MOTORTYPE_ALL	= 2,
+};
+
 //NOT final! (not sure if using joy1Btn() or not)
 typedef enum JoystickButton
 {

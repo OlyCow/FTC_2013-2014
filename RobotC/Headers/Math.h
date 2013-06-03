@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef MATH_H
+#define MATH_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Math.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // MATH_H

@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef BUTTONS_H
+#define BUTTONS_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Buttons.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // BUTTONS_H

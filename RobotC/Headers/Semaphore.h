@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef SEMAPHORE_H
+#define SEMAPHORE_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Semaphore.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // SEMAPHORE_H

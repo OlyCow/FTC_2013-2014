@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef SOUND_H
+#define SOUND_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Sound.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // SOUND_H

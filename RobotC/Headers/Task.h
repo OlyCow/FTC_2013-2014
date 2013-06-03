@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef TASK_H
+#define TASK_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Task.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // TASK_H

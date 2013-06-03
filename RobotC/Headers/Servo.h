@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef SERVO_H
+#define SERVO_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Servo.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // SERVO_H

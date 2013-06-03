@@ -1,7 +1,7 @@
-#ifndef _H
-#define _H
+#ifndef JOYSTICK_H
+#define JOYSTICK_H
 #pragma systemFile
-#include "..\Libraries\.c"
+#include "..\Libraries\Joystick.c"
 
 
 
@@ -9,4 +9,4 @@
 
 
 
-#endif // _H
+#endif // JOYSTICK_H

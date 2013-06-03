@@ -18,6 +18,8 @@
 
 task main()
 {
+	initializeVariables();
+
 	servoChangeRate[servo_wheel]=5;
 
 	float servoPosition=127; //servo value ranges from 0 to 255

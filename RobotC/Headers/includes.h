@@ -11,6 +11,7 @@
 #include "..\Drivers\sensor multiplexer.h"
 
 #include "enums.h"
+#include "structs.h"
 #include "global vars.h"
 #include "RobotC encapsulation.h" // This needs to be gotten rid of soon. See below.
 #include "Motor.h"
@@ -18,7 +19,7 @@
 #include "Sensor.h"
 #include "Joystick.h"
 #include "File.h"
-#include "Tasks.h"
+#include "Task.h"
 #include "Time.h"
 #include "Bluetooth.h"
 #include "Buttons.h"

@@ -27,7 +27,7 @@ task main()
 
 	waitForStart();
 
-	while(true)
+	while (true)
 	{
 		wait10Msec(1);
 		getJoystickSettings(joystick);
@@ -35,31 +35,31 @@ task main()
 
 
 		//-------------------------MOTORS----------
-		if( (joystick.joy1_y2>g_JoystickDeadZone) ||
-			(joystick.joy1_y2<-g_JoystickDeadZone) )
+		if ( (joystick.joy1_y2>g_JoystickDeadZone) ||
+			 (joystick.joy1_y2<-g_JoystickDeadZone) )
 				motorPower=-(joystick.joy1_y2);
-		if( (joy1Btn(BUTTON_LT)||joy1Btn(BUTTON_RT)) ==true)
-			motorPower /= 4;
+		if(  (joy1Btn(BUTTON_LT)||joy1Btn(BUTTON_RT)) ==true)
+			 motorPower /= 4;
 		motor[motor_wheel]=motorPower;
 
 
 		//-------------------------SERVOS----------
-		if(joystick.joy1_TopHat==(short)DIRECTION_R)
+		if (joystick.joy1_TopHat==(short)DIRECTION_R)
 			servoPosition+=4;
-		if(joystick.joy1_TopHat==(short)DIRECTION_L)
+		if (joystick.joy1_TopHat==(short)DIRECTION_L)
 			servoPosition-=4;
-		if( (joy1Btn(BUTTON_LB)||joy1Btn(BUTTON_RB)) ==true )
+		if ( (joy1Btn(BUTTON_LB)||joy1Btn(BUTTON_RB)) ==true )
 		{
-			if(joystick.joy1_TopHat==(short)DIRECTION_R)
+			if (joystick.joy1_TopHat==(short)DIRECTION_R)
 				servoPosition-=3;
-			if(joystick.joy1_TopHat==(short)DIRECTION_L)
+			if (joystick.joy1_TopHat==(short)DIRECTION_L)
 				servoPosition+=3;
 		}
 		servo[servo_wheel]=servoPosition;
 		servoChangeRate[servo_wheel]=5;
-		if(servoPosition>255)
+		if (servoPosition>255)
 			servoPosition=255;
-		if(servoPosition<0)
+		if (servoPosition<0)
 			servoPosition=0;
 	}
 }

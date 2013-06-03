@@ -18,7 +18,6 @@ typedef enum MotorType
 	MOTORTYPE_NXT	= 0,
 	MOTORTYPE_12V	= 1,
 	MOTORTYPE_ALL	= 2,
-	MOTORTYPE_OTHER	= 3,
 };
 
 //NOT final! (not sure if using joy1Btn() or not)

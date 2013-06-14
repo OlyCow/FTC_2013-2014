@@ -51,19 +51,18 @@ void Motor_SetMaxSpeed(int speed, tMotor motorName) //warning: for all motors of
 }
 int Motor_GetMaxSpeed(MotorType motorType=MOTORTYPE_ALL)
 {
-	// RobotC requires an explicit `return` statement not nested inside a function.
 	// The "default" value is being set to a negative number to make errors obvious.
-	int returnValue = -1024;
+	int maxSpeed = -1024;
 	switch (motorType)
 	{
 		case MOTORTYPE_NXT:
-			returnValue = nMaxRegulatedSpeedNxt;
+			maxSpeed = nMaxRegulatedSpeedNxt;
 			break;
 		case MOTORTYPE_12V:
-			returnValue = nMaxRegulatedSpeed12V;
+			maxSpeed = nMaxRegulatedSpeed12V;
 			break;
 	}
-	return returnValue;
+	return maxSpeed;
 }
 int Motor_GetMaxSpeed(tMotor motorName)
 {

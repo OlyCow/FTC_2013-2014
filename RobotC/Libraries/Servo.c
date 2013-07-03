@@ -1,6 +1,7 @@
 #ifndef SERVO_C
 #define SERVO_C
 #pragma systemFile
+#include "..\Headers\Servo.h"
 
 
 

@@ -1,6 +1,7 @@
 #ifndef MOTOR_C
 #define MOTOR_C
 #pragma systemFile
+#include "..\Headers\Motor.h"
 
 
 

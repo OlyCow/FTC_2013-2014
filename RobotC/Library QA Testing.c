@@ -19,7 +19,6 @@
 task main()
 {
 	initializeVariables();
-
 	waitForStart();
 
 	while (true)

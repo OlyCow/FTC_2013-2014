@@ -8,4 +8,5 @@
 
 
 
+#include "..\Libraries\Semaphore.c"
 #endif // SEMAPHORE_H

@@ -8,4 +8,5 @@
 
 
 
+#include "..\Libraries\Bluetooth.c"
 #endif // BLUETOOTH_H

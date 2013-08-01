@@ -30,4 +30,5 @@ TNxtRunState Motor_GetState(tMotor motorName);
 
 
 
+#include "..\Libraries\Motor.c"
 #endif // MOTOR_H

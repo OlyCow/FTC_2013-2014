@@ -15,4 +15,5 @@ int  Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of c
 
 
 
+#include "..\Libraries\Joystick.c"
 #endif // JOYSTICK_H

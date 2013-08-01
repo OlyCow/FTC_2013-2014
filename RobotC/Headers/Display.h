@@ -8,4 +8,5 @@
 
 
 
+#include "..\Libraries\Display.c"
 #endif // DISPLAY_H

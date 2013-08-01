@@ -8,4 +8,5 @@
 
 
 
+#include "..\Libraries\Sound.c"
 #endif // SOUND_H

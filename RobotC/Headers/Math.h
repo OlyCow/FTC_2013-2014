@@ -8,4 +8,5 @@
 
 
 
+#include "..\Libraries\Math.c"
 #endif // MATH_H

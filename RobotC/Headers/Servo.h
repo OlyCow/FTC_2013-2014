@@ -19,4 +19,5 @@ int  Servo_UpdateInterval(TServoIndex servoName);
 
 
 
+#include "..\Libraries\Servo.c"
 #endif // SERVO_H

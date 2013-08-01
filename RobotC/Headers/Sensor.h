@@ -8,4 +8,5 @@
 
 
 
+#include "..\Libraries\Sensor.c"
 #endif // SENSOR_H

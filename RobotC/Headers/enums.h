@@ -5,24 +5,21 @@
 
 
 
-typedef enum Motor
-{
+typedef enum Motor {
 	MOTOR_FR = 0,
 	MOTOR_FL = 1,
 	MOTOR_BL = 2,
 	MOTOR_BR = 3,
 };
 
-typedef enum MotorType
-{
+typedef enum MotorType {
 	MOTORTYPE_NXT	= 0,
 	MOTORTYPE_12V	= 1,
 	MOTORTYPE_ALL	= 2,
 };
 
 //NOT final! (not sure if using joy1Btn() or not)
-typedef enum JoystickButton
-{
+typedef enum JoystickButton {
 	BUTTON_A = 2,
 	BUTTON_B = 3,
 	BUTTON_X = 1,
@@ -37,26 +34,23 @@ typedef enum JoystickButton
 	BUTTON_JOYR = 12,	//button on the joystick
 };
 
-typedef enum Controller
-{
+typedef enum Controller {
 	CONTROLLER_1 = 1,
 	CONTROLLER_2 = 2,
 };
 
-typedef enum JoystickAxis
-{
+typedef enum JoystickAxis {
 	AXIS_X = 0,
 	AXIS_Y = 1,
 };
 
-typedef enum JoystickLR
-{
+typedef enum JoystickLR {
 	JOYSTICK_L = 0,
 	JOYSTICK_R = 1,
 };
 
-typedef enum Direction //still needs a definitive test
-{
+// This still needs a definitive test.
+typedef enum Direction {
 	DIRECTION_NONE = -1,
 	DIRECTION_F = 0,
 	DIRECTION_FR = 1,
@@ -69,8 +63,7 @@ typedef enum Direction //still needs a definitive test
 };
 
 // These frequencies are all in hertz, rounded to the nearest int.
-typedef enum SoundNotes
-{
+typedef enum SoundNotes {
 	NOTE_REST = 0,
 
 	NOTE_C3 = 131,	NOTE_C4 = 262,	NOTE_C5 = 523,

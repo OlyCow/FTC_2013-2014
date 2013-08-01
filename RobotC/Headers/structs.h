@@ -5,8 +5,7 @@
 
 
 
-typedef struct motorData
-{
+typedef struct motorData {
 	int angleOffset;
 	int power;
 } motorData;

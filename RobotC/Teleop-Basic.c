@@ -18,18 +18,18 @@ task main()
 	initializeGlobalVariables();
 	float gyro_angle = 0;
 	float rotation_magnitude = 0;
-	float rotation_angle[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float rotation_x[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float rotation_y[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
+	float rotation_angle[4] = {0,0,0,0}; //4=# of drive base motors
+	float rotation_x[4] = {0,0,0,0}; //4=# of drive base motors
+	float rotation_y[4] = {0,0,0,0}; //4=# of drive base motors
 	float translation_magnitude = 0;
 	float translation_angle = 0;
 	float translation_x = 0;
 	float translation_y = 0;
-	float combined_angle[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float combined_x[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float combined_y[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float motor_power[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float servo_angle[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
+	float combined_angle[4] = {0,0,0,0}; //4=# of drive base motors
+	float combined_x[4] = {0,0,0,0}; //4=# of drive base motors
+	float combined_y[4] = {0,0,0,0}; //4=# of drive base motors
+	float motor_power[4] = {0,0,0,0}; //4=# of drive base motors
+	float servo_angle[4] = {0,0,0,0}; //4=# of drive base motors
 
 	while (true)
 	{

@@ -10,9 +10,9 @@
 #include "..\Drivers\prototype board.h"
 #include "..\Drivers\sensor multiplexer.h"
 
-#include "enums.h"
-#include "structs.h"
-#include "global vars.h"
+#include "..\Headers\enums.h"
+#include "..\Headers\structs.h"
+#include "..\Headers\global vars.h"
 #include "..\Headers\Motor.h"
 #include "..\Headers\Servo.h"
 #include "..\Headers\Sensor.h"
@@ -25,7 +25,7 @@
 #include "..\Headers\Display.h"
 #include "..\Headers\Sound.h"
 #include "..\Headers\Math.h"
-#include "..\Headers\Semaphore.h"
+#include "..\Headers\Semaphore.h" //Maybe combine this with "Task.h"?
 
 
 

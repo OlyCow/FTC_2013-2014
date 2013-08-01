@@ -8,5 +8,10 @@
 
 
 
+//SemaphoreInitialize(nSemaphore)
+//SemaphoreLock(nSemaphore, waitTime)
+//SemaphoreUnlock(nSemaphore)
+//getSemaphoreTaskOwner(nSemaphore)
+//bDoesTaskOwnSemaphore(nSemaphore)
 #include "..\Libraries\Semaphore.c"
 #endif // SEMAPHORE_H

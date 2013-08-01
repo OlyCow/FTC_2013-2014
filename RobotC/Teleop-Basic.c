@@ -35,12 +35,11 @@ task main()
 	{
 		Joystick_UpdateData();
 
-		rotation_magnitude = Joystick_GetJoystick(AXIS_X, JOYSTICK_L, CONTROLLER_1);
-		translation_x = Joystick_GetJoystick(AXIS_X, JOYSTICK_R, CONTROLLER_1);
-		translation_y = Joystick_GetJoystick(AXIS_Y, JOYSTICK_R, CONTROLLER_1);
+		rotation_magnitude = Joystick_Joystick(JOYSTICK_L, AXIS_X, CONTROLLER_1);
+		translation_x = Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_1);
+		translation_y = Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_1);
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); //Pythagoras
-		for (int i=MOTOR_FR; i<=MOTOR_BR; i++)
-		{
+		for (int i=(int)MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 			rotation_angle[i] = g_motorData[i].angleOffset+gyro_angle;
 			rotation_x[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			rotation_y[i] = rotation_magnitude*cosDegrees(rotation_angle[i]);
@@ -48,15 +47,11 @@ task main()
 			combined_y[i] = translation_y+rotation_y;
 			combined_angle[i] = radiansToDegrees(atan2(combined_y[i],combined_x[i]));
 			motor_power[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2))*sinDegrees(combined_angle[i]-rotation_angle[i]);
-			if (abs(rotation_magnitude)>0)
-			{
+			if (abs(rotation_magnitude)>0) {
 				servo_angle[i] = g_motorData[i].angleOffset;
-			}
-			else
-			{
+			} else {
 				translation_angle = radiansToDegrees(atan2(translation_y,translation_x))-gyro_angle-90; //degrees
-				for (int j=MOTOR_FR; j<=MOTOR_BR; j++)
-				{
+				for (int j=(int)MOTOR_FR; j<=(int)MOTOR_BR; j++) {
 					servo_angle[i] = translation_angle;
 				}
 			}

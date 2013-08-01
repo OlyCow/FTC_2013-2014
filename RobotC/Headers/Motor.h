@@ -1,7 +1,6 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 #pragma systemFile
-#include "..\Libraries\Motor.c"
 
 
 
@@ -31,4 +30,5 @@ TNxtRunState Motor_GetState(tMotor motorName);
 
 
 
+#include "..\Libraries\Motor.c"
 #endif // MOTOR_H

@@ -1,7 +1,6 @@
 #ifndef SENSOR_H
 #define SENSOR_H
 #pragma systemFile
-#include "..\Libraries\Sensor.c"
 
 
 
@@ -9,4 +8,5 @@
 
 
 
+#include "..\Libraries\Sensor.c"
 #endif // SENSOR_H

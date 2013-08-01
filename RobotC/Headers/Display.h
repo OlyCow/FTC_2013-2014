@@ -1,7 +1,6 @@
-#ifndef _H
-#define _H
+#ifndef DISPLAY_H
+#define DISPLAY_H
 #pragma systemFile
-#include "..\Libraries\.c"
 
 
 
@@ -9,4 +8,5 @@
 
 
 
-#endif // _H
+#include "..\Libraries\Display.c"
+#endif // DISPLAY_H

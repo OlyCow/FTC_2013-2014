@@ -2,6 +2,7 @@
 #define JOYSTICK_C
 #pragma systemFile
 #include "..\Headers\Joystick.h"
+// For default values, see above header file.
 
 
 
@@ -10,7 +11,7 @@ void Joystick_UpdateData()
 	//"joystick" is a magic number (struct?) that RobotC forces upon us.
 	getJoystickSettings(joystick);
 }
-bool Joystick_Button(JoystickButton button, Controller controller = CONTROLLER_1)
+bool Joystick_Button(JoystickButton button, Controller controller)
 {
 	//"false" is the default return value.
 	bool isPressed = false;
@@ -25,7 +26,7 @@ bool Joystick_Button(JoystickButton button, Controller controller = CONTROLLER_1
 	}
 	return isPressed;
 }
-Direction Joystick_Direction(Controller controller = CONTROLLER_1)
+Direction Joystick_Direction(Controller controller)
 {
 	Direction direction = DIRECTION_NONE;
 	switch (controller)
@@ -43,7 +44,7 @@ Direction Joystick_Direction(Controller controller = CONTROLLER_1)
 // avoid conflict with name of built-in struct "joystick";
 int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of code
 						JoystickAxis axis,
-						Controller controller = CONTROLLER_1)
+						Controller controller)
 {
 	int axisValue = 0;
 	switch (controller)

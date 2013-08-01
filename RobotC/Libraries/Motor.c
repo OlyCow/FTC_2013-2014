@@ -2,6 +2,7 @@
 #define MOTOR_C
 #pragma systemFile
 #include "..\Headers\Motor.h"
+// For default values, see above header file.
 
 
 
@@ -21,7 +22,7 @@ long Motor_GetEncoder(tMotor motorName)
 {
 	return nMotorEncoder[motorName];
 }
-void Motor_SetBrakes(bool isOn=true)
+void Motor_SetBrakes(bool isOn)
 {
 	bFloatDuringInactiveMotorPWM = !isOn;
 }
@@ -29,7 +30,7 @@ bool Motor_GetBrakes()
 {
 	return !bFloatDuringInactiveMotorPWM;
 }
-void Motor_SetMaxSpeed(int speed, MotorType motorType=MOTORTYPE_ALL)
+void Motor_SetMaxSpeed(int speed, MotorType motorType)
 {
 	switch (motorType)
 	{
@@ -50,7 +51,7 @@ void Motor_SetMaxSpeed(int speed, tMotor motorName) //warning: for all motors of
 	// TODO: First find the MotorType of the specified motor, then use
 	// the same logic as the other (overloaded) Motor_SetMaxSpeed().
 }
-int Motor_GetMaxSpeed(MotorType motorType=MOTORTYPE_ALL)
+int Motor_GetMaxSpeed(MotorType motorType)
 {
 	// The "default" value is being set to a negative number to make errors obvious.
 	int maxSpeed = -1024;
@@ -78,7 +79,7 @@ int  Motor_GetEncoderTarget(tMotor motorName)
 {
 	return nMotorEncoderTarget[motorName];
 }
-void Motor_SetPIDInterval(int interval, MotorType motorType=MOTORTYPE_ALL)
+void Motor_SetPIDInterval(int interval, MotorType motorType)
 {
 	switch (motorType)
 	{
@@ -100,7 +101,7 @@ void Motor_SetPIDInterval(int interval, tMotor motorName) //warning: for all mot
 	// TODO: First find the MotorType of the specified motor, then use
 	// the same logic as the other (overloaded) Motor_SetPIDInterval().
 }
-int Motor_GetPIDInterval(MotorType motorType=MOTORTYPE_ALL)
+int Motor_GetPIDInterval(MotorType motorType)
 {
 	// RobotC requires an explicit `return` statement not nested inside a function.
 	// The "default" value is being set to a negative number to make errors obvious.

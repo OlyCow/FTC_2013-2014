@@ -2,6 +2,7 @@
 #define SERVO_C
 #pragma systemFile
 #include "..\Headers\Servo.h"
+// For default values, see above header file.
 
 
 
@@ -21,11 +22,11 @@ int Servo_GetSpeed(TServoIndex servoName)
 {
 	return servoChangeRate[servoName];
 }
-void Servo_LockPosition(bool isLocked=true)
+void Servo_LockPosition(bool isLocked)
 {
 	bSystemLeaveServosEnabledOnProgramStop = isLocked;
 }
-void Servo_LockPosition(TServoIndex servoName, bool isLocked=true)
+void Servo_LockPosition(TServoIndex servoName, bool isLocked)
 {
 	bSystemLeaveServosEnabledOnProgramStop = isLocked;
 }

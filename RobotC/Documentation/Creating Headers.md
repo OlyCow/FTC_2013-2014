@@ -100,17 +100,27 @@ header won't be `#included` over and over.
 This is a handy `#pragma` which tells the RobotC compiler _not_ to give you warnings about unreferenced functions
 and the like. Usually you will want to include this line, unless you have special reasons not to (all of the functions
 in your library should be accessed, or you like all those yellow crosses, or something--I don't know!). Judge for
-yourself on this one.
+yourself on this one. Style-wise, we place it here:
+
+`foo.h`:
+	#ifndef FOO_H
+	#define FOO_H
+	#pragma systemFile
+	
+	// ... Your code ...
+	
+	#endif
+_In every single header, we place it there. OCD? Maybe._
 
 
-## Other `#include`s
+##  Things to `#include`
 You might have noticed a special header file (in the `\Headers\` folder) named `includes.h`--this is very crucial
 if you want everything to "link". Ideally, in every program you write (`.c`), you will only need to include this
 header (and any program specific headers if you must).
 
 All you need to keep in mind is to `#include` headers only, and do so in order of dependency. (e.g., if `foo.h`
 depends on a constant defined in `bar.h`, `#include` `bar.h` before `foo.h`.) Of course, if you end up having some
-sort of circular dependency, that sucks :) (and cannot be resolved). So do _not_ include any of your `.c` `\Library\`
+sort of circular dependency, that sucks :) (and cannot be resolved). Do _not_ include any of your `.c` `\Library\`
 files, as those should be `#include`d in their corresponding headers (see below).
 
 In each of your header files, remember to `#include` the corresponding `.c` `\Library\` file. And then, since you

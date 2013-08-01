@@ -1,7 +1,6 @@
-#ifndef ROBOTC_ENCAPSULATION_H
-#define ROBOTC_ENCAPSULATION_H
+#ifndef ROBOTC_ENCAPSULATION_C
+#define ROBOTC_ENCAPSULATION_C
 #pragma systemFile
-#include "..\Headers\includes.h"
 
 
 
@@ -328,4 +327,4 @@ void Task_AbortAll()
 
 
 
-#endif // ROBOTC_ENCAPSULATION_H
+#endif // ROBOTC_ENCAPSULATION_C

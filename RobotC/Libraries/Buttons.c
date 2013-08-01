@@ -2,6 +2,7 @@
 #define BUTTONS_C
 #pragma systemFile
 #include "..\Headers\Buttons.h"
+// For default values, see above header file.
 
 
 

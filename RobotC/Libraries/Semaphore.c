@@ -2,6 +2,7 @@
 #define SEMAPHORE_C
 #pragma systemFile
 #include "..\Headers\Semaphore.h"
+// For default values, see above header file.
 
 
 

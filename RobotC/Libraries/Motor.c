@@ -6,34 +6,26 @@
 
 
 
-void Motor_SetPower(int power, tMotor motorName)
-{
+void Motor_SetPower(int power, tMotor motorName) {
 	motor[motorName] = power;
 }
-int Motor_GetPower(tMotor motorName)
-{
+int Motor_GetPower(tMotor motorName) {
 	return motor[motorName];
 }
-void Motor_SetEncoder(long encoderValue, tMotor motorName)
-{
+void Motor_SetEncoder(long encoderValue, tMotor motorName) {
 	nMotorEncoder[motorName] = encoderValue;
 }
-long Motor_GetEncoder(tMotor motorName)
-{
+long Motor_GetEncoder(tMotor motorName) {
 	return nMotorEncoder[motorName];
 }
-void Motor_SetBrakes(bool isOn)
-{
+void Motor_SetBrakes(bool isOn) {
 	bFloatDuringInactiveMotorPWM = !isOn;
 }
-bool Motor_GetBrakes()
-{
+bool Motor_GetBrakes() {
 	return !bFloatDuringInactiveMotorPWM;
 }
-void Motor_SetMaxSpeed(int speed, MotorType motorType)
-{
-	switch (motorType)
-	{
+void Motor_SetMaxSpeed(int speed, MotorType motorType) {
+	switch (motorType) 	{
 		case MOTORTYPE_NXT:
 			nMaxRegulatedSpeedNxt = speed;
 			break;
@@ -46,17 +38,15 @@ void Motor_SetMaxSpeed(int speed, MotorType motorType)
 			break;
 	}
 }
-void Motor_SetMaxSpeed(int speed, tMotor motorName) //warning: for all motors of the same type!
-{
+// WARNING: for all motors of the same type!
+void Motor_SetMaxSpeed(int speed, tMotor motorName) {
 	// TODO: First find the MotorType of the specified motor, then use
 	// the same logic as the other (overloaded) Motor_SetMaxSpeed().
 }
-int Motor_GetMaxSpeed(MotorType motorType)
-{
+int Motor_GetMaxSpeed(MotorType motorType) {
 	// The "default" value is being set to a negative number to make errors obvious.
 	int maxSpeed = -1024;
-	switch (motorType)
-	{
+	switch (motorType) 	{
 		case MOTORTYPE_NXT:
 			maxSpeed = nMaxRegulatedSpeedNxt;
 			break;
@@ -66,23 +56,18 @@ int Motor_GetMaxSpeed(MotorType motorType)
 	}
 	return maxSpeed;
 }
-int Motor_GetMaxSpeed(tMotor motorName)
-{
+int Motor_GetMaxSpeed(tMotor motorName) {
 	// TODO: First find the MotorType of the specified motor, then use
 	// the same logic as the other (overloaded) Motor_GetMaxSpeed().
 }
-void Motor_SetEncoderTarget(long encoderValue, tMotor motorName)
-{
+void Motor_SetEncoderTarget(long encoderValue, tMotor motorName) {
 	nMotorEncoderTarget[motorName] = encoderValue;
 }
-int  Motor_GetEncoderTarget(tMotor motorName)
-{
+int  Motor_GetEncoderTarget(tMotor motorName) {
 	return nMotorEncoderTarget[motorName];
 }
-void Motor_SetPIDInterval(int interval, MotorType motorType)
-{
-	switch (motorType)
-	{
+void Motor_SetPIDInterval(int interval, MotorType motorType) {
+	switch (motorType) 	{
 		case MOTORTYPE_NXT:
 			// nPidUpdateIntervalNxt is internally #defined as nPidUpdateInterval
 			nPidUpdateInterval = interval;
@@ -96,18 +81,16 @@ void Motor_SetPIDInterval(int interval, MotorType motorType)
 			break;
 	}
 }
-void Motor_SetPIDInterval(int interval, tMotor motorName) //warning: for all motors of the same type!
-{
+// WARNING: for all motors of the same type!
+void Motor_SetPIDInterval(int interval, tMotor motorName) {
 	// TODO: First find the MotorType of the specified motor, then use
 	// the same logic as the other (overloaded) Motor_SetPIDInterval().
 }
-int Motor_GetPIDInterval(MotorType motorType)
-{
+int Motor_GetPIDInterval(MotorType motorType) {
 	// RobotC requires an explicit `return` statement not nested inside a function.
 	// The "default" value is being set to a negative number to make errors obvious.
 	int returnValue = -1024;
-	switch (motorType)
-	{
+	switch (motorType) {
 		case MOTORTYPE_NXT:
 			// nPidUpdateIntervalNxt is internally #defined as nPidUpdateInterval
 			returnValue = nPidUpdateInterval;
@@ -118,21 +101,17 @@ int Motor_GetPIDInterval(MotorType motorType)
 	}
 	return returnValue;
 }
-int Motor_GetPIDInterval(tMotor motorName)
-{
+int Motor_GetPIDInterval(tMotor motorName) {
 	// TODO: First find the MotorType of the specified motor, then use
 	// the same logic as the other (overloaded) Motor_SetPIDInterval().
 }
-int Motor_GetAssignedPower(tMotor motorName)
-{
+int Motor_GetAssignedPower(tMotor motorName) {
 	return motorPWMLevel[motorName];
 }
-void Motor_SetState(TNxtRunState state, tMotor motorName)
-{
+void Motor_SetState(TNxtRunState state, tMotor motorName) {
 	nMotorRunState[motorName] = state;
 }
-TNxtRunState Motor_GetState(tMotor motorName)
-{
+TNxtRunState Motor_GetState(tMotor motorName) {
 	return nMotorRunState[motorName];
 }
 

@@ -6,17 +6,14 @@
 
 
 
-void Joystick_UpdateData()
-{
+void Joystick_UpdateData() {
 	//"joystick" is a magic number (struct?) that RobotC forces upon us.
 	getJoystickSettings(joystick);
 }
-bool Joystick_Button(JoystickButton button, Controller controller)
-{
+bool Joystick_Button(JoystickButton button, Controller controller) {
 	//"false" is the default return value.
 	bool isPressed = false;
-	switch (controller)
-	{
+	switch (controller) {
 		case CONTROLLER_1:
 			isPressed = (bool)(joy1Btn(button));
 			break;
@@ -26,11 +23,9 @@ bool Joystick_Button(JoystickButton button, Controller controller)
 	}
 	return isPressed;
 }
-Direction Joystick_Direction(Controller controller)
-{
+Direction Joystick_Direction(Controller controller) {
 	Direction direction = DIRECTION_NONE;
-	switch (controller)
-	{
+	switch (controller) {
 		case CONTROLLER_1:
 			direction = (Direction)joystick.joy1_TopHat;
 			break;
@@ -47,14 +42,11 @@ int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of co
 						Controller controller)
 {
 	int axisValue = 0;
-	switch (controller)
-	{
+	switch (controller) {
 		case CONTROLLER_1:
-			switch (Joystick)
-			{
+			switch (Joystick) {
 				case JOYSTICK_L:
-					switch (axis)
-					{
+					switch (axis) {
 						case AXIS_X:	//controller 1, joystick L, X-axis
 							axisValue = joystick.joy1_x1;
 							break;
@@ -64,8 +56,7 @@ int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of co
 					}
 					break;
 				case JOYSTICK_R:
-					switch (axis)
-					{
+					switch (axis) {
 						case AXIS_X:	//controller 1, joystick L, X-axis
 							axisValue = joystick.joy1_x2;
 							break;
@@ -77,11 +68,9 @@ int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of co
 			}
 			break;
 		case CONTROLLER_2:
-			switch (Joystick)
-			{
+			switch (Joystick) {
 				case JOYSTICK_L:
-					switch (axis)
-					{
+					switch (axis) {
 						case AXIS_X:	//controller 2, joystick L, X-axis
 							axisValue = joystick.joy2_x1;
 							break;
@@ -91,8 +80,7 @@ int Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of co
 					}
 					break;
 				case JOYSTICK_R:
-					switch (axis)
-					{
+					switch (axis) {
 						case AXIS_X:	//controller 2, joystick L, X-axis
 							axisValue = joystick.joy2_x2;
 							break;

@@ -25,7 +25,6 @@
 #include "..\Headers\Display.h"
 #include "..\Headers\Sound.h"
 #include "..\Headers\Math.h"
-#include "..\Headers\Semaphore.h" //Maybe combine this with "Task.h"?
 
 
 

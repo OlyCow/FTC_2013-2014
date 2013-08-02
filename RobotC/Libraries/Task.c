@@ -7,22 +7,22 @@
 
 
 // Very unsure about this `void` thing.
-void Task_StartTask(void taskID, int priority) {
+void Task_Spawn(void taskID, int priority) {
 	StartTask(taskID, priority);
 }
-void Task_SuspendTask() {
+void Task_Suspend() {
 	suspendTask(nCurrentTask); //doing this may not be legal, since suspendTask expects a `void`
 }
-void Task_SuspendTask(void taskID) {
+void Task_Suspend(void taskID) {
 	suspendTask(taskID);
 }
-void Task_StopTask() {
+void Task_Stop() {
 	StopTask(nCurrentTask); //doing this may not be legal, since StopTask expects a `void`
 }
-void Task_StopTask(void taskID) {
+void Task_Stop(void taskID) {
 	StopTask(taskID);
 }
-void Task_StopAllTasks() {
+void Task_StopAll() {
 	StopAllTasks();
 }
 void Task_HogCPU() {
@@ -52,10 +52,26 @@ void Task_SetTimesliceSize(int size) {
 int  Task_GetTimesliceSize() {
 	return nOpcodesPerTimeslice;
 }
+void Task_NewSemaphore(TSemaphore semaphore) {
+	SemaphoreInitialize(semaphore);
+}
+void Task_LockSemaphore(TSemaphore semaphore, int waitTime) {
+	SemaphoreLock(semaphore, waitTime);
+}
+void Task_UnlockSemaphore(TSemaphore semaphore) {
+	SemaphoreUnlock(semaphore);
+}
+ubyte Task_SemaphoreOwner(TSemaphore semaphore) { //return type is really sketchy... Like, sketch, man.
+	return getSemaphoreTaskOwner(semaphore);
+}
 
 
 
-
+//---SemaphoreInitialize(nSemaphore)
+//---SemaphoreLock(nSemaphore, waitTime)
+//---SemaphoreUnlock(nSemaphore)
+//---getSemaphoreTaskOwner(nSemaphore)
+//---bDoesTaskOwnSemaphore(nSemaphore)
 //---abortTimeslice()
 //---EndTimeSlice()
 //---getTaskPriority(taskID)

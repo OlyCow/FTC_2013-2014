@@ -38,11 +38,11 @@ void initializeGlobalVariables() {
 	g_MotorData[MOTOR_BR].angleOffset = 315;
 
 	//`<=` used here because we want to evaluate CONTROLLER_2 as well.
-	for (int i=CONTROLLER_1; i<=CONTROLLER_2; i++) {
+	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {
 		g_JoystickData[i].buttonMap = 0;
 		g_JoystickData[i].direction = DIRECTION_NONE;
 	}
-	for (int i=CONTROLLER_1; i<=CONTROLLER_2; i++) {
+	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {
 		g_PrevJoystickData[i].buttonMap = 0;
 		g_PrevJoystickData[i].direction = DIRECTION_NONE;
 	}

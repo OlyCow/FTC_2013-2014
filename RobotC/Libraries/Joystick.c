@@ -10,7 +10,7 @@ void Joystick_UpdateData() {
 	//"joystick" is a magic number (struct?) that RobotC forces upon us.
 	getJoystickSettings(joystick);
 	//`<=` used here because we want to evaluate CONTROLLER_2 as well.
-	for (int i=CONTROLLER_1; i<=CONTROLLER_2; i++) {
+	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {
 		g_PrevJoystickData[i].buttonMap = g_JoystickData[i].buttonMap;
 		g_PrevJoystickData[i].direction = g_JoystickData[i].direction;
 	}
@@ -22,7 +22,7 @@ void Joystick_UpdateData() {
 
 
 
-// Here be Dark Wizardry. Only Wizards of the Underworld shall changeth.-------->>>>
+// <<<<--------Here be Dark Wizardry. Only Wizards of the Underworld shall changeth.-------->>>>
 bool Joystick_ButtonPressed(JoystickButton button, Controller controller) {
 	bool wasPressed = (g_PrevJoystickData[controller].buttonMap & (1 << (button-1)) != 0);
 	bool isPressed = (g_JoystickData[controller].buttonMap & (1 << (button-1)) != 0);
@@ -47,7 +47,7 @@ bool Joystick_DirectionReleased(Direction direction, Controller controller) {
 	bool isTriggered = (wasPressed==true)&&(isPressed==false);
 	return isTriggered;
 }
-// Here there be light. All yonder ye shall vieweth without fear.-------->>>>
+// <<<<--------Here there be light. All yonder ye shall vieweth without fear.-------->>>>
 
 
 

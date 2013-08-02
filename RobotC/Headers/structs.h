@@ -9,6 +9,11 @@ typedef struct motorData {
 	int power;
 } motorData;
 
+typedef struct joystickData {
+	short buttonMap;
+	Direction direction;
+} joystickData;
+
 
 
 #endif // STRUCTS_H

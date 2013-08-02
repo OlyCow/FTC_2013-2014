@@ -25,18 +25,27 @@ const int g_FineTuneFactor = 4;
 const int g_FullPower = 100;
 const int g_FullRegulatedPower = 80;
 
-motorData g_motorData[4];
+motorData g_MotorData[4]; //4 drive base motors.
+joystickData g_JoystickData[2]; //2 controllers.
+joystickData g_PrevJoystickData[2]; //2 controllers.
 
 
 
 void initializeGlobalVariables() {
-	g_motorData[MOTOR_FR].angleOffset = 45;
+	g_MotorData[MOTOR_FR].angleOffset = 45;
+	g_MotorData[MOTOR_FL].angleOffset = 135;
+	g_MotorData[MOTOR_BL].angleOffset = 225;
+	g_MotorData[MOTOR_BR].angleOffset = 315;
 
-	g_motorData[MOTOR_FL].angleOffset = 135;
-
-	g_motorData[MOTOR_BL].angleOffset = 225;
-
-	g_motorData[MOTOR_BR].angleOffset = 315;
+	//`<=` used here because we want to evaluate CONTROLLER_2 as well.
+	for (int i=CONTROLLER_1; i<=CONTROLLER_2; i++) {
+		g_JoystickData[i].buttonMap = 0;
+		g_JoystickData[i].direction = DIRECTION_NONE;
+	}
+	for (int i=CONTROLLER_1; i<=CONTROLLER_2; i++) {
+		g_PrevJoystickData[i].buttonMap = 0;
+		g_PrevJoystickData[i].direction = DIRECTION_NONE;
+	}
 }
 
 

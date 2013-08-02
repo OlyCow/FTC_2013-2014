@@ -50,6 +50,9 @@ void Sound_SetQueueStatus(bool isOpen) {
 bool Sound_GetQueueStatus() {
 	return bPlaySounds;
 }
+void Sound_Moo() {
+	PlaySoundFile("moo.rso");
+}
 
 
 

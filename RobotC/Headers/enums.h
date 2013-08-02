@@ -34,8 +34,8 @@ typedef enum JoystickButton {
 };
 
 typedef enum Controller {
-	CONTROLLER_1 = 1,
-	CONTROLLER_2 = 2,
+	CONTROLLER_1 = 0,
+	CONTROLLER_2 = 1,
 };
 
 typedef enum JoystickAxis {

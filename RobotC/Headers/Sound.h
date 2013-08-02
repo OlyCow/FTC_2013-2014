@@ -16,6 +16,7 @@ bool Sound_IsPlaying();
 bool Sound_IsQueueEmpty();
 void Sound_SetQueueStatus(bool isOpen);
 bool Sound_GetQueueStatus();
+void Sound_Moo();
 
 
 

@@ -5,6 +5,8 @@
 
 
 
+// The number of internal timers available to use.
+const int g_TimerNumber = 4; //defined internally as macro `kNumbOfTimers`
 // The mode the IR sensor is set at.
 // The competition IR beam/emmiter pulses at 1200 hertz.
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;

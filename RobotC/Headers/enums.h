@@ -61,6 +61,12 @@ typedef enum Direction {
 	DIRECTION_FL = 7,
 };
 
+typedef enum TimerType {
+	TIMER_CLOCK		= 0,
+	TIMER_SYSTEM	= 1,
+	TIMER_PROGRAM	= 2,
+};
+
 // These frequencies are all in hertz, rounded to the nearest int.
 typedef enum SoundNotes {
 	NOTE_REST = 0,

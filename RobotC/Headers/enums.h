@@ -68,7 +68,7 @@ typedef enum TimerType {
 };
 
 // These frequencies are all in hertz, rounded to the nearest int.
-typedef enum SoundNotes {
+typedef enum NoteFrequency {
 	NOTE_REST = 0,
 
 	NOTE_C3 = 131,	NOTE_C4 = 262,	NOTE_C5 = 523,

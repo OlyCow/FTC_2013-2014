@@ -11,7 +11,16 @@ void Display_DrawLineXOR(int x1, int y1, int x2, int y2, bool isNegative=false);
 void Display_DrawRect(int L, int T, int R, int B, bool isNegative=false, bool isFilled=false);
 void Display_DrawCircle(int h, int k, int diameter, bool isNegative=false, bool isFilled=false);
 void Display_DrawEllipse(int L, int T, int R, int B, bool isNegative=false, bool isFilled=false);
-/* <---- (REMAINING) FUNCTIONS FOR TEXT GO HERE ----> */
+void Display_DrawRIC(int left, int bottom, string fileName);
+void Display_SetContrast(int contrast=90); //default value (in NXT-G)
+int  Display_GetContrast();
+// DO NOT! use the following function very many times. It is written to flash memory,
+// which has a limited (10k~100k) R/W limit. So, DO NOT USE THE FOLLOWING FUNCTION! (:P)
+// (see what I did with that smiley up there? :)
+void Display_SetDefaultContrast(int contrast=90); //default value (in NXT-G)
+int  Display_GetDefaultContrast();
+void Display_SetStatusBarVisibility(bool isVisible);
+bool Display_GetStatusBarVisibility();
 
 
 
@@ -44,8 +53,8 @@ void Display_DrawEllipse(int L, int T, int R, int B, bool isNegative=false, bool
 //---nxtInvertLine(xPos, yPos, xPosTo, yPosTo);
 //nxtScrollText(pChar, ...);
 //nxtScrollText(sFormatString);
-//bNxtLCDStatusDisplay
-//nLCDContrast
-//nLCDContrastDefault
+//---bNxtLCDStatusDisplay
+//---nLCDContrast
+//---nLCDContrastDefault
 #include "..\Libraries\Display.c"
 #endif // DISPLAY_H

@@ -1,5 +1,7 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  none,     none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S3,     ,               sensorI2CCustom)
+#pragma config(Sensor, S4,     ,               sensorI2CCustom9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FL,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FR,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, PIDControl, encoder)
@@ -8,6 +10,14 @@
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoContinuousRotation)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoContinuousRotation)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoContinuousRotation)
+#pragma config(Servo,  srvo_S2_C1_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo7,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
 
 #include "Headers\includes.h"
 

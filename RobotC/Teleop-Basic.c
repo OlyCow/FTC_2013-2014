@@ -23,8 +23,7 @@
 
 
 
-task main()
-{
+task main() {
 	initializeGlobalVariables();
 	float gyro_angle = 0;
 	float rotation_magnitude = 0;
@@ -41,8 +40,7 @@ task main()
 	float motor_power[4] = {0,0,0,0}; //4=# of drive base motors
 	float servo_angle[4] = {0,0,0,0}; //4=# of drive base motors
 
-	while (true)
-	{
+	while (true) {
 		Joystick_UpdateData();
 
 		rotation_magnitude = Joystick_Joystick(JOYSTICK_L, AXIS_X, CONTROLLER_1);

@@ -13,8 +13,8 @@
 #include "..\Headers\enums.h"
 #include "..\Headers\structs.h"
 #include "..\Headers\global vars.h"
-#include "..\Headers\Motor.h"
-#include "..\Headers\Servo.h"
+#include "..\Headers\Motor.h" // TODO! (high-level stuff)
+#include "..\Headers\Servo.h" // TODO! (high-level stuff)
 #include "..\Headers\Sensor.h" // TODO!
 #include "..\Headers\Joystick.h"
 #include "..\Headers\File.h" // TODO!

@@ -67,8 +67,8 @@ void Display_DrawRect(int L, int T, int R, int B, bool isNegative, bool isFilled
 }
 void Display_DrawCircle(int h, int k, int diameter, bool isNegative, bool isFilled) {
 	int r = diameter/2;
-	int L = h-radius;
-	int T = k+radius;
+	int L = h-r;
+	int T = k+r;
 	int R = L+diameter-1; //not sure if this -1 is necessary, but it's in "RobotCIntrinsics.c", so...
 	int B = T-diameter+1; //^ditto
 	switch (isNegative) {

@@ -21,14 +21,15 @@ int  Joystick_Joystick(	JoystickLR Joystick,	//Still a relatively good line of c
 
 
 
-// Joystick_UpdateData
-// Joystick_ButtonPressed
-// Joystick_ButtonReleased
-// Joystick_DirectionPressed
-// Joystick_DirectionReleased
-// Joystick_Direction
-// Joystick_Button
-// TESTED:PASS>>	Joystick_Direction
-// TESTED:PASS>>	Joystick_Joystick
+// TESTED:WORKING>>		Joystick_UpdateData
+// TESTED:WORKING>>		Joystick_ButtonPressed
+// TESTED:WORKING>>		Joystick_ButtonReleased
+// TESTED:WORKING>>		Joystick_DirectionPressed
+// TESTED:WORKING>>		Joystick_DirectionReleased
+// NOT-TESTED>>			Joystick_Direction
+// NOT-TESTED>>			Joystick_Button
+// TESTED:PASS>>		Joystick_Direction
+// TESTED:PASS>>		Joystick_Joystick
+
 #include "..\Libraries\Joystick.c"
 #endif // JOYSTICK_H

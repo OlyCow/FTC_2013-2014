@@ -24,14 +24,14 @@ void Joystick_UpdateData() {
 
 // <<<<--------Here be Dark Wizardry. Only Wizards of the Underworld shall changeth.-------->>>>
 bool Joystick_ButtonPressed(JoystickButton button, Controller controller) {
-	bool wasPressed = (g_PrevJoystickData[controller].buttonMap & (1 << (button+1)) != 0);
-	bool isPressed = (g_JoystickData[controller].buttonMap & (1 << (button+1)) != 0);
+	bool wasPressed = (((g_PrevJoystickData[controller].buttonMap)&(1<<(button-1)))!=0);
+	bool isPressed = (((g_JoystickData[controller].buttonMap)&(1<<(button-1)))!=0);
 	bool isTriggered = (wasPressed==false)&&(isPressed==true);
 	return isTriggered;
 }
 bool Joystick_ButtonReleased(JoystickButton button, Controller controller) {
-	bool wasPressed = (g_PrevJoystickData[controller].buttonMap & (1 << (button+1)) != 0);
-	bool isPressed = (g_JoystickData[controller].buttonMap & (1 << (button+1)) != 0);
+	bool wasPressed = (((g_PrevJoystickData[controller].buttonMap)&(1<<(button-1)))!=0);
+	bool isPressed = (((g_JoystickData[controller].buttonMap)&(1<<(button-1)))!=0);
 	bool isTriggered = (wasPressed==true)&&(isPressed==false);
 	return isTriggered;
 }

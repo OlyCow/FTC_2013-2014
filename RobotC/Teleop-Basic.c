@@ -1,5 +1,7 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  none,     none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S3,     ,               sensorI2CCustom)
+#pragma config(Sensor, S4,     ,               sensorI2CCustom9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FL,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FR,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, PIDControl, encoder)
@@ -8,55 +10,56 @@
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoContinuousRotation)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoContinuousRotation)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoContinuousRotation)
+#pragma config(Servo,  srvo_S2_C1_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo7,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
 
 #include "Headers\includes.h"
 
 
 
-task main()
-{
+task main() {
 	initializeGlobalVariables();
 	float gyro_angle = 0;
 	float rotation_magnitude = 0;
-	float rotation_angle[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float rotation_x[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float rotation_y[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
+	float rotation_angle[4] = {0,0,0,0}; //4=# of drive base motors
+	float rotation_x[4] = {0,0,0,0}; //4=# of drive base motors
+	float rotation_y[4] = {0,0,0,0}; //4=# of drive base motors
 	float translation_magnitude = 0;
 	float translation_angle = 0;
 	float translation_x = 0;
 	float translation_y = 0;
-	float combined_angle[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float combined_x[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float combined_y[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float motor_power[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
-	float servo_angle[4] = {0,0,0,0}; //4=# of motors (FR/FL/BL/BR)
+	float combined_angle[4] = {0,0,0,0}; //4=# of drive base motors
+	float combined_x[4] = {0,0,0,0}; //4=# of drive base motors
+	float combined_y[4] = {0,0,0,0}; //4=# of drive base motors
+	float motor_power[4] = {0,0,0,0}; //4=# of drive base motors
+	float servo_angle[4] = {0,0,0,0}; //4=# of drive base motors
 
-	while (true)
-	{
+	while (true) {
 		Joystick_UpdateData();
 
-		rotation_magnitude = Joystick_GetJoystick(AXIS_X, JOYSTICK_L, CONTROLLER_1);
-		translation_x = Joystick_GetJoystick(AXIS_X, JOYSTICK_R, CONTROLLER_1);
-		translation_y = Joystick_GetJoystick(AXIS_Y, JOYSTICK_R, CONTROLLER_1);
+		rotation_magnitude = Joystick_Joystick(JOYSTICK_L, AXIS_X, CONTROLLER_1);
+		translation_x = Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_1);
+		translation_y = Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_1);
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); //Pythagoras
-		for (int i=MOTOR_FR; i<=MOTOR_BR; i++)
-		{
-			rotation_angle[i] = g_motorData[i].angleOffset+gyro_angle;
+		for (int i=(int)MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			rotation_angle[i] = g_MotorData[i].angleOffset+gyro_angle;
 			rotation_x[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			rotation_y[i] = rotation_magnitude*cosDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x;
 			combined_y[i] = translation_y+rotation_y;
 			combined_angle[i] = radiansToDegrees(atan2(combined_y[i],combined_x[i]));
 			motor_power[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2))*sinDegrees(combined_angle[i]-rotation_angle[i]);
-			if (abs(rotation_magnitude)>0)
-			{
-				servo_angle[i] = g_motorData[i].angleOffset;
-			}
-			else
-			{
+			if (abs(rotation_magnitude)>0) {
+				servo_angle[i] = g_MotorData[i].angleOffset;
+			} else {
 				translation_angle = radiansToDegrees(atan2(translation_y,translation_x))-gyro_angle-90; //degrees
-				for (int j=MOTOR_FR; j<=MOTOR_BR; j++)
-				{
+				for (int j=(int)MOTOR_FR; j<=(int)MOTOR_BR; j++) {
 					servo_angle[i] = translation_angle;
 				}
 			}

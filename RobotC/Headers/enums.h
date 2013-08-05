@@ -1,7 +1,6 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 #pragma systemFile
-#include "..\Headers\includes.h"
 
 
 
@@ -35,8 +34,8 @@ typedef enum JoystickButton {
 };
 
 typedef enum Controller {
-	CONTROLLER_1 = 1,
-	CONTROLLER_2 = 2,
+	CONTROLLER_1 = 0,
+	CONTROLLER_2 = 1,
 };
 
 typedef enum JoystickAxis {
@@ -62,8 +61,14 @@ typedef enum Direction {
 	DIRECTION_FL = 7,
 };
 
+typedef enum TimerType {
+	TIMER_CLOCK		= 0,
+	TIMER_SYSTEM	= 1,
+	TIMER_PROGRAM	= 2,
+};
+
 // These frequencies are all in hertz, rounded to the nearest int.
-typedef enum SoundNotes {
+typedef enum NoteFrequency {
 	NOTE_REST = 0,
 
 	NOTE_C3 = 131,	NOTE_C4 = 262,	NOTE_C5 = 523,

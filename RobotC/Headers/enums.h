@@ -67,6 +67,22 @@ typedef enum TimerType {
 	TIMER_PROGRAM	= 2,
 };
 
+typedef enum Quadrant {
+	QUADRANT_I		= 0,
+	QUADRANT_II		= 1,
+	QUADRANT_III	= 2,
+	QUADRANT_IV		= 3,
+};
+
+typedef enum AngleUnit {
+	UNIT_DEG		= 0,
+	UNIT_DEGREE		= 0,
+	UNIT_RAD		= 1,
+	UNIT_RADIAN		= 1,
+	UNIT_GRAD		= 2,
+	UNIT_GRADIAN	= 2,
+};
+
 // These frequencies are all in hertz, rounded to the nearest int.
 typedef enum NoteFrequency {
 	NOTE_REST = 0,

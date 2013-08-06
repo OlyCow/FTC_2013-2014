@@ -1,6 +1,7 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 #pragma systemFile
+#include "..\Headers\enums.h"
 
 
 

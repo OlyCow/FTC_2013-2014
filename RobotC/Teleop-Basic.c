@@ -20,11 +20,15 @@
 #pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
 
 #include "Headers\includes.h"
+#include "Teleop-Basic.h"
 
 
+
+task PID();
 
 task main() {
 	initializeGlobalVariables();
+	g_task_main = Task_GetCurrentIndex();
 	float gyro_angle = 0;
 	float rotation_magnitude = 0;
 	float rotation_angle[4] = {0,0,0,0}; //4=# of drive base motors
@@ -39,6 +43,7 @@ task main() {
 	float combined_y[4] = {0,0,0,0}; //4=# of drive base motors
 	float motor_power[4] = {0,0,0,0}; //4=# of drive base motors
 	float servo_angle[4] = {0,0,0,0}; //4=# of drive base motors
+	Joystick_WaitForStart();
 
 	while (true) {
 		Joystick_UpdateData();
@@ -48,7 +53,7 @@ task main() {
 		// frame of the drive base, to simulate the input from an actual joystick.
 		// No word as to when we will be able to purchase a prototype board and
 		// the MPU-6050 breakout board.
-		gyro_angle = radiansToDegrees(atan2(
+		gyro_angle = Math_RadToDeg(atan2(
 							Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2),
 							Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2) ));
 
@@ -86,16 +91,36 @@ task main() {
 			rotation_y[i] = rotation_magnitude*cosDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x;
 			combined_y[i] = translation_y+rotation_y;
-			combined_angle[i] = radiansToDegrees(atan2(combined_y[i],combined_x[i]));
+			combined_angle[i] = Math_RadToDeg(atan2(combined_y[i],combined_x[i]));
 			motor_power[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2))*sinDegrees(combined_angle[i]-rotation_angle[i]);
 			if (abs(rotation_magnitude)>0) {
 				servo_angle[i] = g_MotorData[i].angleOffset;
 			} else {
-				translation_angle = radiansToDegrees(atan2(translation_y,translation_x))-gyro_angle-90; //degrees
+				translation_angle = Math_RadToDeg(atan2(translation_y,translation_x))-gyro_angle-90; //degrees
 				for (int j=(int)MOTOR_FR; j<=(int)MOTOR_BR; j++) {
 					servo_angle[i] = translation_angle;
 				}
 			}
 		}
+	}
+}
+
+
+
+task PID() {
+	g_task_PID = Task_GetCurrentIndex();
+	Joystick_WaitForStart();
+
+	while (true) {
+		// Parse the motor settings and assign them to the motors.
+		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			if (g_MotorData[i].isReversed==true) {
+				g_MotorData[i].power *= -1;
+			}
+		}
+		Motor_SetPower(g_MotorData[MOTOR_FR].power, motor_FR);
+		Motor_SetPower(g_MotorData[MOTOR_FL].power, motor_FL);
+		Motor_SetPower(g_MotorData[MOTOR_BL].power, motor_BL);
+		Motor_SetPower(g_MotorData[MOTOR_BR].power, motor_BR);
 	}
 }

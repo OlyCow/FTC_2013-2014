@@ -4,7 +4,6 @@
 
 
 
-// Very unsure about this `void` thing.
 void Task_Spawn(short taskID, int priority=kDefaultTaskPriority);
 void Task_Suspend(short taskID=nCurrentTask);
 void Task_Stop(short taskID=nCurrentTask);
@@ -12,6 +11,7 @@ void Task_StopAll();
 void Task_HogCPU();
 void Task_ReleaseCPU();
 void Task_EndTimeslice();
+int  Task_GetCurrentIndex();
 void Task_SetPriority(int priority);
 void Task_SetPriority(short taskID, int priority);
 int  Task_GetPriority(short taskID=nCurrentTask);

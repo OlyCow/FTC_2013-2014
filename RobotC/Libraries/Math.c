@@ -80,29 +80,29 @@ float Math_Sec(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
 }
 float Math_Csc(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
 }
-float Math_Arcsin(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arcsin(float input, AngleUnit units) {
 }
-float Math_Arccos(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arccos(float input, AngleUnit units) {
 }
-float Math_Arctan(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arctan(float input, AngleUnit units) {
 }
-float Math_Arccot(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arccot(float input, AngleUnit units) {
 }
-float Math_Arcsec(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arcsec(float input, AngleUnit units) {
 }
-float Math_Arccsc(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arccsc(float input, AngleUnit units) {
 }
-float Math_Arcsin2(float x, float y, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arcsin2(float x, float y, AngleUnit units) {
 }
-float Math_Arccos2(float x, float y, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arccos2(float x, float y, AngleUnit units) {
 }
-float Math_Arctan2(float x, float y, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arctan2(float x, float y, AngleUnit units) {
 }
-float Math_Arccot2(float x, float y, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arccot2(float x, float y, AngleUnit units) {
 }
-float Math_Arcsec2(float x, float y, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arcsec2(float x, float y, AngleUnit units) {
 }
-float Math_Arccsc2(float x, float y, AngleUnit inputUnit, AngleUnit outputUnit) {
+float Math_Arccsc2(float x, float y, AngleUnit units) {
 }
 float Math_DegToRad(float input) {
 	return input*pi/180;

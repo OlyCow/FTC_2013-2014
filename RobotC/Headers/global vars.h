@@ -30,6 +30,8 @@ const int g_FullPower = 100;
 const int g_taskIndices[20] =
 	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}; // There can only be 20 tasks, including `main()`.
 	// Declared here instead of with a for loop because these should be const.
+int g_task_main	= -1;
+int g_task_PID	= -1;
 
 // Various structs, initialized in `initializeGlobalVariables()`.
 motorData g_MotorData[4]; //4 drive base motors.
@@ -44,7 +46,7 @@ void initializeGlobalVariables() {
 	g_MotorData[MOTOR_BL].angleOffset = 225;
 	g_MotorData[MOTOR_BR].angleOffset = 315;
 
-	for (int i=MOTOR_FR; i<=MOTOR_BR; i++) {
+	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 		g_MotorData[i].isReversed = false;
 	}
 

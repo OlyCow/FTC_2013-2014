@@ -27,6 +27,9 @@ void Task_ReleaseCPU() {
 void Task_EndTimeslice() {
 	abortTimeslice();
 }
+int  Task_GetCurrentIndex() {
+	return nCurrentTask;
+}
 void Task_SetPriority(int priority) {
 	setTaskPriority(nCurrentTask, priority);
 }

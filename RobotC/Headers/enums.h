@@ -9,7 +9,7 @@ typedef enum WheelPod {
 	POD_FL = 1,
 	POD_BL = 2,
 	POD_BR = 3,
-	POD_NUM,
+	POD_NUM, // Should this be hard-coded to be 4?
 };
 
 typedef enum Motor {

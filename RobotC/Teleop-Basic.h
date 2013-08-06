@@ -83,10 +83,12 @@ Servo	Servo_Convert(TServoIndex servoName) {
 	return conversion;
 }
 float	Joystick_GetTranslationX() {
-	return Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X));
+	return Math_Limit(
+			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
 }
 float	Joystick_GetTranslationY() {
-	return Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y));
+	return Math_Limit(
+			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
 }
 float	Joystick_GetRotationMagnitude() {
 	//// Alternate version using triggers:
@@ -99,5 +101,6 @@ float	Joystick_GetRotationMagnitude() {
 	//	rotationMagnitude = 0;
 	//}
 	//return rotationMagnitude;
-	return Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X));
+	return Math_Limit(
+			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
 }

@@ -20,16 +20,16 @@ const int g_IRthreshold = 10; //units?
 // The highest we've ever recorded is +/-8.
 const int g_JoystickDeadZone = 10;
 
+// The highest value a joystick can go to. Not set to 128 we prefer to
+// assign too much power than not assign enough.
+const int g_JoystickMax = 127;
+
 // The various motor-regulation speeds.
 const int g_FullPower = 100;
 
 // Each task will define a const variable with the same name as the task,
-// equal to the value of a call to `nCurrentTask`, to refer to an element
-// of this struct. `Task_Spawn()` and other "Task.h" functions will then
-// use `g_taskIndices[TASK_FOO_CONST]` to refer to that task.
-const int g_taskIndices[20] =
-	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}; // There can only be 20 tasks, including `main()`.
-	// Declared here instead of with a for loop because these should be const.
+// equal to the value of a call to `nCurrentTask`. The corresponding int
+// here should be assigned that value immediately once the tasks starts.
 int g_task_main	= -1;
 int g_task_PID	= -1;
 
@@ -53,6 +53,7 @@ void initializeGlobalVariables() {
 
 	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 		g_ServoData[i].angle = 90;	// These should start out facing forward.
+		g_ServoData[i].power = 0;
 	}
 
 	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {

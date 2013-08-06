@@ -13,6 +13,7 @@ typedef struct motorData {
 
 typedef struct servoData {
 	int angle;
+	int power;
 } servoData;
 
 typedef struct joystickData {

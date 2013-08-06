@@ -40,6 +40,7 @@ task main() {
 	float translation_angle = 0;
 	float translation_x = 0;
 	float translation_y = 0;
+	float combined_input_magnitude = 0;
 	float combined_angle[4] = {0,0,0,0}; //4=# of drive base motors
 	float combined_x[4] = {0,0,0,0}; //4=# of drive base motors
 	float combined_y[4] = {0,0,0,0}; //4=# of drive base motors
@@ -87,7 +88,12 @@ task main() {
 		translation_x = Joystick_GetTranslationX();
 		translation_y = Joystick_GetTranslationY();
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); //Pythagoras
-		for (int i=(int)MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		combined_input_magnitude = translation_magnitude+rotation_magnitude;
+		if (combined_input_magnitude>g_FullPower) {
+			Math_Normalize(rotation_magnitude, g_JoystickMax, combined_input_magnitude);
+			Math_Normalize(translation_magnitude, g_JoystickMax, combined_input_magnitude);
+		}
+		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 			rotation_angle[i] = g_MotorData[i].angleOffset+gyro_angle;
 			rotation_x[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			rotation_y[i] = rotation_magnitude*cosDegrees(rotation_angle[i]);
@@ -99,10 +105,12 @@ task main() {
 				servo_angle[i] = g_MotorData[i].angleOffset;
 			} else {
 				translation_angle = Math_RadToDeg(atan2(translation_y,translation_x))-gyro_angle-90; //degrees
-				for (int j=(int)MOTOR_FR; j<=(int)MOTOR_BR; j++) {
+				for (int j=MOTOR_FR; j<=(int)MOTOR_BR; j++) {
 					servo_angle[i] = translation_angle;
 				}
 			}
+			g_MotorData[i].power = motor_power[i];
+			g_ServoData[i].angle = servo_angle[i];
 		}
 
 		Task_EndTimeslice();
@@ -113,24 +121,41 @@ task main() {
 
 task PID() {
 	g_task_PID = Task_GetCurrentIndex();
+	float kP = 25; //might need to make these terms arrays, if inverse-ness is an issue
+	float kI = 0; //ditto^
+	float kD = 0; //ditto^
+	float error[4] = {0,0,0,0};
+	float term_P[4] = {0,0,0,0};
+	float term_I[4] = {0,0,0,0};
+	float term_D[4] = {0,0,0,0};
+	float total_correction[4] = {0,0,0,0};
 	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		Motor_SetEncoder(90, Motor_Convert((Motor)i)); // Might not be 90, could be some other number :P
+		Motor_SetEncoder(Math_Normalize(90, 360, 1440), Motor_Convert((Motor)i)); // Might not be 90, could be some other number :P
 	}
 	Joystick_WaitForStart();
 
 	while (true) {
+		Task_HogCPU(); //This may be unnecessary/too greedy. Remember to remove `Task_ReleaseCPU()` if not needed.
 
+		// Assigns power to servos in same loop as power is calculated (kinda is rolling assignment)
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			error[i] = g_ServoData[i].angle - Math_Normalize(Motor_GetEncoder(Motor_Convert((Motor)i)), 1440, 360);
+			term_P[i] = kP*error[i]; //kP might become an array; see declaration
+			term_I[i] = 0; //TODO! Has timers :P
+			term_D[i] = 0; //TODO! Has timers :P
+			total_correction[i] = term_P[i]+term_I[i]+term_D[i];
+			Servo_SetPower(Servo_Convert((Servo)i), total_correction[i]);
+		}
 
-		// Parse the motor settings and assign them to the motors.
+		// Parse the motor settings and assign them to the motors (in same loop).
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
 			}
-		}
-		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
 		}
 
-		Task_EndTimeslice();
+		Task_ReleaseCPU();
+		Task_EndTimeslice(); //Unless `Task_ReleaseCPU()` automatically switches tasks?
 	}
 }

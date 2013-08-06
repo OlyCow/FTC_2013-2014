@@ -2,6 +2,7 @@
 #define GLOBAL_VARS_H
 #pragma systemFile
 #include "..\Headers\enums.h"
+#include "..\Headers\structs.h"
 
 
 
@@ -43,7 +44,10 @@ void initializeGlobalVariables() {
 	g_MotorData[MOTOR_BL].angleOffset = 225;
 	g_MotorData[MOTOR_BR].angleOffset = 315;
 
-	//`<=` used here because we want to evaluate CONTROLLER_2 as well.
+	for (int i=MOTOR_FR; i<=MOTOR_BR; i++) {
+		g_MotorData[i].isReversed = false;
+	}
+
 	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {
 		g_JoystickData[i].buttonMap = 0;
 		g_JoystickData[i].direction = DIRECTION_NONE;

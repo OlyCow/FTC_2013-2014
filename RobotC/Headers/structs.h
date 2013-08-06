@@ -11,6 +11,10 @@ typedef struct motorData {
 	int power;
 } motorData;
 
+typedef struct servoData {
+	int angle;
+} servoData;
+
 typedef struct joystickData {
 	short buttonMap;
 	Direction direction;

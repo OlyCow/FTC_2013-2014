@@ -22,6 +22,8 @@
 #include "Headers\includes.h"
 #include "Teleop-Basic.h"
 
+#pragma autoStartTasks
+
 
 
 task PID();
@@ -109,18 +111,24 @@ task main() {
 
 task PID() {
 	g_task_PID = Task_GetCurrentIndex();
+	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		Motor_SetEncoder(90, Motor_Convert((Motor)i)); // Might not be 90, could be some other number :P
+	}
 	Joystick_WaitForStart();
 
 	while (true) {
+
+
 		// Parse the motor settings and assign them to the motors.
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
 			}
 		}
-		Motor_SetPower(g_MotorData[MOTOR_FR].power, motor_FR);
-		Motor_SetPower(g_MotorData[MOTOR_FL].power, motor_FL);
-		Motor_SetPower(g_MotorData[MOTOR_BL].power, motor_BL);
-		Motor_SetPower(g_MotorData[MOTOR_BR].power, motor_BR);
+		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
+		}
+
+		Task_EndTimeslice();
 	}
 }

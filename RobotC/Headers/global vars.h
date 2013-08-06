@@ -35,6 +35,7 @@ int g_task_PID	= -1;
 
 // Various structs, initialized in `initializeGlobalVariables()`.
 motorData g_MotorData[4]; //4 drive base motors.
+servoData g_ServoData[4]; //4 continuous rotation servos.
 joystickData g_JoystickData[2]; //2 controllers.
 joystickData g_PrevJoystickData[2]; //2 controllers.
 
@@ -48,6 +49,10 @@ void initializeGlobalVariables() {
 
 	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 		g_MotorData[i].isReversed = false;
+	}
+
+	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		g_ServoData[i].angle = 90;	// These should start out facing forward.
 	}
 
 	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {

@@ -17,6 +17,13 @@ typedef enum MotorType {
 	MOTORTYPE_ALL	= 2,
 };
 
+typedef enum Servo {
+	SERVO_FR = 0,
+	SERVO_FL = 1,
+	SERVO_BL = 2,
+	SERVO_BR = 3,
+};
+
 //NOT final! (not sure if using joy1Btn() or not)
 typedef enum JoystickButton {
 	BUTTON_A = 2,

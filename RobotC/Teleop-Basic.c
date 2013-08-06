@@ -83,9 +83,9 @@ task main() {
 		// is taken in the direction the servo is pointing (finding the component
 		// of the vector in the same direction as the servo is pointing). That
 		// equals the power assigned to the motor of that wheel pod.
-		rotation_magnitude = Joystick_Joystick(JOYSTICK_L, AXIS_X);
-		translation_x = Joystick_Joystick(JOYSTICK_R, AXIS_X);
-		translation_y = Joystick_Joystick(JOYSTICK_R, AXIS_X);
+		rotation_magnitude = Joystick_GetRotationMagnitude();
+		translation_x = Joystick_GetTranslationX();
+		translation_y = Joystick_GetTranslationY();
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); //Pythagoras
 		for (int i=(int)MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 			rotation_angle[i] = g_MotorData[i].angleOffset+gyro_angle;
@@ -104,6 +104,8 @@ task main() {
 				}
 			}
 		}
+
+		Task_EndTimeslice();
 	}
 }
 

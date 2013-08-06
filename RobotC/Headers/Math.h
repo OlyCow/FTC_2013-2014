@@ -10,6 +10,8 @@ const float e	= 2.71828182845904523536028747135266249775724709369995957496696762
 const float phi	= 1.618033988749894848204586834365638117720309179805762862135448623; // 64 sig figs
 int   Math_TrimDeadzone(int input, int deadzone=g_JoystickDeadZone);
 float Math_TrimDeadzone(float input, float deadzone=g_JoystickDeadZone);
+int   Math_Limit(int input, int max);
+float Math_Limit(float input, float max);
 float Math_ConvertAngle(float input, AngleUnit inputUnit, AngleUnit outputUnit);
 int   Math_Normalize(int input, int originalMax, int newMax);
 float Math_Normalize(float input, float originalMax, float newMax);

@@ -4,17 +4,27 @@
 
 
 
+typedef enum WheelPod {
+	POD_FR = 0,
+	POD_FL = 1,
+	POD_BL = 2,
+	POD_BR = 3,
+	POD_NUM,
+};
+
 typedef enum Motor {
 	MOTOR_FR = 0,
 	MOTOR_FL = 1,
 	MOTOR_BL = 2,
 	MOTOR_BR = 3,
+	MOTOR_NUM,
 };
 
 typedef enum MotorType {
 	MOTORTYPE_NXT	= 0,
 	MOTORTYPE_12V	= 1,
 	MOTORTYPE_ALL	= 2,
+	MOTORTYPE_NUM,
 };
 
 typedef enum Servo {
@@ -22,6 +32,7 @@ typedef enum Servo {
 	SERVO_FL = 1,
 	SERVO_BL = 2,
 	SERVO_BR = 3,
+	SERVO_NUM,
 };
 
 //NOT final! (not sure if using joy1Btn() or not)
@@ -38,21 +49,25 @@ typedef enum JoystickButton {
 	BUTTON_START = 10,
 	BUTTON_JOYL = 11,	//button on the joystick
 	BUTTON_JOYR = 12,	//button on the joystick
+	BUTTON_NUM,
 };
 
 typedef enum Controller {
 	CONTROLLER_1 = 0,
 	CONTROLLER_2 = 1,
+	CONTROLLER_NUM,
 };
 
 typedef enum JoystickAxis {
 	AXIS_X = 0,
 	AXIS_Y = 1,
+	AXIS_NUM,
 };
 
 typedef enum JoystickLR {
 	JOYSTICK_L = 0,
 	JOYSTICK_R = 1,
+	JOYSTICK_NUM,
 };
 
 // This still needs a definitive test.
@@ -66,6 +81,7 @@ typedef enum Direction {
 	DIRECTION_BL = 5,
 	DIRECTION_L = 6,
 	DIRECTION_FL = 7,
+	DIRECTION_NUM,
 };
 
 typedef enum TimerType {
@@ -79,6 +95,7 @@ typedef enum Quadrant {
 	QUADRANT_II		= 1,
 	QUADRANT_III	= 2,
 	QUADRANT_IV		= 3,
+	QUADRANT_NUM,
 };
 
 typedef enum AngleUnit {

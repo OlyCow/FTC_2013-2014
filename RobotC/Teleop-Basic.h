@@ -4,6 +4,11 @@ tMotor	Motor_Convert(Motor motorName);
 Motor	Motor_Convert(tMotor motorName);
 TServoIndex Servo_Convert(Servo servoName);
 Servo	Servo_Convert(TServoIndex servoName);
+float	Joystick_GetTranslationX();
+float	Joystick_GetTranslationY();
+float	Joystick_GetRotationMagnitude();
+
+
 
 tMotor	Motor_Convert(Motor motorName) {
 	tMotor conversion;
@@ -76,4 +81,23 @@ Servo	Servo_Convert(TServoIndex servoName) {
 			break;
 	}
 	return conversion;
+}
+float	Joystick_GetTranslationX() {
+	return Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X));
+}
+float	Joystick_GetTranslationY() {
+	return Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y));
+}
+float	Joystick_GetRotationMagnitude() {
+	//// Alternate version using triggers:
+	//float rotationMagnitude = 0;
+	//if (Joystick_Button(BUTTON_LT)==true) {
+	//	rotationMagnitude = -100;
+	//} else if (Joystick_Button(BUTTON_RT)==true) {
+	//	rotationMagnitude = 100;
+	//} else {
+	//	rotationMagnitude = 0;
+	//}
+	//return rotationMagnitude;
+	return Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X));
 }

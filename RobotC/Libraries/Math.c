@@ -20,6 +20,24 @@ float Math_TrimDeadzone(float input, float deadzone) {
 	}
 	return output;
 }
+int   Math_Limit(int input, int max) {
+	int output = input;
+	if (input>max) {
+		output = max;
+	} else if (input<-max) {
+		output = -max;
+	}
+	return output;
+}
+float Math_Limit(float input, float max) {
+	float output = input;
+	if (input>max) {
+		output = max;
+	} else if (input<-max) {
+		output = -max;
+	}
+	return output;
+}
 float Math_ConvertAngle(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
 	float output = 0;
 	switch (inputUnit) {

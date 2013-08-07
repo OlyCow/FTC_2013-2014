@@ -6,6 +6,9 @@
 
 
 
+void Joystick_WaitForStart() {
+	waitForStart();
+}
 void Joystick_UpdateData() {
 	//"joystick" is a magic number (struct?) that RobotC forces upon us.
 	getJoystickSettings(joystick);
@@ -19,10 +22,6 @@ void Joystick_UpdateData() {
 	g_JoystickData[CONTROLLER_1].direction = (Direction)joystick.joy1_TopHat;
 	g_JoystickData[CONTROLLER_2].direction = (Direction)joystick.joy2_TopHat;
 }
-
-
-
-// <<<<--------Here be Dark Wizardry. Only Wizards of the Underworld shall changeth.-------->>>>
 bool Joystick_ButtonPressed(JoystickButton button, Controller controller) {
 	bool wasPressed = (((g_PrevJoystickData[controller].buttonMap)&(1<<(button-1)))!=0);
 	bool isPressed = (((g_JoystickData[controller].buttonMap)&(1<<(button-1)))!=0);
@@ -47,10 +46,6 @@ bool Joystick_DirectionReleased(Direction direction, Controller controller) {
 	bool isTriggered = (wasPressed==true)&&(isPressed==false);
 	return isTriggered;
 }
-// <<<<--------Here there be light. All yonder ye shall vieweth without fear.-------->>>>
-
-
-
 bool Joystick_Direction(Direction direction, Controller controller) {
 	bool isPressed = false;
 	switch (controller) {

@@ -6,20 +6,13 @@
 
 
 
-// Very unsure about this `void` thing.
-void Task_Spawn(void taskID, int priority) {
+void Task_Spawn(short taskID, int priority) {
 	StartTask(taskID, priority);
 }
-void Task_Suspend() {
-	suspendTask(nCurrentTask); //doing this may not be legal, since suspendTask expects a `void`
-}
-void Task_Suspend(void taskID) {
+void Task_Suspend(short taskID) {
 	suspendTask(taskID);
 }
-void Task_Stop() {
-	StopTask(nCurrentTask); //doing this may not be legal, since StopTask expects a `void`
-}
-void Task_Stop(void taskID) {
+void Task_Stop(short taskID) {
 	StopTask(taskID);
 }
 void Task_StopAll() {
@@ -34,16 +27,16 @@ void Task_ReleaseCPU() {
 void Task_EndTimeslice() {
 	abortTimeslice();
 }
-void Task_SetPriority(int priority) {
-	setTaskPriority(nCurrentTask, priority); //doing this may not be legal, since setTaskPriority expects a `void`
+int  Task_GetCurrentIndex() {
+	return nCurrentTask;
 }
-void Task_SetPriority(void taskID, int priority) {
+void Task_SetPriority(int priority) {
+	setTaskPriority(nCurrentTask, priority);
+}
+void Task_SetPriority(short taskID, int priority) {
 	setTaskPriority(taskID, priority);
 }
-int  Task_GetPriority() {
-	return getTaskPriority(nCurrentTask); //doing this may not be legal, since getTaskPriority expects a `void`
-}
-int  Task_GetPriority(void taskID) {
+int  Task_GetPriority(short taskID) {
 	return getTaskPriority(taskID);
 }
 void Task_SetTimesliceSize(int size) {

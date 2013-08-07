@@ -4,20 +4,17 @@
 
 
 
-// Very unsure about this `void` thing.
-void Task_Spawn(void taskID, int priority=kDefaultTaskPriority);
-void Task_Suspend(); //If I can cast an `int` to a `void` this function can be combined with the next.
-void Task_Suspend(void taskID);
-void Task_Stop(); //If I can cast an `int` to a `void` this function can be combined with the next.
-void Task_Stop(void taskID);
+void Task_Spawn(short taskID, int priority=kDefaultTaskPriority);
+void Task_Suspend(short taskID=nCurrentTask);
+void Task_Stop(short taskID=nCurrentTask);
 void Task_StopAll();
 void Task_HogCPU();
 void Task_ReleaseCPU();
 void Task_EndTimeslice();
+int  Task_GetCurrentIndex();
 void Task_SetPriority(int priority);
-void Task_SetPriority(void taskID, int priority);
-int  Task_GetPriority(); //If I can cast an `int` to a `void` this function can be combined with the next.
-int  Task_GetPriority(void taskID);
+void Task_SetPriority(short taskID, int priority);
+int  Task_GetPriority(short taskID=nCurrentTask);
 void Task_SetTimesliceSize(int size); //Source claims this is read-only...
 int  Task_GetTimesliceSize();
 void Task_NewSemaphore(TSemaphore semaphore);

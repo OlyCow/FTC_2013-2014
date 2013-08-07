@@ -6,6 +6,8 @@
 
 void Servo_SetPosition(TServoIndex servoName, short position);
 int  Servo_GetPosition(TServoIndex servoName);
+void Servo_SetPower(TServoIndex servoName, short power); //for continuous rotation servos
+int  Servo_GetPower(TServoIndex servoName); //for continuous rotation servos
 void Servo_SetSpeed(TServoIndex servoName, int rate);
 int  Servo_GetSpeed(TServoIndex servoName);
 void Servo_LockPosition(bool isLocked=true);

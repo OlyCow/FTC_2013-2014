@@ -16,13 +16,11 @@
 
 
 
-task main()
-{
-	initializeVariables();
+task main() {
+	initializeGlobalVariables();
 	waitForStart();
 
-	while (true)
-	{
-		//CODE!!!
+	while (true) {
+		Joystick_UpdateData();
 	}
 }

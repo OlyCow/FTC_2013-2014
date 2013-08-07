@@ -1,21 +1,38 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 #pragma systemFile
-#include "..\Headers\includes.h"
 
 
+
+typedef enum WheelPod {
+	POD_FR = 0,
+	POD_FL = 1,
+	POD_BL = 2,
+	POD_BR = 3,
+	POD_NUM, // Should this be hard-coded to be 4?
+};
 
 typedef enum Motor {
 	MOTOR_FR = 0,
 	MOTOR_FL = 1,
 	MOTOR_BL = 2,
 	MOTOR_BR = 3,
+	MOTOR_NUM,
 };
 
 typedef enum MotorType {
 	MOTORTYPE_NXT	= 0,
 	MOTORTYPE_12V	= 1,
 	MOTORTYPE_ALL	= 2,
+	MOTORTYPE_NUM,
+};
+
+typedef enum Servo {
+	SERVO_FR = 0,
+	SERVO_FL = 1,
+	SERVO_BL = 2,
+	SERVO_BR = 3,
+	SERVO_NUM,
 };
 
 //NOT final! (not sure if using joy1Btn() or not)
@@ -32,21 +49,25 @@ typedef enum JoystickButton {
 	BUTTON_START = 10,
 	BUTTON_JOYL = 11,	//button on the joystick
 	BUTTON_JOYR = 12,	//button on the joystick
+	BUTTON_NUM,
 };
 
 typedef enum Controller {
-	CONTROLLER_1 = 1,
-	CONTROLLER_2 = 2,
+	CONTROLLER_1 = 0,
+	CONTROLLER_2 = 1,
+	CONTROLLER_NUM,
 };
 
 typedef enum JoystickAxis {
 	AXIS_X = 0,
 	AXIS_Y = 1,
+	AXIS_NUM,
 };
 
 typedef enum JoystickLR {
 	JOYSTICK_L = 0,
 	JOYSTICK_R = 1,
+	JOYSTICK_NUM,
 };
 
 // This still needs a definitive test.
@@ -60,10 +81,34 @@ typedef enum Direction {
 	DIRECTION_BL = 5,
 	DIRECTION_L = 6,
 	DIRECTION_FL = 7,
+	DIRECTION_NUM,
+};
+
+typedef enum TimerType {
+	TIMER_CLOCK		= 0,
+	TIMER_SYSTEM	= 1,
+	TIMER_PROGRAM	= 2,
+};
+
+typedef enum Quadrant {
+	QUADRANT_I		= 0,
+	QUADRANT_II		= 1,
+	QUADRANT_III	= 2,
+	QUADRANT_IV		= 3,
+	QUADRANT_NUM,
+};
+
+typedef enum AngleUnit {
+	UNIT_DEG		= 0,
+	UNIT_DEGREE		= 0,
+	UNIT_RAD		= 1,
+	UNIT_RADIAN		= 1,
+	UNIT_GRAD		= 2,
+	UNIT_GRADIAN	= 2,
 };
 
 // These frequencies are all in hertz, rounded to the nearest int.
-typedef enum SoundNotes {
+typedef enum NoteFrequency {
 	NOTE_REST = 0,
 
 	NOTE_C3 = 131,	NOTE_C4 = 262,	NOTE_C5 = 523,

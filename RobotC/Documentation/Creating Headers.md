@@ -114,18 +114,11 @@ _In every single header, we place it there. OCD? Maybe._
 
 
 ##  Things to `#include`
-You might have noticed a special header file (in the `\Headers\` folder) named `includes.h`--this is very crucial
-if you want everything to "link". Ideally, in every program you write (`.c`), you will only need to include this
-header (and any program specific headers if you must).
-
-All you need to keep in mind is to `#include` headers only, and do so in order of dependency. (e.g., if `foo.h`
-depends on a constant defined in `bar.h`, `#include` `bar.h` before `foo.h`.) Of course, if you end up having some
-sort of circular dependency, that sucks :) (and cannot be resolved). Do _not_ include any of your `.c` `\Library\`
-files, as those should be `#include`d in their corresponding headers (see below).
-
-In each of your header files, remember to `#include` the corresponding `.c` `\Library\` file. And then, since you
-already put the header files in order of dependency, you won't have any "foo is undefined" errors in your `.c` (or
-`.h`) files. And it's all as simple as that.
+Each library should be able to stand on its own. So, just make sure that your `Foo.c` `#include`s the corresponding
+`Foo.h`, and that your `Foo.h` `#include`s every dependency. Of course, you can just `#include` `..\Headers\include.h`
+for convenience (that's why it exists), but if you're going to re-use that library elsewhere or share it somehow, it is
+always good practice to make sure it works as a standalone file. And by `#include`ing exactly what you need, you make
+it clear what is and isn't necessary for your libraries to compile.
 
 
 ## Content

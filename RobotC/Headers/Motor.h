@@ -1,6 +1,7 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 #pragma systemFile
+#include "..\Headers\enums.h"
 
 
 
@@ -25,8 +26,7 @@ void Motor_SetState(TNxtRunState state, tMotor motorName); //DANGER! this functi
 TNxtRunState Motor_GetState(tMotor motorName);
 
 //Types of functions:
-//
-// Low-level; used for setting vars
+// Low-level; used for setting vars; don't use; etc.
 
 
 

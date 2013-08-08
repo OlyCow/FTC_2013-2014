@@ -31,21 +31,20 @@ task PID();
 task main() {
 	initializeGlobalVariables();
 	g_task_main = Task_GetCurrentIndex();
+	bool  shouldNormalize = false;
 	float gyro_angle = 0;
 	float rotation_magnitude = 0;
-	float rotation_angle[4] = {0,0,0,0}; //4=# of drive base motors
-	float rotation_x[4] = {0,0,0,0}; //4=# of drive base motors
-	float rotation_y[4] = {0,0,0,0}; //4=# of drive base motors
+	float rotation_angle[POD_NUM] = {0,0,0,0};
+	float rotation_x[POD_NUM] = {0,0,0,0};
+	float rotation_y[POD_NUM] = {0,0,0,0};
 	float translation_magnitude = 0;
 	float translation_angle = 0;
 	float translation_x = 0;
 	float translation_y = 0;
-	float combined_input_magnitude = 0;
-	float combined_angle[4] = {0,0,0,0}; //4=# of drive base motors
-	float combined_x[4] = {0,0,0,0}; //4=# of drive base motors
-	float combined_y[4] = {0,0,0,0}; //4=# of drive base motors
-	float motor_power[4] = {0,0,0,0}; //4=# of drive base motors
-	float servo_angle[4] = {0,0,0,0}; //4=# of drive base motors
+	float combined_magnitude[POD_NUM] = {0,0,0,0};
+	float combined_angle[POD_NUM] = {0,0,0,0};
+	float combined_x[POD_NUM] = {0,0,0,0};
+	float combined_y[POD_NUM] = {0,0,0,0};
 	Joystick_WaitForStart();
 
 	while (true) {
@@ -60,57 +59,43 @@ task main() {
 							Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2),
 							Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2) ));
 
-		// Actual code starts here. I would advise against touching it (or even
-		// looking at it). It is also difficult to understand without looking at
-		// documentation (which doesn't exist yet) or the engineering notebook
-		// (I haven't finished writing that either). The following is an attempt
-		// at describing the system without using any diagrams (O.o).
-		// Basically, the orientation of the continuous rotation (CR) servos can
-		// be divided into two cases: where they are all facing the same direction,
-		// or if they are arranged in a "circle" (all rotated 45 deg). If there is
-		// any rotation component to the input(s), then the CR servos are rotated
-		// to the latter case (else, the former).
-		// The position that the servo needs to move to is then sent to a different
-		// task: a PID control loop that constantly monitors the input from the
-		// respective encoder, and tries to move the servo to the position fed to
-		// it by `task main()`.
-		// When the input is completely linear, the motor is simply assigned a
-		// (normalized) value of the joystick's magnitude. When there is a rotation
-		// component involved, then the two are added together and normalized. It
-		// is only normalized in this case if the sum of the two magnitudes exceeds
-		// 100% motor power. (Of course, this is after the joystick values are
-		// themselves normalized from 127 to 100.) The translation and rotation
-		// vectors on each servo are then combined, and then the "cross product"
-		// is taken in the direction the servo is pointing (finding the component
-		// of the vector in the same direction as the servo is pointing). That
-		// equals the power assigned to the motor of that wheel pod.
+		// Actual code starts here. It is ridiculously simple, but oddly counter-
+		// intuitive. The rotation vector and the translation vector are combined,
+		// then the final vector is normalized. That is it. This algorithm has the
+		// property of seeming like the direction of the resultant vector is the
+		// average of the input vectors' directions, which it is. It might seem like
+		// there would be inevitable slipping involved in this scheme, but a simple
+		// derivative analysis of a generalized cycloid shows the above algorithm
+		// to describe the direction of the wheel pods perfectly.
 		rotation_magnitude = Joystick_GetRotationMagnitude();
 		translation_x = Joystick_GetTranslationX();
 		translation_y = Joystick_GetTranslationY();
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); //Pythagoras
-		combined_input_magnitude = translation_magnitude+rotation_magnitude;
-		if (combined_input_magnitude>g_FullPower) {
-			Math_Normalize(rotation_magnitude, g_JoystickMax, combined_input_magnitude);
-			Math_Normalize(translation_magnitude, g_JoystickMax, combined_input_magnitude);
-		}
+		translation_angle = Math_RadToDeg(atan2(translation_y, translation_x));
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-			rotation_angle[i] = g_MotorData[i].angleOffset+gyro_angle;
-			rotation_x[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
-			rotation_y[i] = rotation_magnitude*cosDegrees(rotation_angle[i]);
+			rotation_angle[i] = g_MotorData[i].angleOffset+gyro_angle+90; //tangent to circle, +90
+			rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]);
+			rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x;
 			combined_y[i] = translation_y+rotation_y;
-			combined_angle[i] = Math_RadToDeg(atan2(combined_y[i],combined_x[i]));
-			motor_power[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2))*sinDegrees(combined_angle[i]-rotation_angle[i]);
-			if (abs(rotation_magnitude)>0) {
-				servo_angle[i] = g_MotorData[i].angleOffset;
-			} else {
-				translation_angle = Math_RadToDeg(atan2(translation_y,translation_x))-gyro_angle-90; //degrees
-				for (int j=MOTOR_FR; j<=(int)MOTOR_BR; j++) {
-					servo_angle[i] = translation_angle;
-				}
+			combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
+			if (combined_magnitude[i]>g_FullPower) {
+				shouldNormalize = true;
 			}
-			g_MotorData[i].power = motor_power[i];
-			g_ServoData[i].angle = servo_angle[i];
+			combined_angle[i] = Math_RadToDeg(atan2(combined_y[i], combined_x[i]));
+			g_ServoData[i].angle = combined_angle[i];
+		}
+		if (shouldNormalize==true) {
+			float originalMaxPower =	combined_magnitude[0] +
+										combined_magnitude[1] +
+										combined_magnitude[2] +
+										combined_magnitude[3];
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
+			}
+		}
+		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			g_MotorData[i].power = combined_magnitude[i];
 		}
 
 		Task_EndTimeslice();

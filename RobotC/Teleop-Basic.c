@@ -107,9 +107,13 @@ task main() {
 			g_MotorData[i].power = combined_magnitude[i];
 		}
 
-		if ((Joystick_Button(BUTTON_RT)||Joystick_Button(BUTTON_LT))==true) {
+		if (Joystick_Button(BUTTON_RT)==true) {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 6;
+				g_MotorData[i].fineTuneFactor = 4;
+			}
+		} else if (Joystick_Button(BUTTON_LT)==true) {
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				g_MotorData[i].fineTuneFactor = g_FullPower;
 			}
 		} else {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {

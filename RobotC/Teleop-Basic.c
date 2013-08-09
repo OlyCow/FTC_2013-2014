@@ -44,7 +44,7 @@ task main() {
 	float combined_y[POD_NUM] = {0,0,0,0};
 
 	//For `task PID()`:
-	float kP = 2;//1.5
+	float kP = 0.9;
 	float kI = 0;
 	float kD = 0;
 	float error[4] = {0,0,0,0};
@@ -92,7 +92,7 @@ task main() {
 				shouldNormalize = true;
 			}
 			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+360)%360;
-			g_ServoData[i].angle = combined_angle[i];
+			g_ServoData[i].angle = 2*combined_angle[i];
 		}
 		if (shouldNormalize==true) {
 			float originalMaxPower =	combined_magnitude[0] +
@@ -107,7 +107,7 @@ task main() {
 			g_MotorData[i].power = combined_magnitude[i];
 		}
 
-		if (Joystick_Button(BUTTON_RT, CONTROLLER_1)==true) {
+		if ((Joystick_Button(BUTTON_RT)||Joystick_Button(BUTTON_LT))==true) {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 				g_MotorData[i].fineTuneFactor = 6;
 			}
@@ -130,27 +130,23 @@ task main() {
 
 
 
-		error[POD_FR] = g_ServoData[POD_FR].angle - (Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360);
-		term_P[POD_FR] = kP*error[POD_FR];
-		total_correction[POD_FR] = Math_Limit((term_P[POD_FR]), 128);
-
-		error[POD_FL] = g_ServoData[POD_FL].angle - (Math_Normalize(Motor_GetEncoder(motor_FL), (float)1440, 360)%360);
-		term_P[POD_FL] = kP*error[POD_FL];
-		total_correction[POD_FL] = Math_Limit((term_P[POD_FL]), 128);
-
-		error[POD_BL] = g_ServoData[POD_BL].angle - (Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360);
-		term_P[POD_BL] = kP*error[POD_BL];
-		total_correction[POD_BL] = Math_Limit((term_P[POD_BL]), 128);
-
-		error[POD_BR] = g_ServoData[POD_BR].angle - (Math_Normalize(Motor_GetEncoder(motor_BR), (float)1440, 360)%360);
-		term_P[POD_BR] = kP*error[POD_BR];
-		total_correction[POD_BR] = Math_Limit((term_P[POD_BR]), 128);
-
+		error[POD_FR] = g_ServoData[POD_FR].angle-(Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360);
+		error[POD_FL] = g_ServoData[POD_FL].angle-(Math_Normalize(Motor_GetEncoder(motor_FL), (float)1440, 360)%360);
+		error[POD_BL] = g_ServoData[POD_BL].angle-(Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360);
+		error[POD_BR] = g_ServoData[POD_BR].angle-(Math_Normalize(Motor_GetEncoder(motor_BR), (float)1440, 360)%360);
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			if (error[i]>180) {
 				error[i] = error[i]-360;
 			}
 		}
+		term_P[POD_FL] = kP*error[POD_FL];
+		term_P[POD_FR] = kP*error[POD_FR];
+		term_P[POD_BL] = kP*error[POD_BL];
+		term_P[POD_BR] = kP*error[POD_BR];
+		total_correction[POD_FR] = Math_Limit((term_P[POD_FR]), 128);
+		total_correction[POD_FL] = Math_Limit((term_P[POD_FL]), 128);
+		total_correction[POD_BL] = Math_Limit((term_P[POD_BL]), 128);
+		total_correction[POD_BR] = Math_Limit((term_P[POD_BR]), 128);
 
 
 
@@ -159,10 +155,6 @@ task main() {
 		float ANGLE_FL = g_ServoData[MOTOR_FL].angle;
 		float ANGLE_BL = g_ServoData[MOTOR_BL].angle;
 		float ANGLE_BR = g_ServoData[MOTOR_BR].angle;
-		//float CURRENT_FR = nMotorEncoder[motor_BL]/(float)1440*360;
-		//float CURRENT_FL = nMotorEncoder[motor_FL]/(float)1440*360;
-		//float CURRENT_BL = nMotorEncoder[motor_BL]/(float)1440*360;
-		//float CURRENT_BR = nMotorEncoder[motor_BR]/(float)1440*360;
 		float CURRENT_FR = Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360;
 		float CURRENT_FL = Math_Normalize(Motor_GetEncoder(motor_FL), (float)1440, 360)%360;
 		float CURRENT_BL = Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360;
@@ -175,6 +167,10 @@ task main() {
 		nxtDisplayTextLine(5, "FL current%d", CURRENT_FL);
 		nxtDisplayTextLine(6, "BL current%d", CURRENT_BL);
 		nxtDisplayTextLine(7, "BR current%d", CURRENT_BR);
+		//float CURRENT_FR = nMotorEncoder[motor_BL]/(float)1440*360;
+		//float CURRENT_FL = nMotorEncoder[motor_FL]/(float)1440*360;
+		//float CURRENT_BL = nMotorEncoder[motor_BL]/(float)1440*360;
+		//float CURRENT_BR = nMotorEncoder[motor_BR]/(float)1440*360;
 		//nxtDisplayTextLine(2, "BR> Target : %d", ANGLE_BR);
 		//nxtDisplayTextLine(3, "BR> Current: %d", Math_Normalize(Motor_GetEncoder(motor_BR), 1440, 360)%360);
 		//nxtDisplayTextLine(4, "BR> Error  : %d", error[POD_BR]);
@@ -185,6 +181,7 @@ task main() {
 
 		servo[servo_FR] = total_correction[POD_FR]+128;
 		servo[servo_FL] = total_correction[POD_FL]+128;
+		servo[servo_BL] = 128;
 		//servo[servo_BL] = total_correction[POD_BL]+128;
 		servo[servo_BR] = total_correction[POD_BR]+128;
 
@@ -199,6 +196,9 @@ task main() {
 
 
 		//Task_EndTimeslice();
+		if (Joystick_ButtonReleased(BUTTON_X)==true){
+			Sound_Moo();
+		}
 	}
 }
 

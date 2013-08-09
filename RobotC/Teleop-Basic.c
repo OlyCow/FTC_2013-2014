@@ -4,7 +4,7 @@
 #pragma config(Sensor, S4,     ,               sensorI2CMuxController)
 #pragma config(Motor,  mtr_S4_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S4_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S4_C2_1,     motor_BL,      tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S4_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S4_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S3_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S3_C1_2,    servo_FL,             tServoStandard)
@@ -44,7 +44,7 @@ task main() {
 	float combined_y[POD_NUM] = {0,0,0,0};
 
 	//For `task PID()`:
-	float kP = 0.5;//1.5
+	float kP = 2;//1.5
 	float kI = 0;
 	float kD = 0;
 	float error[4] = {0,0,0,0};
@@ -130,17 +130,27 @@ task main() {
 
 
 
-		error[POD_FR] = g_ServoData[POD_FR].angle - (Math_Normalize(Motor_GetEncoder(motor_BL), 1440, 360)%360);
+		error[POD_FR] = g_ServoData[POD_FR].angle - (Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360);
 		term_P[POD_FR] = kP*error[POD_FR];
 		total_correction[POD_FR] = Math_Limit((term_P[POD_FR]), 128);
 
-		error[POD_FL] = g_ServoData[POD_FL].angle - (Math_Normalize(Motor_GetEncoder(motor_FL), 1440, 360)%360);
+		error[POD_FL] = g_ServoData[POD_FL].angle - (Math_Normalize(Motor_GetEncoder(motor_FL), (float)1440, 360)%360);
 		term_P[POD_FL] = kP*error[POD_FL];
 		total_correction[POD_FL] = Math_Limit((term_P[POD_FL]), 128);
 
-		error[POD_BR] = g_ServoData[POD_BR].angle - (Math_Normalize(Motor_GetEncoder(motor_BR), 1440, 360)%360);
+		error[POD_BL] = g_ServoData[POD_BL].angle - (Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360);
+		term_P[POD_BL] = kP*error[POD_BL];
+		total_correction[POD_BL] = Math_Limit((term_P[POD_BL]), 128);
+
+		error[POD_BR] = g_ServoData[POD_BR].angle - (Math_Normalize(Motor_GetEncoder(motor_BR), (float)1440, 360)%360);
 		term_P[POD_BR] = kP*error[POD_BR];
 		total_correction[POD_BR] = Math_Limit((term_P[POD_BR]), 128);
+
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			if (error[i]>180) {
+				error[i] = error[i]-360;
+			}
+		}
 
 
 
@@ -149,10 +159,22 @@ task main() {
 		float ANGLE_FL = g_ServoData[MOTOR_FL].angle;
 		float ANGLE_BL = g_ServoData[MOTOR_BL].angle;
 		float ANGLE_BR = g_ServoData[MOTOR_BR].angle;
-		nxtDisplayTextLine(2, "FR> deg%d; pow%d", ANGLE_FR, total_correction[POD_FR]);
-		nxtDisplayTextLine(3, "FL> deg%d; pow%d", ANGLE_FL, total_correction[POD_FL]);
-		nxtDisplayTextLine(4, "BL> deg%d; pow%d", ANGLE_BL, total_correction[POD_BL]);
-		nxtDisplayTextLine(5, "BR> deg%d; pow%d", ANGLE_BR, total_correction[POD_BR]);
+		//float CURRENT_FR = nMotorEncoder[motor_BL]/(float)1440*360;
+		//float CURRENT_FL = nMotorEncoder[motor_FL]/(float)1440*360;
+		//float CURRENT_BL = nMotorEncoder[motor_BL]/(float)1440*360;
+		//float CURRENT_BR = nMotorEncoder[motor_BR]/(float)1440*360;
+		float CURRENT_FR = Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360;
+		float CURRENT_FL = Math_Normalize(Motor_GetEncoder(motor_FL), (float)1440, 360)%360;
+		float CURRENT_BL = Math_Normalize(Motor_GetEncoder(motor_BL), (float)1440, 360)%360;
+		float CURRENT_BR = Math_Normalize(Motor_GetEncoder(motor_BR), (float)1440, 360)%360;
+		nxtDisplayTextLine(0, "FR deg%d pow%d", ANGLE_FR, total_correction[POD_FR]);
+		nxtDisplayTextLine(1, "FL deg%d pow%d", ANGLE_FL, total_correction[POD_FL]);
+		nxtDisplayTextLine(2, "BL deg%d pow%d", ANGLE_BL, total_correction[POD_BL]);
+		nxtDisplayTextLine(3, "BR deg%d pow%d", ANGLE_BR, total_correction[POD_BR]);
+		nxtDisplayTextLine(4, "FR current%d", CURRENT_FR);
+		nxtDisplayTextLine(5, "FL current%d", CURRENT_FL);
+		nxtDisplayTextLine(6, "BL current%d", CURRENT_BL);
+		nxtDisplayTextLine(7, "BR current%d", CURRENT_BR);
 		//nxtDisplayTextLine(2, "BR> Target : %d", ANGLE_BR);
 		//nxtDisplayTextLine(3, "BR> Current: %d", Math_Normalize(Motor_GetEncoder(motor_BR), 1440, 360)%360);
 		//nxtDisplayTextLine(4, "BR> Error  : %d", error[POD_BR]);

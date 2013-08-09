@@ -24,8 +24,8 @@ int   Math_Limit(int input, int max) {
 	int output = input;
 	if (input>max) {
 		output = max;
-	} else if (input<-max) {
-		output = -max;
+	} else if (input<(-max)) {
+		output = (-max);
 	}
 	return output;
 }
@@ -33,8 +33,8 @@ float Math_Limit(float input, float max) {
 	float output = input;
 	if (input>max) {
 		output = max;
-	} else if (input<-max) {
-		output = -max;
+	} else if (input<(-max)) {
+		output = (-max);
 	}
 	return output;
 }

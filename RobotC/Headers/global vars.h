@@ -42,13 +42,19 @@ joystickData g_PrevJoystickData[2]; //2 controllers.
 
 
 void initializeGlobalVariables() {
+	nMotorEncoder[motor_FR] = 0;
+	nMotorEncoder[motor_FL] = 0;
+	nMotorEncoder[motor_BL] = 0;
+	nMotorEncoder[motor_BR] = 0;
+
 	g_MotorData[MOTOR_FR].angleOffset = 45;
 	g_MotorData[MOTOR_FL].angleOffset = 135;
-	g_MotorData[MOTOR_BL].angleOffset = 225;
-	g_MotorData[MOTOR_BR].angleOffset = 315;
+	g_MotorData[MOTOR_BL].angleOffset = -135;
+	g_MotorData[MOTOR_BR].angleOffset = -45;
 
 	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
 		g_MotorData[i].isReversed = false;
+		g_MotorData[i].fineTuneFactor = 1;
 	}
 
 	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {

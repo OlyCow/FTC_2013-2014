@@ -54,6 +54,13 @@
 //				Button_LB/RB, Controller_1: Rotation.
 //				Button_LT, Controller_1: Stop motors.
 //				Button_RT, Controller_1: Fine-tune motors.
+//				Joystick_R, Controller_2: Simulated gyro.
+//
+//     To troubleshoot, simply download the code, give the robot some input, and
+// look at the screen. "FR/FL/BL/BR" refers to the wheel pod. "set" refers to
+// the target angle for the servo, while "chg" refers to the correction force
+// applied by the servo. "encdr" prints the reading of the encoder (normalized,
+// to compensate for gearing), and "pow" is the power applied to the motor.
 //
 //--------------------------------------------------------------------------->>
 
@@ -65,6 +72,8 @@ task main() {
 
 	// For finding target values:
 	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
+	float gyro_x = 0; // These two will be unnecessary once we get an actual gyro.
+	float gyro_y = 0;
 	bool  shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 	float gyro_angle = 0;
 	float rotation_magnitude = 0; // Components of the vector of rotation.
@@ -99,12 +108,11 @@ task main() {
 		// This part is temporary. We are assigning a gyro angle from a joystick.
 		// An operator moves the joystick to correspond with the front of the drive
 		// base, to simulate the input from an actual gyro. When we get a gyro, fix
-		// this so it returns the actual value of the gyro.
-		gyro_angle = 0; // No "relative" movement - unnecessary complexity for now.
-		//gyro_angle = Math_RadToDeg(atan2(
-		//					Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2),
-		//					Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2) ));
-		//// ^Doesn't work(?) :(
+		// this so it returns the actual value of the gyro. If you just ignore the
+		// second controller, then the movement will be absolute (not relative).
+		gyro_x = Math_TrimDeadzone(Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2));
+		gyro_y = Math_TrimDeadzone(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2));
+		gyro_angle = Math_RadToDeg(atan2(gyro_y, gyro_x)); //atan2(0,0)=0
 
 		// Actual code starts here. It is ridiculously simple, but oddly counter-
 		// intuitive. The rotation vector and the translation vector are combined,
@@ -120,7 +128,7 @@ task main() {
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
 		translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
 		for (int i=POD_FR; i<=(int)POD_BR; i++) {
-			rotation_angle[i] = g_MotorData[i].angleOffset+gyro_angle+90; // Tangent to circle, so +90deg.
+			rotation_angle[i] = g_MotorData[i].angleOffset+90; // Tangent to circle, so +90deg.
 			rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
 			rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
@@ -129,7 +137,7 @@ task main() {
 			if (combined_magnitude[i]>g_FullPower) {
 				shouldNormalize = true;
 			}
-			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+360)%360;
+			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+gyro_angle+360)%360;
 			g_ServoData[i].angle = combined_angle[i];
 		}
 
@@ -166,13 +174,18 @@ task main() {
 
 
 
-		//PID control loop:
+		// PID control loop:
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			current_encoder[i] = ((Math_Normalize(Motor_GetEncoder(Motor_Convert((Motor)i)), (float)1440, 360)+360)%360)/2; // Encoders are geared up by 2.
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i));
+			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
+			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
+			current_encoder[i] += 360; // Value is now >= 0.
+			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between 0 ~ 360.
+			current_encoder[i] /= 2; // Encoders are geared up by 2.
 			error[i] = g_ServoData[i].angle-current_encoder[i];
-			term_P[i] = kP*error[i]; //kP might become an array
-			term_I[i] = 0; //TODO! Has timers :P
-			term_D[i] = 0; //TODO! Has timers :P
+			term_P[i] = kP*error[i]; // kP might become an array
+			term_I[i] = 0; // TODO! Has timers :P
+			term_D[i] = 0; // TODO! Has timers :P
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 			if (error[i]>180) {
 				error[i] = error[i]-360;

@@ -16,18 +16,41 @@
 #include "Headers\includes.h"
 #include "Teleop-Basic.h"
 
+// Automatically starts all tasks defined in this file. (May not be necessary,
+// now that we've merged `task PID()` into `task main()`. This change can be
+// reversed if our code gets too complicated/causes too much lag.)
 #pragma autoStartTasks
+#warning "I can declare warnings at will!"
+#define WILL_EXPLODE // Comment out this line (Ctrl-Q) to prevent this from compiling!
+#ifndef WILL_EXPLODE
+#error "This code will explode!"
+#endif
+
+//---------------- README!!! ------------------------------------------------>>
+//   The version of the code in the commit "WORKING VERSION!!!" is "working".
+// If you somehow mess up the code, you can always revert. So feel free to play
+// around.
+//   Set the robot up as follows: with the front (where the NXT is mounted) facing
+// towards you, the side of the wheel pods with ABS plastic should be on the
+// left. As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
+// `BL`, `BR`. As of this writing, `POD_BL` is missing a bevel gear and encoder,
+// and thus has an omni-wheel attached to it. (This may or may not affect moving
+// forward and rotating at the same time - I cannot test the code because the
+// robot is out of batteries.)
+//   The code is split into 2 chunks: 1. Find the target angle, velocity, etc.
+// 2. Adjust the current angle, velocity, etc. through a PID control. The PID
+// loop doesn't have an "I" or "D" term yet, so it either overshoots (and then
+// starts oscillating), or it never reaches the target ("steady-state error").
+// Go ahead and implement that if you wish!
 
 
-
-//task PID();
 
 task main() {
-	initializeGlobalVariables();
-	disableDiagnosticsDisplay();
+	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
+	disableDiagnosticsDisplay(); // This disables the "samostat.rxe"-like diagnostics screen.
 
-	//For `task main()`:
-	g_task_main = Task_GetCurrentIndex();
+	// For finding target values:
+	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
 	bool  shouldNormalize = false;
 	float gyro_angle = 0;
 	float rotation_magnitude = 0;
@@ -43,15 +66,18 @@ task main() {
 	float combined_x[POD_NUM] = {0,0,0,0};
 	float combined_y[POD_NUM] = {0,0,0,0};
 
-	//For `task PID()`:
+	// For PID control:
 	float kP = 0.9;
-	float kI = 0;
-	float kD = 0;
-	float error[4] = {0,0,0,0};
-	float term_P[4] = {0,0,0,0};
-	float term_I[4] = {0,0,0,0};
-	float term_D[4] = {0,0,0,0};
-	float total_correction[4] = {0,0,0,0};
+	float kI = 0; // These terms aren't implemented yet.
+	float kD = 0; // These terms aren't implemented yet.
+	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
+	float term_P[POD_NUM] = {0,0,0,0};
+	float term_I[POD_NUM] = {0,0,0,0}; // Not implemented. ^
+	float term_D[POD_NUM] = {0,0,0,0}; // Not implemented. ^
+	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
+
+	// For troubleshooting:
+	float ENCODER_VALUE[POD_NUM] = {0,0,0,0};
 
 	Joystick_WaitForStart();
 
@@ -154,7 +180,7 @@ task main() {
 
 
 
-		//Troubleshooting:
+		// Troubleshooting:
 		float ANGLE_FR = g_ServoData[MOTOR_FR].angle;
 		float ANGLE_FL = g_ServoData[MOTOR_FL].angle;
 		float ANGLE_BL = g_ServoData[MOTOR_BL].angle;
@@ -171,21 +197,12 @@ task main() {
 		nxtDisplayTextLine(5, "FL current%d", CURRENT_FL);
 		nxtDisplayTextLine(6, "BL current%d", CURRENT_BL);
 		nxtDisplayTextLine(7, "BR current%d", CURRENT_BR);
-		//float CURRENT_FR = nMotorEncoder[motor_BL]/(float)1440*360;
-		//float CURRENT_FL = nMotorEncoder[motor_FL]/(float)1440*360;
-		//float CURRENT_BL = nMotorEncoder[motor_BL]/(float)1440*360;
-		//float CURRENT_BR = nMotorEncoder[motor_BR]/(float)1440*360;
-		//nxtDisplayTextLine(2, "BR> Target : %d", ANGLE_BR);
-		//nxtDisplayTextLine(3, "BR> Current: %d", Math_Normalize(Motor_GetEncoder(motor_BR), 1440, 360)%360);
-		//nxtDisplayTextLine(4, "BR> Error  : %d", error[POD_BR]);
-		//nxtDisplayTextLine(5, "BR> Power  : %d", total_correction[POD_BR]);
-		//Time_Wait(50);
 
 
 
 		servo[servo_FR] = total_correction[POD_FR]+128;
 		servo[servo_FL] = total_correction[POD_FL]+128;
-		servo[servo_BL] = 128;
+		servo[servo_BL] = 128; // We don't have an encoder mounted for this servo... derp.
 		//servo[servo_BL] = total_correction[POD_BL]+128;
 		servo[servo_BR] = total_correction[POD_BR]+128;
 
@@ -205,49 +222,3 @@ task main() {
 		}
 	}
 }
-
-
-
-//task PID() {
-//	g_task_PID = Task_GetCurrentIndex();
-//	float kP = 20; //might need to make these terms arrays, if inverse-ness is an issue
-//	float kI = 0; //ditto^
-//	float kD = 0; //ditto^
-//	float error[4] = {0,0,0,0};
-//	float term_P[4] = {0,0,0,0};
-//	float term_I[4] = {0,0,0,0};
-//	float term_D[4] = {0,0,0,0};
-//	float total_correction[4] = {0,0,0,0};
-//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-//		Motor_SetEncoder(0, Motor_Convert((Motor)i)); // Can only assign 0, not arbitrary values.
-//	}
-//	Joystick_WaitForStart();
-
-//	while (true) {
-//		//Task_HogCPU(); //This may be unnecessary/too greedy. Remember to remove `Task_ReleaseCPU()` if not needed.
-
-//		// Assigns power to servos in same loop as power is calculated (kinda is rolling assignment)
-//		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-//			error[i] = g_ServoData[i].angle - Math_Normalize(Motor_GetEncoder(Motor_Convert((Motor)i)), 1440, 360);
-//			term_P[i] = kP*error[i]; //kP might become an array; see declaration
-//			term_I[i] = 0; //TODO! Has timers :P
-//			term_D[i] = 0; //TODO! Has timers :P
-//			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
-//		}
-//		servo[servo_FR] = total_correction[POD_FR];
-//		servo[servo_FL] = total_correction[POD_FL];
-//		servo[servo_BL] = total_correction[POD_BL];
-//		servo[servo_BR] = total_correction[POD_BR];
-
-//		// Parse the motor settings and assign them to the motors (in same loop).
-//		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-//			if (g_MotorData[i].isReversed==true) {
-//				g_MotorData[i].power *= -1;
-//			}
-//			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
-//		}
-
-//		//Task_ReleaseCPU();
-//		Task_EndTimeslice(); //Unless `Task_ReleaseCPU()` automatically switches tasks?
-//	}
-//}

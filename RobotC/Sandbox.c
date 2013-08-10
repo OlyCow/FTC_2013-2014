@@ -19,22 +19,8 @@
 
 
 task main() {
-	nMotorEncoder[motor_FR] = 0;
-	nMotorEncoder[motor_FL] = 0;
-	nMotorEncoder[motor_BL] = 0;
-	nMotorEncoder[motor_BR] = 0;
-	float NUMBER_FR = -288;
-	float NUMBER_FL = -388;
-	float NUMBER_BL = -488;
-	float NUMBER_BR = -588;
+	disableDiagnosticsDisplay();
 	Joystick_WaitForStart();
 	while (true) {
-		NUMBER_FR = nMotorEncoder[motor_BL];
-		NUMBER_FL = nMotorEncoder[motor_FL];
-		NUMBER_BR = nMotorEncoder[motor_BR];
-		nxtDisplayCenteredTextLine(2, "FR: %f", NUMBER_FR);
-		nxtDisplayCenteredTextLine(3, "FL: %f", NUMBER_FL);
-		nxtDisplayCenteredTextLine(4, "BL: %f", NUMBER_BL);
-		nxtDisplayCenteredTextLine(5, "BR: %f", NUMBER_BR);
 	}
 }

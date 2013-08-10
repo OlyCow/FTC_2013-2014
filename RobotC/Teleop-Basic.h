@@ -1,5 +1,7 @@
 #include "Headers\enums.h"
 
+
+
 tMotor	Motor_Convert(Motor motorName);
 Motor	Motor_Convert(tMotor motorName);
 TServoIndex Servo_Convert(Servo servoName);
@@ -91,16 +93,16 @@ float	Joystick_GetTranslationY() {
 			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
 }
 float	Joystick_GetRotationMagnitude() {
-	//// Alternate version using triggers:
-	//float rotationMagnitude = 0;
-	//if (Joystick_Button(BUTTON_LT)==true) {
-	//	rotationMagnitude = -100;
-	//} else if (Joystick_Button(BUTTON_RT)==true) {
-	//	rotationMagnitude = 100;
-	//} else {
-	//	rotationMagnitude = 0;
-	//}
-	//return rotationMagnitude;
-	return Math_Limit(
-			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
+	// Alternate version using triggers:
+	float rotationMagnitude = 0;
+	if (Joystick_Button(BUTTON_LB)==true) {
+		rotationMagnitude = -100;
+	} else if (Joystick_Button(BUTTON_RB)==true) {
+		rotationMagnitude = 100;
+	} else {
+		rotationMagnitude = 0;
+	}
+	return rotationMagnitude;
+	//return Math_Limit(
+	//		Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
 }

@@ -10,7 +10,7 @@
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_transmission,   tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_lock,           tServoStandard)
 
 #include "Headers\includes.h"
@@ -50,6 +50,7 @@
 // CONTROLS:	Controller_1, Joystick_R:	Translational movement.
 //				Controller_1, Button_LB/RB:	Rotational movement.
 //				Controller_1, Button_A:		Toggles servo locking.
+//				Controller_1, Button_X:		Toggles transmission gearing.
 //				Controller_1, Button_LT:	Stop motors (adjust pod direction).
 //				Controller_1, Button_RT:	Fine-tune motors.
 //				Controller_2, Joystick_R:	Simulates gyro input.
@@ -100,9 +101,12 @@ task main() {
 	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
 
 	// Miscellaneous variables:
-	bool areLocked = false;
-	const int lockedPosition = 0; // I just made up those numbers.
-	const int unlockedPosition = 180; // I just made up those numbers.
+	bool isLocked = false;
+	const int lockedPosition = 0; // I just made up these numbers.
+	const int unlockedPosition = 180; // I just made up these numbers.
+	bool isLowGear = false;
+	const int lowGearPosition = 0; // I just made up these numbers.
+	const int highGearPosition = 180; // I just made up these numbers.
 	bool isPlaying = false;
 
 	Joystick_WaitForStart();
@@ -233,12 +237,22 @@ task main() {
 
 		// Check if we should lock/release wheelpods.
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
-			areLocked = !areLocked;
+			isLocked = !isLocked;
 		}
-		if (areLocked==true) {
+		if (isLocked==true) {
 			Servo_SetPosition(servo_lock, lockedPosition);
 		} else {
 			Servo_SetPosition(servo_lock, unlockedPosition);
+		}
+
+		// Check if we want to gear motors down.
+		if (Joystick_ButtonPressed(BUTTON_X)==true) {
+			isLowGear = !isLowGear;
+		}
+		if (isLowGear==true) {
+			Servo_SetPosition(servo_transmission, lowGearPosition);
+		} else {
+			Servo_SetPosition(servo_transmission, highGearPosition);
 		}
 
 

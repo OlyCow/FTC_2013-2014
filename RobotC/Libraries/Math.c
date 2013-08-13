@@ -86,6 +86,10 @@ int   Math_Normalize(int input, int originalMax, int newMax) {
 float Math_Normalize(float input, float originalMax, float newMax) {
 	return input*newMax/originalMax;
 }
+void  Math_RotateVector(float x, float y, float theta, AngleUnit rotateUnit) {
+	x = x*cosDegrees(theta)-y*sinDegrees(theta);
+	y = x*sinDegrees(theta)+y*cosDegrees(theta);
+}
 float Math_Sin(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
 }
 float Math_Cos(float input, AngleUnit inputUnit, AngleUnit outputUnit) {

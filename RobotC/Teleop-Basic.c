@@ -90,7 +90,7 @@ task main() {
 	float combined_y[POD_NUM] = {0,0,0,0};
 
 	// For PID control:
-	float kP = 0.9; // Slightly low. When terms "I" and "D" are implemented, increase `kI` or `kD`.
+	float kP = 0.8; // Slightly low. When terms "I" and "D" are implemented, increase `kI` or `kD`.
 	float kI = 0;
 	float kD = 0;
 	float current_encoder[POD_NUM] = {0,0,0,0};
@@ -125,6 +125,7 @@ task main() {
 		rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
 		translation_x = Joystick_GetTranslationX();
 		translation_y = Joystick_GetTranslationY();
+		Math_RotateVector(translation_x, translation_y, 90);
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
 		translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
 		for (int i=POD_FR; i<=(int)POD_BR; i++) {
@@ -160,15 +161,15 @@ task main() {
 		// Set our "fine-tune" factor (amount motor power is divided by).
 		if (Joystick_Button(BUTTON_LT)==true) {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 0; // Since power is fine-tuned w/ multiplication, this zeroes motor power.
+				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
 			}
 		} else if (Joystick_Button(BUTTON_RT)==true) {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 4;
+				g_MotorData[i].fineTuneFactor = 0.25;
 			}
 		} else {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 1;
+				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
 			}
 		}
 
@@ -176,12 +177,11 @@ task main() {
 
 		// PID control loop:
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i));
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/2; // Encoders are geared up by 2.
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between 0 ~ 360.
-			current_encoder[i] /= 2; // Encoders are geared up by 2.
 			error[i] = g_ServoData[i].angle-current_encoder[i];
 			term_P[i] = kP*error[i]; // kP might become an array
 			term_I[i] = 0; // TODO! Has timers :P
@@ -199,7 +199,7 @@ task main() {
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
 			}
-			g_MotorData[i].power /= g_MotorData[i].fineTuneFactor;
+			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
 		}
 

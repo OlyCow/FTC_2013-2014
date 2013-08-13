@@ -87,7 +87,7 @@ task main() {
 	float combined_y[POD_NUM] = {0,0,0,0};
 
 	// For PID control:
-	float kP = 0.8; // Slightly low. When terms "I" and "D" are implemented, increase `kI` or `kD`.
+	float kP = 1.2;
 	float kI = 0.0;
 	float kD = 0.0;
 	float current_encoder[POD_NUM] = {0,0,0,0};
@@ -122,7 +122,7 @@ task main() {
 		rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
 		translation_x = Joystick_GetTranslationX();
 		translation_y = Joystick_GetTranslationY();
-		Math_RotateVector(translation_x, translation_y, 90);
+		Math_RotateVector(translation_x, translation_y, -90);
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
 		translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
 		for (int i=POD_FR; i<=(int)POD_BR; i++) {
@@ -174,15 +174,29 @@ task main() {
 
 		// PID control loop:
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			//// Reverse the encoders! >:D
+			//current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(-2);
 			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/2; // Encoders are geared up by 2.
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between 0 ~ 360.
 			error[i] = g_ServoData[i].angle-current_encoder[i];
-			if (abs(error[i])>180) {
+			if (error[i]>180) {
 				error[i] = error[i]-360;
-			}
+			} else if (error[i]<-180) {
+				error[i] = error[i]+360;
+			} // TODO: Can the above chain be simplified to something having to do with modulo 180?
+			//// This might work, kinda risky though, just because I'm scared.
+			//if (error[i]>90) {
+			//	error[i] = error[i]-180;
+			//	g_MotorData[i].isReversed = true;
+			//} else if (error[i]<90) {
+			//	error[i] = error[i]+180;
+			//	g_MotorData[i].isReversed = true;
+			//} else {
+			//	g_MotorData[i].isReversed = false;
+			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
 			Math_TrimDeadband(error[i], g_EncoderDeadband);
 			term_P[i] = kP*error[i]; // kP might become an array
 			term_I[i] = 0; // TODO! Has timers :P

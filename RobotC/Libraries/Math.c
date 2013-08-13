@@ -6,16 +6,16 @@
 
 
 
-int   Math_TrimDeadzone(int input, int deadzone) {
+int   Math_TrimDeadband(int input, int deadband) {
 	int output = 0;
-	if (abs(input)>deadzone==true) {
+	if (abs(input)>deadband==true) {
 		output = input;
 	}
 	return output;
 }
-float Math_TrimDeadzone(float input, float deadzone) {
+float Math_TrimDeadband(float input, float deadband) {
 	float output = 0;
-	if (abs(input)>deadzone==true) {
+	if (abs(input)>deadband==true) {
 		output = input;
 	}
 	return output;

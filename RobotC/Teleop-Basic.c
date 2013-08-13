@@ -16,13 +16,10 @@
 #include "Headers\includes.h"
 #include "Teleop-Basic.h"
 
-// Automatically starts all tasks defined in this file. (May not be necessary,
-// now that we've merged `task PID()` into `task main()`. This change can be
-// reversed if our code gets too complicated/causes too much lag.)
+// Automatically starts all tasks defined in this file.
 #pragma autoStartTasks
 
-#warning "I can declare warnings at will!"
-//#define WILL_EXPLODE // Un-comment this line (Ctrl-Q) to prevent this from compiling!
+//#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #error "This code will explode!"
 #endif
@@ -72,18 +69,18 @@ task main() {
 
 	// For finding target values:
 	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
-	float gyro_x = 0; // These two will be unnecessary once we get an actual gyro.
-	float gyro_y = 0;
+	float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
+	float gyro_y = 0.0;
 	bool  shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
-	float gyro_angle = 0;
-	float rotation_magnitude = 0; // Components of the vector of rotation.
+	float gyro_angle = 0.0;
+	float rotation_magnitude = 0.0; // Components of the vector of rotation.
 	float rotation_angle[POD_NUM] = {0,0,0,0};
 	float rotation_x[POD_NUM] = {0,0,0,0};
 	float rotation_y[POD_NUM] = {0,0,0,0};
-	float translation_magnitude = 0; // Components of the vector of translation.
-	float translation_angle = 0;
-	float translation_x = 0;
-	float translation_y = 0;
+	float translation_magnitude = 0.0; // Components of the vector of translation.
+	float translation_angle = 0.0;
+	float translation_x = 0.0;
+	float translation_y = 0.0;
 	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
 	float combined_angle[POD_NUM] = {0,0,0,0};
 	float combined_x[POD_NUM] = {0,0,0,0};
@@ -91,8 +88,8 @@ task main() {
 
 	// For PID control:
 	float kP = 0.8; // Slightly low. When terms "I" and "D" are implemented, increase `kI` or `kD`.
-	float kI = 0;
-	float kD = 0;
+	float kI = 0.0;
+	float kD = 0.0;
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float term_P[POD_NUM] = {0,0,0,0};
@@ -110,8 +107,8 @@ task main() {
 		// base, to simulate the input from an actual gyro. When we get a gyro, fix
 		// this so it returns the actual value of the gyro. If you just ignore the
 		// second controller, then the movement will be absolute (not relative).
-		gyro_x = Math_TrimDeadzone(Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2));
-		gyro_y = Math_TrimDeadzone(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2));
+		gyro_x = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2));
+		gyro_y = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2));
 		gyro_angle = Math_RadToDeg(atan2(gyro_y, gyro_x)); //atan2(0,0)=0
 
 		// Actual code starts here. It is ridiculously simple, but oddly counter-
@@ -183,13 +180,14 @@ task main() {
 			current_encoder[i] += 360; // Value is now >= 0.
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between 0 ~ 360.
 			error[i] = g_ServoData[i].angle-current_encoder[i];
+			if (abs(error[i])>180) {
+				error[i] = error[i]-360;
+			}
+			Math_TrimDeadband(error[i], g_EncoderDeadband);
 			term_P[i] = kP*error[i]; // kP might become an array
 			term_I[i] = 0; // TODO! Has timers :P
 			term_D[i] = 0; // TODO! Has timers :P
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
-			if (error[i]>180) {
-				error[i] = error[i]-360;
-			}
 		}
 
 
@@ -208,7 +206,7 @@ task main() {
 		servo[servo_FR] = total_correction[POD_FR]+128; // +128, because that's how continuous rotation servos work.
 		servo[servo_FL] = total_correction[POD_FL]+128;
 		servo[servo_BL] = 128; // We don't have an encoder mounted for this servo... derp.
-		//servo[servo_BL] = total_correction[POD_BL]+128; // Un-comment this when we do mount one.
+		//servo[servo_BL] = total_correction[POD_BL]+128; // Uncomment this when we do mount one.
 		servo[servo_BR] = total_correction[POD_BR]+128;
 
 

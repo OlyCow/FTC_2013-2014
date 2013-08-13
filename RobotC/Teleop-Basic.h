@@ -1,4 +1,5 @@
 #include "Headers\enums.h"
+#include "Headers\Math.h"
 
 
 
@@ -86,11 +87,11 @@ Servo	Servo_Convert(TServoIndex servoName) {
 }
 float	Joystick_GetTranslationX() {
 	return Math_Limit(
-			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
+			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
 }
 float	Joystick_GetTranslationY() {
 	return Math_Limit(
-			Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
+			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
 }
 float	Joystick_GetRotationMagnitude() {
 	// Alternate version using triggers:
@@ -104,5 +105,5 @@ float	Joystick_GetRotationMagnitude() {
 	}
 	return rotationMagnitude;
 	//return Math_Limit(
-	//		Math_TrimDeadzone((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
+	//		Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
 }

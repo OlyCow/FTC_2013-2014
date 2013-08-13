@@ -11,7 +11,7 @@
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S2_C1_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_lock,           tServoStandard)
 
 #include "Headers\includes.h"
 #include "Teleop-Basic.h"
@@ -47,11 +47,13 @@
 // error"). Go ahead and implement that if you wish! #3 Display data on the NXT
 // screen for debugging purposes. Believe me, this is useful :)
 //
-// CONTROLS:	Joystick_R, Controller_1: Movement.
-//				Button_LB/RB, Controller_1: Rotation.
-//				Button_LT, Controller_1: Stop motors.
-//				Button_RT, Controller_1: Fine-tune motors.
-//				Joystick_R, Controller_2: Simulated gyro.
+// CONTROLS:	Controller_1, Joystick_R:	Translational movement.
+//				Controller_1, Button_LB/RB:	Rotational movement.
+//				Controller_1, Button_A:		Toggles servo locking.
+//				Controller_1, Button_LT:	Stop motors (adjust pod direction).
+//				Controller_1, Button_RT:	Fine-tune motors.
+//				Controller_2, Joystick_R:	Simulates gyro input.
+//				Controller_1, Button_Y:		Moo.
 //
 //     To troubleshoot, simply download the code, give the robot some input, and
 // look at the screen. "FR/FL/BL/BR" refers to the wheel pod. "set" refers to
@@ -96,6 +98,12 @@ task main() {
 	float term_I[POD_NUM] = {0,0,0,0};
 	float term_D[POD_NUM] = {0,0,0,0};
 	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
+
+	// Miscellaneous variables:
+	bool areLocked = false;
+	const int lockedPosition = 0; // I just made up those numbers.
+	const int unlockedPosition = 180; // I just made up those numbers.
+	bool isPlaying = false;
 
 	Joystick_WaitForStart();
 
@@ -223,6 +231,16 @@ task main() {
 		//servo[servo_BL] = total_correction[POD_BL]+128; // Uncomment this when we do mount one.
 		servo[servo_BR] = total_correction[POD_BR]+128;
 
+		// Check if we should lock/release wheelpods.
+		if (Joystick_ButtonPressed(BUTTON_A)==true) {
+			areLocked = !areLocked;
+		}
+		if (areLocked==true) {
+			Servo_SetPosition(servo_lock, lockedPosition);
+		} else {
+			Servo_SetPosition(servo_lock, unlockedPosition);
+		}
+
 
 
 		// Troubleshooting display:
@@ -236,5 +254,21 @@ task main() {
 		nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
 
 		//Task_EndTimeslice(); // This was used when we had multiple tasks.
+
+
+
+		// Check if "moo.rso" should be playing. (EASTER EGG!)
+		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
+			isPlaying = !isPlaying;
+		}
+		if (isPlaying==true) {
+			if (Sound_IsPlaying()==false) {
+				Sound_Moo();
+			}
+		} else {
+			if (Sound_IsPlaying()==true) {
+				Sound_ClearQueue();
+			}
+		}
 	}
 }

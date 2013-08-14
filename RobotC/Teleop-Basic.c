@@ -74,7 +74,6 @@ task main() {
 	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
 	float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
 	float gyro_y = 0.0;
-	bool  shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 	float gyro_angle = 0.0;
 	float rotation_magnitude = 0.0; // Components of the vector of rotation.
 	float rotation_angle[POD_NUM] = {0,0,0,0};
@@ -88,6 +87,7 @@ task main() {
 	float combined_angle[POD_NUM] = {0,0,0,0};
 	float combined_x[POD_NUM] = {0,0,0,0};
 	float combined_y[POD_NUM] = {0,0,0,0};
+	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 
 	// For PID control:
 	float kP = 1.2;
@@ -99,6 +99,7 @@ task main() {
 	float term_I[POD_NUM] = {0,0,0,0};
 	float term_D[POD_NUM] = {0,0,0,0};
 	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
+	bool isAligned = true; // If false, cut motor power so that wheel pod can get aligned.
 
 	// Miscellaneous variables:
 	bool isLocked = false;
@@ -209,12 +210,19 @@ task main() {
 			//} else {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
+			if (error[i]>30) {
+				isAligned = false;
+			}
 			Math_TrimDeadband(error[i], g_EncoderDeadband);
 			term_P[i] = kP*error[i]; // kP might become an array
 			term_I[i] = 0; // TODO! Has timers :P
 			term_D[i] = 0; // TODO! Has timers :P
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}
+		if (isAligned==false) {
+			g_MotorData[i].power *= 0.2;
+		}
+		isAligned = true; // Reset this in preparation for next iteration.
 
 
 

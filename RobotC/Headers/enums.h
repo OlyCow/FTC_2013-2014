@@ -107,6 +107,12 @@ typedef enum AngleUnit {
 	UNIT_GRADIAN	= 2,
 };
 
+typedef enum Aligned {
+	ALIGNED_FAR		= 0,
+	ALIGNED_MEDIUM	= 1,
+	ALIGNED_CLOSE	= 2,
+};
+
 // These frequencies are all in hertz, rounded to the nearest int.
 typedef enum NoteFrequency {
 	NOTE_REST = 0,

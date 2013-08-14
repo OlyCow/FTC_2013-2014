@@ -99,7 +99,7 @@ task main() {
 	float term_I[POD_NUM] = {0,0,0,0};
 	float term_D[POD_NUM] = {0,0,0,0};
 	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
-	bool isAligned = true; // If false, cut motor power so that wheel pod can get aligned.
+	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 
 	// Miscellaneous variables:
 	bool isLocked = false;
@@ -135,7 +135,6 @@ task main() {
 		rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
 		translation_x = Joystick_GetTranslationX();
 		translation_y = Joystick_GetTranslationY();
-		Math_RotateVector(translation_x, translation_y, -90);
 		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
 		translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
 		for (int i=POD_FR; i<=(int)POD_BR; i++) {
@@ -187,9 +186,7 @@ task main() {
 
 		// PID control loop:
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			//// Reverse the encoders! >:D
-			//current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(-2);
-			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/2; // Encoders are geared up by 2.
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
@@ -210,8 +207,12 @@ task main() {
 			//} else {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
-			if (abs(error[i])>30) {
-				isAligned = false;
+			if (abs(error[i])>36) { //36 is an arbitrary number :P
+				isAligned = ALIGNED_FAR;
+			} else if (abs(error[i])>12) {
+				isAligned = ALIGNED_MEDIUM;
+			} else {
+				isAligned = ALIGNED_CLOSE;
 			}
 			Math_TrimDeadband(error[i], g_EncoderDeadband);
 			term_P[i] = kP*error[i]; // kP might become an array
@@ -219,12 +220,19 @@ task main() {
 			term_D[i] = 0; // TODO! Has timers :P
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}
-		if (isAligned==false) {
-			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].power *= 0.2;
+		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			switch (isAligned) {
+				case ALIGNED_FAR:
+					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
+					break;
+				case ALIGNED_MEDIUM:
+					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
+					break;
+				//case ALIGNED_CLOSE: // Not checking this condition may increase performance.
+				//	g_MotorData[i].fineTuneFactor *= 1; // Keeps it the same.
+				//	break;
 			}
 		}
-		isAligned = true; // Reset this in preparation for next iteration.
 
 
 

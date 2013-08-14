@@ -161,7 +161,7 @@ task main() {
 				}
 			}
 			for (int i=POD_FR; i<=(int)POD_BR; i++) {
-				Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
+				combined_magnitude[i] = Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
 			}
 		}
 		for (int i=POD_FR; i<=(int)POD_BR; i++) {
@@ -210,7 +210,7 @@ task main() {
 			//} else {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
-			if (error[i]>30) {
+			if (abs(error[i])>30) {
 				isAligned = false;
 			}
 			Math_TrimDeadband(error[i], g_EncoderDeadband);

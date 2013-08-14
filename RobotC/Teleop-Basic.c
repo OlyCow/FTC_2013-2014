@@ -220,7 +220,9 @@ task main() {
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}
 		if (isAligned==false) {
-			g_MotorData[i].power *= 0.2;
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				g_MotorData[i].power *= 0.2;
+			}
 		}
 		isAligned = true; // Reset this in preparation for next iteration.
 

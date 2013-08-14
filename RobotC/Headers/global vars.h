@@ -16,9 +16,11 @@ const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 // The threshold for IR values to count as detected.
 const int g_IRthreshold = 10; //units?
 
-// The deadzone for joysticks (eliminates humming).
-// The highest we've ever recorded is +/-8.
-const int g_JoystickDeadZone = 10;
+// Highest "noise" we've ever recorded is +/-8.
+const int g_JoystickDeadband = 10;
+
+// This number is just a working guess. Not verified at all.
+const float g_EncoderDeadband = 1.0;
 
 // The highest value a joystick can go to. Not set to 128 we prefer to
 // assign too much power than not assign enough.

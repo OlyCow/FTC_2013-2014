@@ -162,11 +162,15 @@ task main() {
 			for (int i=POD_FR; i<=(int)POD_BR; i++) {
 				combined_magnitude[i] = Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
 			}
+			shouldNormalize = false; // Reset this for the next iteration.
 		}
 		for (int i=POD_FR; i<=(int)POD_BR; i++) {
 			g_MotorData[i].power = combined_magnitude[i];
 		}
 
+		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
+		// while holding both triggers stops movement? The `if... else if...` structure
+		// is also a problem (BUTTON_LT takes precedence over BUTTON_RT).
 		// Set our "fine-tune" factor (amount motor power is divided by).
 		if (Joystick_Button(BUTTON_LT)==true) {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {

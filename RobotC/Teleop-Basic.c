@@ -2,10 +2,10 @@
 #pragma config(Hubs,  S2, HTServo,  none,     none,     none)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
@@ -90,7 +90,18 @@ task main() {
 	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 
 	// For PID control:
-	float kP = 1.2;
+	float time_current = Time_GetTime(TIMER_PROGRAM);
+	float time_previous = time_current;
+	float time_difference = time_current-time_previous;
+	const int kI_delay = 10;
+	float error_accumulated[POD_NUM][kI_delay];
+	for (int i=0; i<(int)POD_NUM; i++) {
+		for (int j=0; j<kI_delay; j++) {
+			error_accumulated[i][j] = 0;
+		}
+	}
+	float error_accumulated_total[POD_NUM] = {0,0,0,0};
+	float kP = 4.8;
 	float kI = 0.0;
 	float kD = 0.0;
 	float current_encoder[POD_NUM] = {0,0,0,0};
@@ -103,14 +114,18 @@ task main() {
 
 	// Miscellaneous variables:
 	bool isLocked = false;
-	const int lockedPosition = 0; // I just made up these numbers.
-	const int unlockedPosition = 180; // I just made up these numbers.
+	const int lockedPosition = 100; // I just made up these numbers.
+	const int unlockedPosition = 20; // I just made up these numbers.
 	bool isLowGear = false;
 	const int lowGearPosition = 0; // I just made up these numbers.
-	const int highGearPosition = 180; // I just made up these numbers.
+	const int highGearPosition = 255; // I just made up these numbers.
 	bool isPlaying = false;
 
 	Joystick_WaitForStart();
+
+	time_previous = 0;
+	time_current = Time_GetTime(TIMER_PROGRAM);
+	time_difference = time_current-time_previous;
 
 	while (true) {
 		Joystick_UpdateData();
@@ -142,6 +157,7 @@ task main() {
 			rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
 			rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
+			combined_x[i] = -combined_x[i];
 			combined_y[i] = translation_y+rotation_y[i];
 			combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
 			if (combined_magnitude[i]>g_FullPower) {
@@ -178,7 +194,7 @@ task main() {
 			}
 		} else if (Joystick_Button(BUTTON_RT)==true) {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 0.25;
+				g_MotorData[i].fineTuneFactor = 0.2;
 			}
 		} else {
 			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
@@ -190,6 +206,9 @@ task main() {
 
 		// PID control loop:
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			time_previous = time_current;
+			time_current = Time_GetTime(TIMER_PROGRAM);
+			time_difference = time_current-time_previous;
 			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
@@ -211,6 +230,11 @@ task main() {
 			//} else {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
+			//Math_Normalize(error[i], 10, 1);
+			Math_TrimDeadband(error[i], g_EncoderDeadband);
+			for (int j=0; j<kI_delay; j++) {
+				error_accumulated_total[i] += error_accumulated[i][j];
+			}
 			if (abs(error[i])>36) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
 			} else if (abs(error[i])>12) {
@@ -218,9 +242,8 @@ task main() {
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
-			Math_TrimDeadband(error[i], g_EncoderDeadband);
 			term_P[i] = kP*error[i]; // kP might become an array
-			term_I[i] = 0; // TODO! Has timers :P
+			term_I[i] = kI*error_accumulated_total[i]; // TODO! Has timers :P
 			term_D[i] = 0; // TODO! Has timers :P
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}

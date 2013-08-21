@@ -27,19 +27,19 @@
 //---------------- README!!! ------------------------------------------------>>
 //
 //     Set the robot up as follows: with the front (where the NXT is mounted)
-// facing towards you, the side of the wheel pods with ABS plastic should be on
-// the left. As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
-// `BL`, `BR`. As of this writing, `POD_BL` is missing a bevel gear and encoder,
-// and thus has an omni-wheel attached to it. (This may or may not affect moving
-// forward and rotating at the same time - I cannot test the code because the
-// robot is out of batteries.)
+// facing towards you, the side of the wheel pods with 3D-printed gears should
+// face the back. As defined in "enums.h", the wheel pods are "numbered": `FR`,
+// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). As of this
+// writing, `POD_BL` is missing a bevel gear and motor axle (for an encoder),
+// and thus has an omni-wheel attached to it. This causes the robot not to be
+// able to go in straight lines at some orientations, since the motor power on
+// one side is greater than that on the other.
 //
-//     The code is split into a few chunks: #1 Find the target angle, velocity,
-// etc. #2 Adjust the current angle, velocity, etc. through a PID control. The
-// PID loop doesn't have an "I" or "D" term yet, so it either overshoots (and
-// then starts oscillating), or it never reaches the set-point ("steady-state
-// error"). Go ahead and implement that if you wish! #3 Display data on the NXT
-// screen for debugging purposes. Believe me, this is useful :)
+//     The code is currently split into 3 loops, which will be split into their
+// own tasks once they are completed. #1 Find the target angle, velocity, etc.
+// #2 Adjust the current angle, velocity, etc. through a PID control. The PID
+// loop isn't completely implemented yet; go ahead and do that! :) #3 Display
+// data on the NXT screen for debugging purposes. Believe me, this is useful :)
 //
 // CONTROLS:	Controller_1, Joystick_R:	Translational movement.
 //				Controller_1, Button_LB/RB:	Rotational movement.
@@ -210,7 +210,7 @@ task main() {
 			time_previous = time_current;
 			time_current = Time_GetTime(TIMER_PROGRAM);
 			time_difference = time_current-time_previous;
-			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(2); // Encoders are geared up by 2 (and "backwards"(?)).
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
@@ -274,11 +274,11 @@ task main() {
 
 		// Assign the power settings to the servos. Can't make a loop yet, since one
 		// of the assignments is different from the rest. >:(
-		servo[servo_FR] = total_correction[POD_FR]+128; // +128, because that's how continuous rotation servos work.
-		servo[servo_FL] = total_correction[POD_FL]+128;
+		servo[servo_FR] = -total_correction[POD_FR]+128; // +128, because that's how continuous rotation servos work.
+		servo[servo_FL] = -total_correction[POD_FL]+128;
 		servo[servo_BL] = 128; // We don't have an encoder mounted for this servo... derp.
-		//servo[servo_BL] = total_correction[POD_BL]+128; // Uncomment this when we do mount one.
-		servo[servo_BR] = total_correction[POD_BR]+128;
+		//servo[servo_BL] = -total_correction[POD_BL]+128; // Uncomment this when we do mount one.
+		servo[servo_BR] = -total_correction[POD_BR]+128;
 
 		// Check if we should lock/release wheelpods.
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {

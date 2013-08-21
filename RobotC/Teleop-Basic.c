@@ -26,12 +26,6 @@
 
 //---------------- README!!! ------------------------------------------------>>
 //
-//     The version of the code in the commit "WORKING VERSION!!!" is "working".
-// If you somehow mess up the code, you can always revert. So feel free to play
-// around. (Commit hash: "bdf8abe6a7959a4b2f11036f3a48511afd36288d") To actually
-// use that commit, don't forget to switch the encoder wire from FR to BL (the
-// encoder wasn't working at the time).
-//
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with ABS plastic should be on
 // the left. As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
@@ -68,7 +62,8 @@
 
 task main() {
 	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
-	disableDiagnosticsDisplay(); // This disables the "samostat.rxe"-like diagnostics screen.
+	disableDiagnosticsDisplay(); // Disables the "samostat.rxe"-like diagnostics screen which
+	// comes with "JoystickDriver.c".
 
 	// For finding target values:
 	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
@@ -85,6 +80,7 @@ task main() {
 	float translation_y = 0.0;
 	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
 	float combined_angle[POD_NUM] = {0,0,0,0};
+	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	float combined_x[POD_NUM] = {0,0,0,0};
 	float combined_y[POD_NUM] = {0,0,0,0};
 	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
@@ -101,7 +97,7 @@ task main() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0};
-	float kP = 4.8;
+	float kP = 3.6;
 	float kI = 0.0;
 	float kD = 0.0;
 	float current_encoder[POD_NUM] = {0,0,0,0};
@@ -157,13 +153,18 @@ task main() {
 			rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
 			rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
-			combined_x[i] = -combined_x[i];
+			combined_x[i] = combined_x[i];
 			combined_y[i] = translation_y+rotation_y[i];
 			combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
 			if (combined_magnitude[i]>g_FullPower) {
 				shouldNormalize = true;
 			}
 			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+gyro_angle+360)%360;
+			if ((combined_angle[i]==0)&&(combined_magnitude[i]==0)) {
+				combined_angle[i] = combined_angle_prev[i];
+			} else {
+				combined_angle_prev[i] = combined_angle[i];
+			}
 			g_ServoData[i].angle = combined_angle[i];
 		}
 
@@ -209,18 +210,18 @@ task main() {
 			time_previous = time_current;
 			time_current = Time_GetTime(TIMER_PROGRAM);
 			time_difference = time_current-time_previous;
-			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(-2); // Encoders are geared up by 2 (and "backwards").
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
-			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
+			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
-			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between 0 ~ 360.
+			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between 0 ~ 360.
 			error[i] = g_ServoData[i].angle-current_encoder[i];
 			if (error[i]>180) {
 				error[i] = error[i]-360;
 			} else if (error[i]<-180) {
 				error[i] = error[i]+360;
 			} // TODO: Can the above chain be simplified to something having to do with modulo 180?
-			//// This might work, kinda risky though, just because I'm scared.
+			//// This works, but doesn't eliminate the 180 deg turns. :?
 			//if (error[i]>90) {
 			//	error[i] = error[i]-180;
 			//	g_MotorData[i].isReversed = true;
@@ -230,7 +231,6 @@ task main() {
 			//} else {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
-			//Math_Normalize(error[i], 10, 1);
 			Math_TrimDeadband(error[i], g_EncoderDeadband);
 			for (int j=0; j<kI_delay; j++) {
 				error_accumulated_total[i] += error_accumulated[i][j];
@@ -255,9 +255,9 @@ task main() {
 				case ALIGNED_MEDIUM:
 					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
 					break;
-				//case ALIGNED_CLOSE: // Not checking this condition may increase performance.
-				//	g_MotorData[i].fineTuneFactor *= 1; // Keeps it the same.
-				//	break;
+				// Not checking the "ALIGNED_CLOSE" condition may increase performance.
+				// If we were to check it, the assignment would look like this:
+				// g_MotorData[i].fineTuneFactor *= 1; // Keeps it the same.
 			}
 		}
 
@@ -311,6 +311,10 @@ task main() {
 		nxtDisplayTextLine(5, "FL encdr%d pow%d", current_encoder[POD_FL], g_MotorData[POD_FL].power);
 		nxtDisplayTextLine(6, "BL encdr%d pow%d", current_encoder[POD_BL], g_MotorData[POD_BL].power);
 		nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
+		//// The following will display the "raw" encoder value of POD_FL, and
+		//// you can see for yourself that it drifts. Ungood. Very ungood.
+		//int ENCODER_RAW = Motor_GetEncoder(Motor_Convert((Motor)MOTOR_FL));
+		//nxtDisplayCenteredBigTextLine(3, "RAW: %d", ENCODER_RAW);
 
 		//Task_EndTimeslice(); // This was used when we had multiple tasks.
 

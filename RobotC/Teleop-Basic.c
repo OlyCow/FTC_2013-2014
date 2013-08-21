@@ -2,10 +2,10 @@
 #pragma config(Hubs,  S2, HTServo,  none,     none,     none)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
@@ -28,7 +28,7 @@
 //
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with 3D-printed gears should
-// face the back. As defined in "enums.h", the wheel pods are "numbered": `FR`,
+// face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
 // `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). As of this
 // writing, `POD_BL` is missing a bevel gear and motor axle (for an encoder),
 // and thus has an omni-wheel attached to it. This causes the robot not to be
@@ -97,9 +97,9 @@ task main() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0};
-	float kP = 3.6;
-	float kI = 0.0;
-	float kD = 0.0;
+	float kP[POD_NUM] = {2.4, 2.4, 2.4, 14.4}; // {FR, FL, BL, BR} // BR scrapes. What it really needs is a larger kI.
+	float kI[POD_NUM] = {0.0, 0.0, 0.0, 0.0}; // {FR, FL, BL, BR}
+	float kD[POD_NUM] = {0.0, 0.0, 0.0, 0.0}; // {FR, FL, BL, BR}
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float term_P[POD_NUM] = {0,0,0,0};
@@ -210,7 +210,7 @@ task main() {
 			time_previous = time_current;
 			time_current = Time_GetTime(TIMER_PROGRAM);
 			time_difference = time_current-time_previous;
-			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(2); // Encoders are geared up by 2 (and "backwards"(?)).
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
@@ -242,8 +242,8 @@ task main() {
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
-			term_P[i] = kP*error[i]; // kP might become an array
-			term_I[i] = kI*error_accumulated_total[i]; // TODO! Has timers :P
+			term_P[i] = kP[i]*error[i]; // kP might become an array
+			term_I[i] = kI[i]*error_accumulated_total[i]; // TODO! Has timers :P
 			term_D[i] = 0; // TODO! Has timers :P
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}

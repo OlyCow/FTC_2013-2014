@@ -80,7 +80,7 @@ task main() {
 	float translation_y = 0.0;
 	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
 	float combined_angle[POD_NUM] = {0,0,0,0};
-	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
+	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
 	float combined_x[POD_NUM] = {0,0,0,0};
 	float combined_y[POD_NUM] = {0,0,0,0};
 	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
@@ -96,10 +96,10 @@ task main() {
 			error_accumulated[i][j] = 0;
 		}
 	}
-	float error_accumulated_total[POD_NUM] = {0,0,0,0};
-	float kP[POD_NUM] = {2.4, 2.4, 2.4, 14.4}; // {FR, FL, BL, BR} // BR scrapes. What it really needs is a larger kI.
-	float kI[POD_NUM] = {0.0, 0.0, 0.0, 0.0}; // {FR, FL, BL, BR}
-	float kD[POD_NUM] = {0.0, 0.0, 0.0, 0.0}; // {FR, FL, BL, BR}
+	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
+	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.5}; // Still very rough.
+	float kI[POD_NUM] = {0.003,	0.01,	0.01,	0.03};
+	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float term_P[POD_NUM] = {0,0,0,0};
@@ -232,9 +232,12 @@ task main() {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
 			Math_TrimDeadband(error[i], g_EncoderDeadband);
-			for (int j=0; j<kI_delay; j++) {
-				error_accumulated_total[i] += error_accumulated[i][j];
+			error_accumulated_total[i] -= error_accumulated[i][kI_delay-1]; // Array indices.
+			error_accumulated_total[i] += error_accumulated[i][0];
+			for (int j=kI_delay-1; j>0; j--) { //`j=kI_delay-1` because we are dealing with array indices.
+				error_accumulated[i][j] = error_accumulated[i][j-1];
 			}
+			error_accumulated[i][0] = error[i]*time_difference;
 			if (abs(error[i])>36) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
 			} else if (abs(error[i])>12) {
@@ -256,8 +259,6 @@ task main() {
 					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
 					break;
 				// Not checking the "ALIGNED_CLOSE" condition may increase performance.
-				// If we were to check it, the assignment would look like this:
-				// g_MotorData[i].fineTuneFactor *= 1; // Keeps it the same.
 			}
 		}
 

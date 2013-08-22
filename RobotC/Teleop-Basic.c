@@ -270,7 +270,7 @@ task main() {
 
 		// Assign the power settings to the motors (already parsed).
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-			g_MotorData[i].power += total_correction[i]/10;
+			g_MotorData[i].power += total_correction[i]/(float)(1); // Correcting for servo rotation (doesn't work yet).
 			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
@@ -279,13 +279,18 @@ task main() {
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
 		}
 
-		// Assign the power settings to the servos. Can't make a loop yet, since one
-		// of the assignments is different from the rest. >:(
-		servo[servo_FR] = -total_correction[POD_FR]+128; // +128, because that's how continuous rotation servos work.
-		servo[servo_FL] = -total_correction[POD_FL]+128;
-		servo[servo_BL] = 128; // We don't have an encoder mounted for this servo... derp.
-		//servo[servo_BL] = -total_correction[POD_BL]+128; // Uncomment this when we do mount one.
-		servo[servo_BR] = -total_correction[POD_BR]+128;
+		// Assign the power settings to the servos.
+		total_correction[POD_BL] = 0; // Remove this line once we get this pod working.
+		Servo_SetPower(servo_FR, -total_correction[POD_FR]);
+		Servo_SetPower(servo_FL, -total_correction[POD_FL]);
+		Servo_SetPower(servo_BL, -total_correction[POD_BL]);
+		Servo_SetPower(servo_BR, -total_correction[POD_BR]);
+		//// This isn't working :'( Something to do with `enum TServoIndex` being an undefined macro?
+		//for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		//	int placeholder = (int)(Servo_Convert(SERVO_FR));
+		//	servo[placeholder] = -total_correction[i];
+		//	//Servo_SetPower(Servo_Convert((Servo)i), -total_correction[i]); // Servos are backwards (geared once).
+		//}
 
 		// Check if we should lock/release wheelpods.
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {

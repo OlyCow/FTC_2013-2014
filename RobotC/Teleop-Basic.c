@@ -99,9 +99,11 @@ task main() {
 	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
 	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.5}; // Still very rough.
 	float kI[POD_NUM] = {0.003,	0.01,	0.01,	0.03};
-	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
+	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.08};
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
+	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
+	float error_rate[POD_NUM] = {0,0,0,0};
 	float term_P[POD_NUM] = {0,0,0,0};
 	float term_I[POD_NUM] = {0,0,0,0};
 	float term_D[POD_NUM] = {0,0,0,0};
@@ -215,6 +217,7 @@ task main() {
 			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
 			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between 0 ~ 360.
+			error_prev[i] = error[i];
 			error[i] = g_ServoData[i].angle-current_encoder[i];
 			if (error[i]>180) {
 				error[i] = error[i]-360;
@@ -238,6 +241,7 @@ task main() {
 				error_accumulated[i][j] = error_accumulated[i][j-1];
 			}
 			error_accumulated[i][0] = error[i]*time_difference;
+			error_rate[i] = (error[i]-error_prev[i])/time_difference;
 			if (abs(error[i])>36) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
 			} else if (abs(error[i])>12) {
@@ -245,9 +249,9 @@ task main() {
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
-			term_P[i] = kP[i]*error[i]; // kP might become an array
-			term_I[i] = kI[i]*error_accumulated_total[i]; // TODO! Has timers :P
-			term_D[i] = 0; // TODO! Has timers :P
+			term_P[i] = kP[i]*error[i];
+			term_I[i] = kI[i]*error_accumulated_total[i];
+			term_D[i] = kD[i]*error_rate[i];
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
@@ -266,6 +270,8 @@ task main() {
 
 		// Assign the power settings to the motors (already parsed).
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			g_MotorData[i].power += total_correction[i]/10;
+			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
 			}

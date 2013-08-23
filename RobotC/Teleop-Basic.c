@@ -280,7 +280,6 @@ task main() {
 		}
 
 		// Assign the power settings to the servos.
-		total_correction[POD_BL] = 0; // Remove this line once we get this pod working.
 		Servo_SetPower(servo_FR, -total_correction[POD_FR]);
 		Servo_SetPower(servo_FL, -total_correction[POD_FL]);
 		Servo_SetPower(servo_BL, -total_correction[POD_BL]);

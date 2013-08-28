@@ -270,7 +270,8 @@ task main() {
 
 		// Assign the power settings to the motors (already parsed).
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-			g_MotorData[i].power += total_correction[i]/(float)(1); // Correcting for servo rotation (doesn't work yet).
+			// The following line requires a PID loop on velocity, it seems.
+			//g_MotorData[i].power += total_correction[i]/(float)(10); // Correcting for servo rotation (doesn't work yet).
 			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
@@ -301,7 +302,7 @@ task main() {
 			Servo_SetPosition(servo_lock, unlockedPosition);
 		}
 
-		// Check if we want to gear motors down.
+		// Check if we want to activate the transmission.
 		if (Joystick_ButtonPressed(BUTTON_X)==true) {
 			isLowGear = !isLowGear;
 		}

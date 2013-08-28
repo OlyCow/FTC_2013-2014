@@ -2,10 +2,10 @@
 #pragma config(Hubs,  S2, HTServo,  none,     none,     none)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
@@ -26,26 +26,20 @@
 
 //---------------- README!!! ------------------------------------------------>>
 //
-//     The version of the code in the commit "WORKING VERSION!!!" is "working".
-// If you somehow mess up the code, you can always revert. So feel free to play
-// around. (Commit hash: "bdf8abe6a7959a4b2f11036f3a48511afd36288d") To actually
-// use that commit, don't forget to switch the encoder wire from FR to BL (the
-// encoder wasn't working at the time).
-//
 //     Set the robot up as follows: with the front (where the NXT is mounted)
-// facing towards you, the side of the wheel pods with ABS plastic should be on
-// the left. As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
-// `BL`, `BR`. As of this writing, `POD_BL` is missing a bevel gear and encoder,
-// and thus has an omni-wheel attached to it. (This may or may not affect moving
-// forward and rotating at the same time - I cannot test the code because the
-// robot is out of batteries.)
+// facing towards you, the side of the wheel pods with 3D-printed gears should
+// face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
+// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). As of this
+// writing, `POD_BL` is missing a bevel gear and motor axle (for an encoder),
+// and thus has an omni-wheel attached to it. This causes the robot not to be
+// able to go in straight lines at some orientations, since the motor power on
+// one side is greater than that on the other.
 //
-//     The code is split into a few chunks: #1 Find the target angle, velocity,
-// etc. #2 Adjust the current angle, velocity, etc. through a PID control. The
-// PID loop doesn't have an "I" or "D" term yet, so it either overshoots (and
-// then starts oscillating), or it never reaches the set-point ("steady-state
-// error"). Go ahead and implement that if you wish! #3 Display data on the NXT
-// screen for debugging purposes. Believe me, this is useful :)
+//     The code is currently split into 3 loops, which will be split into their
+// own tasks once they are completed. #1 Find the target angle, velocity, etc.
+// #2 Adjust the current angle, velocity, etc. through a PID control. The PID
+// loop isn't completely implemented yet; go ahead and do that! :) #3 Display
+// data on the NXT screen for debugging purposes. Believe me, this is useful :)
 //
 // CONTROLS:	Controller_1, Joystick_R:	Translational movement.
 //				Controller_1, Button_LB/RB:	Rotational movement.
@@ -68,7 +62,8 @@
 
 task main() {
 	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
-	disableDiagnosticsDisplay(); // This disables the "samostat.rxe"-like diagnostics screen.
+	disableDiagnosticsDisplay(); // Disables the "samostat.rxe"-like diagnostics screen which
+	// comes with "JoystickDriver.c".
 
 	// For finding target values:
 	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
@@ -85,6 +80,7 @@ task main() {
 	float translation_y = 0.0;
 	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
 	float combined_angle[POD_NUM] = {0,0,0,0};
+	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
 	float combined_x[POD_NUM] = {0,0,0,0};
 	float combined_y[POD_NUM] = {0,0,0,0};
 	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
@@ -100,12 +96,14 @@ task main() {
 			error_accumulated[i][j] = 0;
 		}
 	}
-	float error_accumulated_total[POD_NUM] = {0,0,0,0};
-	float kP = 4.8;
-	float kI = 0.0;
-	float kD = 0.0;
+	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
+	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.5}; // Still very rough.
+	float kI[POD_NUM] = {0.003,	0.01,	0.01,	0.03};
+	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.08};
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
+	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
+	float error_rate[POD_NUM] = {0,0,0,0};
 	float term_P[POD_NUM] = {0,0,0,0};
 	float term_I[POD_NUM] = {0,0,0,0};
 	float term_D[POD_NUM] = {0,0,0,0};
@@ -157,13 +155,18 @@ task main() {
 			rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
 			rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
 			combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
-			combined_x[i] = -combined_x[i];
+			combined_x[i] = combined_x[i];
 			combined_y[i] = translation_y+rotation_y[i];
 			combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
 			if (combined_magnitude[i]>g_FullPower) {
 				shouldNormalize = true;
 			}
 			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+gyro_angle+360)%360;
+			if ((combined_angle[i]==0)&&(combined_magnitude[i]==0)) {
+				combined_angle[i] = combined_angle_prev[i];
+			} else {
+				combined_angle_prev[i] = combined_angle[i];
+			}
 			g_ServoData[i].angle = combined_angle[i];
 		}
 
@@ -209,18 +212,19 @@ task main() {
 			time_previous = time_current;
 			time_current = Time_GetTime(TIMER_PROGRAM);
 			time_difference = time_current-time_previous;
-			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(-2); // Encoders are geared up by 2 (and "backwards").
+			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
-			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between -360 ~ 360.
+			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
 			current_encoder[i] += 360; // Value is now >= 0.
-			current_encoder[i] = (float)(current_encoder[i]%360); // Value is now between 0 ~ 360.
+			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between 0 ~ 360.
+			error_prev[i] = error[i];
 			error[i] = g_ServoData[i].angle-current_encoder[i];
 			if (error[i]>180) {
 				error[i] = error[i]-360;
 			} else if (error[i]<-180) {
 				error[i] = error[i]+360;
 			} // TODO: Can the above chain be simplified to something having to do with modulo 180?
-			//// This might work, kinda risky though, just because I'm scared.
+			//// This works, but doesn't eliminate the 180 deg turns. :?
 			//if (error[i]>90) {
 			//	error[i] = error[i]-180;
 			//	g_MotorData[i].isReversed = true;
@@ -230,11 +234,14 @@ task main() {
 			//} else {
 			//	g_MotorData[i].isReversed = false;
 			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
-			//Math_Normalize(error[i], 10, 1);
 			Math_TrimDeadband(error[i], g_EncoderDeadband);
-			for (int j=0; j<kI_delay; j++) {
-				error_accumulated_total[i] += error_accumulated[i][j];
+			error_accumulated_total[i] -= error_accumulated[i][kI_delay-1]; // Array indices.
+			error_accumulated_total[i] += error_accumulated[i][0];
+			for (int j=kI_delay-1; j>0; j--) { //`j=kI_delay-1` because we are dealing with array indices.
+				error_accumulated[i][j] = error_accumulated[i][j-1];
 			}
+			error_accumulated[i][0] = error[i]*time_difference;
+			error_rate[i] = (error[i]-error_prev[i])/time_difference;
 			if (abs(error[i])>36) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
 			} else if (abs(error[i])>12) {
@@ -242,9 +249,9 @@ task main() {
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
-			term_P[i] = kP*error[i]; // kP might become an array
-			term_I[i] = kI*error_accumulated_total[i]; // TODO! Has timers :P
-			term_D[i] = 0; // TODO! Has timers :P
+			term_P[i] = kP[i]*error[i];
+			term_I[i] = kI[i]*error_accumulated_total[i];
+			term_D[i] = kD[i]*error_rate[i];
 			total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
@@ -255,9 +262,7 @@ task main() {
 				case ALIGNED_MEDIUM:
 					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
 					break;
-				//case ALIGNED_CLOSE: // Not checking this condition may increase performance.
-				//	g_MotorData[i].fineTuneFactor *= 1; // Keeps it the same.
-				//	break;
+				// Not checking the "ALIGNED_CLOSE" condition may increase performance.
 			}
 		}
 
@@ -265,6 +270,9 @@ task main() {
 
 		// Assign the power settings to the motors (already parsed).
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+			// The following line requires a PID loop on velocity, it seems.
+			//g_MotorData[i].power += total_correction[i]/(float)(10); // Correcting for servo rotation (doesn't work yet).
+			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
 			}
@@ -272,13 +280,17 @@ task main() {
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
 		}
 
-		// Assign the power settings to the servos. Can't make a loop yet, since one
-		// of the assignments is different from the rest. >:(
-		servo[servo_FR] = total_correction[POD_FR]+128; // +128, because that's how continuous rotation servos work.
-		servo[servo_FL] = total_correction[POD_FL]+128;
-		servo[servo_BL] = 128; // We don't have an encoder mounted for this servo... derp.
-		//servo[servo_BL] = total_correction[POD_BL]+128; // Uncomment this when we do mount one.
-		servo[servo_BR] = total_correction[POD_BR]+128;
+		// Assign the power settings to the servos.
+		Servo_SetPower(servo_FR, -total_correction[POD_FR]);
+		Servo_SetPower(servo_FL, -total_correction[POD_FL]);
+		Servo_SetPower(servo_BL, -total_correction[POD_BL]);
+		Servo_SetPower(servo_BR, -total_correction[POD_BR]);
+		//// This isn't working :'( Something to do with `enum TServoIndex` being an undefined macro?
+		//for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		//	int placeholder = (int)(Servo_Convert(SERVO_FR));
+		//	servo[placeholder] = -total_correction[i];
+		//	//Servo_SetPower(Servo_Convert((Servo)i), -total_correction[i]); // Servos are backwards (geared once).
+		//}
 
 		// Check if we should lock/release wheelpods.
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
@@ -290,7 +302,7 @@ task main() {
 			Servo_SetPosition(servo_lock, unlockedPosition);
 		}
 
-		// Check if we want to gear motors down.
+		// Check if we want to activate the transmission.
 		if (Joystick_ButtonPressed(BUTTON_X)==true) {
 			isLowGear = !isLowGear;
 		}
@@ -311,6 +323,10 @@ task main() {
 		nxtDisplayTextLine(5, "FL encdr%d pow%d", current_encoder[POD_FL], g_MotorData[POD_FL].power);
 		nxtDisplayTextLine(6, "BL encdr%d pow%d", current_encoder[POD_BL], g_MotorData[POD_BL].power);
 		nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
+		//// The following will display the "raw" encoder value of POD_FL, and
+		//// you can see for yourself that it drifts. Ungood. Very ungood.
+		//int ENCODER_RAW = Motor_GetEncoder(Motor_Convert((Motor)MOTOR_FL));
+		//nxtDisplayCenteredBigTextLine(3, "RAW: %d", ENCODER_RAW);
 
 		//Task_EndTimeslice(); // This was used when we had multiple tasks.
 

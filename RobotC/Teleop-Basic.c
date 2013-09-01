@@ -58,6 +58,25 @@
 //
 //--------------------------------------------------------------------------->>
 
+// For finding target values:
+//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
+float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
+float gyro_y = 0.0;
+float gyro_angle = 0.0;
+float rotation_magnitude = 0.0; // Components of the vector of rotation.
+float rotation_angle[POD_NUM] = {0,0,0,0};
+float rotation_x[POD_NUM] = {0,0,0,0};
+float rotation_y[POD_NUM] = {0,0,0,0};
+float translation_magnitude = 0.0; // Components of the vector of translation.
+float translation_angle = 0.0;
+float translation_x = 0.0;
+float translation_y = 0.0;
+float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
+float combined_angle[POD_NUM] = {0,0,0,0};
+float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
+float combined_x[POD_NUM] = {0,0,0,0};
+float combined_y[POD_NUM] = {0,0,0,0};
+bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 
 
 task main() {
@@ -65,25 +84,25 @@ task main() {
 	disableDiagnosticsDisplay(); // Disables the "samostat.rxe"-like diagnostics screen which
 	// comes with "JoystickDriver.c".
 
-	// For finding target values:
-	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
-	float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
-	float gyro_y = 0.0;
-	float gyro_angle = 0.0;
-	float rotation_magnitude = 0.0; // Components of the vector of rotation.
-	float rotation_angle[POD_NUM] = {0,0,0,0};
-	float rotation_x[POD_NUM] = {0,0,0,0};
-	float rotation_y[POD_NUM] = {0,0,0,0};
-	float translation_magnitude = 0.0; // Components of the vector of translation.
-	float translation_angle = 0.0;
-	float translation_x = 0.0;
-	float translation_y = 0.0;
-	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
-	float combined_angle[POD_NUM] = {0,0,0,0};
-	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
-	float combined_x[POD_NUM] = {0,0,0,0};
-	float combined_y[POD_NUM] = {0,0,0,0};
-	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+	//// For finding target values:
+	////g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
+	//float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
+	//float gyro_y = 0.0;
+	//float gyro_angle = 0.0;
+	//float rotation_magnitude = 0.0; // Components of the vector of rotation.
+	//float rotation_angle[POD_NUM] = {0,0,0,0};
+	//float rotation_x[POD_NUM] = {0,0,0,0};
+	//float rotation_y[POD_NUM] = {0,0,0,0};
+	//float translation_magnitude = 0.0; // Components of the vector of translation.
+	//float translation_angle = 0.0;
+	//float translation_x = 0.0;
+	//float translation_y = 0.0;
+	//float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
+	//float combined_angle[POD_NUM] = {0,0,0,0};
+	//float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
+	//float combined_x[POD_NUM] = {0,0,0,0};
+	//float combined_y[POD_NUM] = {0,0,0,0};
+	//bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 
 	// For PID control:
 	float time_current = Time_GetTime(TIMER_PROGRAM);
@@ -97,9 +116,9 @@ task main() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.5}; // Still very rough.
-	float kI[POD_NUM] = {0.003,	0.01,	0.01,	0.03};
-	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.08};
+	float kP[POD_NUM] = {0.9,	0.9,	0.9,	0.9}; // Still very rough. (1.1)
+	float kI[POD_NUM] = {0.006,	0.006,	0.006,	0.006}; //  {0.003,	0.01,	0.01,	0.03}
+	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.1}; // .08
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -118,6 +137,14 @@ task main() {
 	const int lowGearPosition = 0; // I just made up these numbers.
 	const int highGearPosition = 255; // I just made up these numbers.
 	bool isPlaying = false;
+
+
+
+	// DELETE LATER: TEMPORARY
+	bool isBackwards = false;
+	// DELETE LATER: TEMPORARY
+
+
 
 	Joystick_WaitForStart();
 
@@ -268,9 +295,25 @@ task main() {
 
 
 
+		// Temporary! Reverses motors.
+		if (Joystick_ButtonPressed(BUTTON_B)==true) {
+			isBackwards = (!isBackwards);
+		}
+		if (isBackwards==true) {
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				g_MotorData[i].isReversed = true;
+			}
+		} else {
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				g_MotorData[i].isReversed = false;
+			}
+		}
+
+
+
 		// Assign the power settings to the motors (already parsed).
 		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-			g_MotorData[i].power += total_correction[i]/(float)(1); // Correcting for servo rotation (doesn't work yet).
+			//g_MotorData[i].power += total_correction[i]/(float)(1); // Correcting for servo rotation (doesn't work yet).
 			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;

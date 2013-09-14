@@ -1,7 +1,6 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  none,     none)
 #pragma config(Hubs,  S2, HTServo,  none,     none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S3,     ,               sensorI2CHiTechnicGyro)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -77,7 +76,7 @@ float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 fro
 float combined_x[POD_NUM] = {0,0,0,0};
 float combined_y[POD_NUM] = {0,0,0,0};
 bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
-
+float gyro_increment = 0.0;
 
 task main() {
 	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
@@ -103,6 +102,7 @@ task main() {
 	//float combined_x[POD_NUM] = {0,0,0,0};
 	//float combined_y[POD_NUM] = {0,0,0,0};
 	//bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+	//float gyro_increment = 0.0;
 
 	// For PID control:
 	float time_current = Time_GetTime(TIMER_PROGRAM);
@@ -116,9 +116,9 @@ task main() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.9,	0.9,	0.9,	0.9}; // Still very rough. (1.1)
-	float kI[POD_NUM] = {0.006,	0.006,	0.006,	0.006}; //  {0.003,	0.01,	0.01,	0.03}
-	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.1}; // .08
+	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // Still very rough. (1.1)
+	float kI[POD_NUM] = {0.008,	0.008,	0.008,	0.008}; //  {0.003,	0.01,	0.01,	0.03}
+	float kD[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // .08
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -154,15 +154,6 @@ task main() {
 
 	while (true) {
 		Joystick_UpdateData();
-
-		// This part is temporary. We are assigning a gyro angle from a joystick.
-		// An operator moves the joystick to correspond with the front of the drive
-		// base, to simulate the input from an actual gyro. When we get a gyro, fix
-		// this so it returns the actual value of the gyro. If you just ignore the
-		// second controller, then the movement will be absolute (not relative).
-		gyro_x = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2));
-		gyro_y = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2));
-		gyro_angle = Math_RadToDeg(atan2(gyro_y, gyro_x)); //atan2(0,0)=0
 
 		// Actual code starts here. It is ridiculously simple, but oddly counter-
 		// intuitive. The rotation vector and the translation vector are combined,
@@ -235,10 +226,12 @@ task main() {
 
 
 		// PID control loop:
+		time_previous = time_current;
+		time_current = Time_GetTime(TIMER_PROGRAM);
+		time_difference = time_current-time_previous;
+		// TEMPORARY!!!
+		//gyro_angle += time_difference*SensorValue[S3];
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			time_previous = time_current;
-			time_current = Time_GetTime(TIMER_PROGRAM);
-			time_difference = time_current-time_previous;
 			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.

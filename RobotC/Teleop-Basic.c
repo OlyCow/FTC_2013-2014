@@ -28,11 +28,7 @@
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with 3D-printed gears should
 // face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
-// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). As of this
-// writing, `POD_BL` is missing a bevel gear and motor axle (for an encoder),
-// and thus has an omni-wheel attached to it. This causes the robot not to be
-// able to go in straight lines at some orientations, since the motor power on
-// one side is greater than that on the other.
+// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). 
 //
 //     The code is currently split into 3 loops, which will be split into their
 // own tasks once they are completed. #1 Find the target angle, velocity, etc.

@@ -3,7 +3,6 @@
 #pragma systemFile
 #ifndef __COMMON_H__
 #define __COMMON_H__
-#include "..\Headers\includes.h"
 
 
 
@@ -23,9 +22,6 @@
 #if (kRobotCVersionNumeric < 359)
 #error "3rd party drivers are only supported on RobotC 3.59+."
 #endif // (kRobotCVersionNumeric < 359)
-
-
-
 // Returns the smaller of 2 numbers.
 #define min2(a, b) (a < b ? a : b)
 // Returns the smaller of 3 numbers.
@@ -36,6 +32,7 @@
 #define max3(a, b, c) (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c)
 // Returns x if between min and max; else, returns min or max.
 #define clip(a, b, c) min2(c, max2(b, a))
+
 
 
 // Array of bytes as a struct, this is a workaround for RobotC's
@@ -105,7 +102,6 @@ bool waitForI2CBus(tSensors link)
 	}
 }
 
-
 // Write to the I2C bus. This function will clear the bus
 // and wait for it be ready before any bytes are sent.
 // Returns true if no error occurred, false if it did.
@@ -153,7 +149,6 @@ bool writeI2C(tSensors link, tByteArray &request) {
 	return true;
 }
 
-
 // Write to the I2C bus. This function will clear the bus
 // and wait for it be ready before any bytes are sent.
 // Returns true if no error occurred, false if it did.
@@ -162,7 +157,6 @@ bool writeI2C(tSensors link, tByteArray &request) {
 // `reply`:		Array to hold received data.
 // `replylen`:	Number of bytes (if any) expected in reply to this command
 bool writeI2C(tSensors link, tByteArray &request, tByteArray &reply, int replylen) {
-	
 
 #if (__COMMON_H_SENSOR_CHECK__ == 1)
 	switch (SensorType[link])
@@ -210,7 +204,6 @@ bool writeI2C(tSensors link, tByteArray &request, tByteArray &reply, int replyle
 	return true;
 }
 
-
 // Create a unique ID (UID) for an NXT based on the last 3 bytes
 // of the Bluetooth address. The first 3 bytes are manufacturer
 // specific (LEGO) and identical for all NXTs (therefore not used).
@@ -223,7 +216,6 @@ long getUID() {
 	// http://www.coffer.com/mac_find/?string=lego
 	return (long)btAddr[5] + ((long)btAddr[4] << 8) + ((long)btAddr[3] << 16);
 }
-
 
 #define STRTOK_MAX_TOKEN_SIZE 20
 #define STRTOK_MAX_BUFFER_SIZE 50

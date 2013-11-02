@@ -1,8 +1,8 @@
 // This header provides some functions frequently used in drivers.
 // Version 0.16, made by Xander Soldaat.
-#pragma systemFile
 #ifndef __COMMON_H__
 #define __COMMON_H__
+#pragma systemFile
 
 
 

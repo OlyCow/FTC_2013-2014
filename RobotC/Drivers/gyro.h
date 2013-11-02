@@ -1,5 +1,7 @@
 // This header provides an API for the HiTechnic gyro sensor.
 // Version 0.4, made by Xander Soldaat.
+#ifndef __HTGYRO_H__
+#define __HTGYRO_H__
 #pragma systemFile
 #ifndef __COMMON_H__
 #include "common.h"
@@ -10,6 +12,7 @@
 float HTGYROreadRot(tSensors link);
 float HTGYROstartCal(tSensors link);
 float HTGYROreadCal(tSensors link);
+void HTGYROsetCal(tSensors link, int offset);
 
 #ifdef __HTSMUX_SUPPORT__
 float HTGYROreadRot(tMUXSensor muxsensor);

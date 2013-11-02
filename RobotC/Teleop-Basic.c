@@ -97,9 +97,9 @@ task main() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // Still very rough.
-	float kI[POD_NUM] = {0.015,	0.015,	0.015,	0.015};
-	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.1};
+	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.5}; // Still very rough.
+	float kI[POD_NUM] = {0.003,	0.01,	0.01,	0.03};
+	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.08};
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.

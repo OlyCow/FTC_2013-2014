@@ -1,7 +1,6 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  none,     none)
 #pragma config(Hubs,  S2, HTServo,  none,     none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S3,     ,               sensorI2CHiTechnicGyro)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -29,11 +28,7 @@
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with 3D-printed gears should
 // face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
-// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). As of this
-// writing, `POD_BL` is missing a bevel gear and motor axle (for an encoder),
-// and thus has an omni-wheel attached to it. This causes the robot not to be
-// able to go in straight lines at some orientations, since the motor power on
-// one side is greater than that on the other.
+// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). 
 //
 //     The code is currently split into 3 loops, which will be split into their
 // own tasks once they are completed. #1 Find the target angle, velocity, etc.
@@ -58,32 +53,52 @@
 //
 //--------------------------------------------------------------------------->>
 
-
+// For finding target values:
+//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
+float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
+float gyro_y = 0.0;
+float gyro_angle = 0.0;
+float rotation_magnitude = 0.0; // Components of the vector of rotation.
+float rotation_angle[POD_NUM] = {0,0,0,0};
+float rotation_x[POD_NUM] = {0,0,0,0};
+float rotation_y[POD_NUM] = {0,0,0,0};
+float translation_magnitude = 0.0; // Components of the vector of translation.
+float translation_angle = 0.0;
+float translation_x = 0.0;
+float translation_y = 0.0;
+float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
+float combined_angle[POD_NUM] = {0,0,0,0};
+float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
+float combined_x[POD_NUM] = {0,0,0,0};
+float combined_y[POD_NUM] = {0,0,0,0};
+bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+float gyro_increment = 0.0;
 
 task main() {
 	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
 	disableDiagnosticsDisplay(); // Disables the "samostat.rxe"-like diagnostics screen which
 	// comes with "JoystickDriver.c".
 
-	// For finding target values:
-	//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
-	float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
-	float gyro_y = 0.0;
-	float gyro_angle = 0.0;
-	float rotation_magnitude = 0.0; // Components of the vector of rotation.
-	float rotation_angle[POD_NUM] = {0,0,0,0};
-	float rotation_x[POD_NUM] = {0,0,0,0};
-	float rotation_y[POD_NUM] = {0,0,0,0};
-	float translation_magnitude = 0.0; // Components of the vector of translation.
-	float translation_angle = 0.0;
-	float translation_x = 0.0;
-	float translation_y = 0.0;
-	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
-	float combined_angle[POD_NUM] = {0,0,0,0};
-	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
-	float combined_x[POD_NUM] = {0,0,0,0};
-	float combined_y[POD_NUM] = {0,0,0,0};
-	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+	//// For finding target values:
+	////g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
+	//float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
+	//float gyro_y = 0.0;
+	//float gyro_angle = 0.0;
+	//float rotation_magnitude = 0.0; // Components of the vector of rotation.
+	//float rotation_angle[POD_NUM] = {0,0,0,0};
+	//float rotation_x[POD_NUM] = {0,0,0,0};
+	//float rotation_y[POD_NUM] = {0,0,0,0};
+	//float translation_magnitude = 0.0; // Components of the vector of translation.
+	//float translation_angle = 0.0;
+	//float translation_x = 0.0;
+	//float translation_y = 0.0;
+	//float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
+	//float combined_angle[POD_NUM] = {0,0,0,0};
+	//float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
+	//float combined_x[POD_NUM] = {0,0,0,0};
+	//float combined_y[POD_NUM] = {0,0,0,0};
+	//bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+	//float gyro_increment = 0.0;
 
 	// For PID control:
 	float time_current = Time_GetTime(TIMER_PROGRAM);
@@ -97,9 +112,9 @@ task main() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.5}; // Still very rough.
-	float kI[POD_NUM] = {0.003,	0.01,	0.01,	0.03};
-	float kD[POD_NUM] = {0.1,	0.1,	0.1,	0.08};
+	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // Still very rough. (1.1)
+	float kI[POD_NUM] = {0.008,	0.008,	0.008,	0.008}; //  {0.003,	0.01,	0.01,	0.03}
+	float kD[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // .08
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -119,6 +134,14 @@ task main() {
 	const int highGearPosition = 255; // I just made up these numbers.
 	bool isPlaying = false;
 
+
+
+	// DELETE LATER: TEMPORARY
+	bool isBackwards = false;
+	// DELETE LATER: TEMPORARY
+
+
+
 	Joystick_WaitForStart();
 
 	time_previous = 0;
@@ -127,15 +150,6 @@ task main() {
 
 	while (true) {
 		Joystick_UpdateData();
-
-		// This part is temporary. We are assigning a gyro angle from a joystick.
-		// An operator moves the joystick to correspond with the front of the drive
-		// base, to simulate the input from an actual gyro. When we get a gyro, fix
-		// this so it returns the actual value of the gyro. If you just ignore the
-		// second controller, then the movement will be absolute (not relative).
-		gyro_x = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X, CONTROLLER_2));
-		gyro_y = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2));
-		gyro_angle = Math_RadToDeg(atan2(gyro_y, gyro_x)); //atan2(0,0)=0
 
 		// Actual code starts here. It is ridiculously simple, but oddly counter-
 		// intuitive. The rotation vector and the translation vector are combined,
@@ -208,10 +222,12 @@ task main() {
 
 
 		// PID control loop:
+		time_previous = time_current;
+		time_current = Time_GetTime(TIMER_PROGRAM);
+		time_difference = time_current-time_previous;
+		// TEMPORARY!!!
+		//gyro_angle += time_difference*SensorValue[S3];
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			time_previous = time_current;
-			time_current = Time_GetTime(TIMER_PROGRAM);
-			time_difference = time_current-time_previous;
 			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
 			current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
@@ -263,6 +279,22 @@ task main() {
 					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
 					break;
 				// Not checking the "ALIGNED_CLOSE" condition may increase performance.
+			}
+		}
+
+
+
+		// Temporary! Reverses motors.
+		if (Joystick_ButtonPressed(BUTTON_B)==true) {
+			isBackwards = (!isBackwards);
+		}
+		if (isBackwards==true) {
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				g_MotorData[i].isReversed = true;
+			}
+		} else {
+			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+				g_MotorData[i].isReversed = false;
 			}
 		}
 

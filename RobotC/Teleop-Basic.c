@@ -372,3 +372,86 @@ task main() {
 		}
 	}
 }
+
+
+
+task PID() {
+}
+
+
+
+task CommLink() {
+}
+
+
+
+// Task for displaying stuff on the LCD screen.
+task Display() {
+
+	typedef enum {
+		DISP_FCS			= 0, // Default FCS screen.
+		DISP_SWERVE_DEBUG	= 1, // Encoders, target values, PID output, power levels.
+		DISP_PID_DEBUG		= 2, // Error, P-term, I-term, D-term.
+		DISP_COMM_STATUS	= 3, // Each line of each frame.
+	} DisplayMode;
+
+	DisplayMode isMode = DISP_FCS;
+	Joystick_WaitForStart();
+
+	while (true) {
+		switch (isMode) {
+			case DISP_FCS :
+				while (true) {
+					bDisplayDiagnostics = true;
+					if (Buttons_Released(NXT_BUTTON_L)==true) {
+						isMode = DISP_COMM_STATUS;
+						break;
+					}
+					if (Buttons_Released(NXT_BUTTON_R)==true) {
+						isMode = DISP_SWERVE_DEBUG;
+						break;
+					}
+				}
+				break;
+			case DISP_SWERVE_DEBUG :
+				while (true) {
+					bDisplayDiagnostics = false;
+					if (Buttons_Released(NXT_BUTTON_L)==true) {
+						isMode = DISP_FCS;
+						break;
+					}
+					if (Buttons_Released(NXT_BUTTON_R)==true) {
+						isMode = DISP_PID_DEBUG;
+						break;
+					}
+				}
+				break;
+			case DISP_PID_DEBUG :
+				while (true) {
+					bDisplayDiagnostics = false;
+					if (Buttons_Released(NXT_BUTTON_L)==true) {
+						isMode = DISP_SWERVE_DEBUG;
+						break;
+					}
+					if (Buttons_Released(NXT_BUTTON_R)==true) {
+						isMode = DISP_COMM_STATUS;
+						break;
+					}
+				}
+				break;
+			case DISP_COMM_STATUS :
+				while (true) {
+					bDisplayDiagnostics = false;
+					if (Buttons_Released(NXT_BUTTON_L)==true) {
+						isMode = DISP_PID_DEBUG;
+						break;
+					}
+					if (Buttons_Released(NXT_BUTTON_R)==true) {
+						isMode = DISP_FCS;
+						break;
+					}
+				}
+				break;
+		}
+	}
+}

@@ -42,7 +42,6 @@
 //				Controller_1, Button_X:		Toggles transmission gearing.
 //				Controller_1, Button_LT:	Stop motors (adjust pod direction).
 //				Controller_1, Button_RT:	Fine-tune motors.
-//				Controller_2, Joystick_R:	Simulates gyro input.
 //				Controller_1, Button_Y:		Moo.
 //
 //     To troubleshoot, simply download the code, give the robot some input, and
@@ -54,9 +53,6 @@
 //--------------------------------------------------------------------------->>
 
 // For finding target values:
-//g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
-float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
-float gyro_y = 0.0;
 float gyro_angle = 0.0;
 float rotation_magnitude = 0.0; // Components of the vector of rotation.
 float rotation_angle[POD_NUM] = {0,0,0,0};
@@ -72,7 +68,6 @@ float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 fro
 float combined_x[POD_NUM] = {0,0,0,0};
 float combined_y[POD_NUM] = {0,0,0,0};
 bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
-float gyro_increment = 0.0;
 
 task main() {
 	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.

@@ -12,7 +12,6 @@
 task main()
 {
 	float orientation = 0.0;
-	float time_delta = 0.0;
 	float translation_x = 0.0;
 	float translation_y = 0.0;
 	float rotation = 0.0;
@@ -22,8 +21,10 @@ task main()
 	float power_BR = 0.0;
 	float power_cap = 0.0;
 	bool doNormalizePower = false;
+	HTGYROstartCal(sensor_gyro);
 	Joystick_WaitForStart();
 
+	Time_ClearTimer(T1);
 	while (true)
 	{
 		orientation += Time_GetTime(T1)*HTGYROreadRot(sensor_gyro);

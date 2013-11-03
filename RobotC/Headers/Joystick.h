@@ -63,8 +63,16 @@ typedef struct joystickData {
 
 
 
-joystickData g_JoystickData[2]; //2 controllers.
-joystickData g_PrevJoystickData[2]; //2 controllers.
+// Highest "noise" we've ever recorded is +/-8.
+const int g_JoystickDeadband = 10;
+
+// The highest value a joystick can go to. Not set to 128--
+// we prefer to assign too much power than not assign enough.
+const int g_JoystickMax = 127;
+
+// For detecting changes in state of the controllers.
+joystickData g_JoystickData[2]; // 2 controllers.
+joystickData g_PrevJoystickData[2]; // 2 controllers.
 
 
 

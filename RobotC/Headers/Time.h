@@ -12,6 +12,11 @@ typedef enum TimerType {
 
 
 
+// The number of internal timers available to use.
+const int g_TimerNumber = 4; //defined internally as macro `kNumbOfTimers`
+
+
+
 void Time_Wait(int milliseconds);
 void Time_Sleep(int milliseconds);
 void Time_Freeze(int opcodes=1);

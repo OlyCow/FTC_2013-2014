@@ -21,6 +21,11 @@ typedef enum MotorType {
 
 
 
+// The various motor-regulation speeds.
+const int g_FullPower = 100;
+
+
+
 #define	Motor_SetPower(power, motorName)			(motor[motorName]=(power))
 #define	Motor_GetPower(motorName)					(motor[motorName])
 #define	Motor_ResetEncoder(motorName)				(nMotorEncoder[motorName]=0) //can only set to 0

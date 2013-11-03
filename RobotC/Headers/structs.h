@@ -1,7 +1,6 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 #pragma systemFile
-#include "..\Headers\enums.h"
 
 
 
@@ -16,11 +15,6 @@ typedef struct servoData {
 	int angle;
 	int power;
 } servoData;
-
-typedef struct joystickData {
-	short buttonMap;
-	Direction direction;
-} joystickData;
 
 
 

@@ -1,9 +1,9 @@
-#pragma config(Hubs,	S1,	HTMotor,  HTMotor,  none,     none)
-#pragma config(Sensor,	S1,     ,               sensorI2CMuxController)
-#pragma config(Motor,	mtr_S1_C1_1,	motor_FR,	tmotorTetrix,	openLoop)
-#pragma config(Motor,	mtr_S1_C1_2,	motor_FL,	tmotorTetrix,	openLoop)
-#pragma config(Motor,	mtr_S1_C2_1,	motor_BL,	tmotorTetrix,	openLoop)
-#pragma config(Motor,	mtr_S1_C2_2,	motor_BR,	tmotorTetrix,	openLoop)
+#pragma config(Hubs,  S1, HTMotor,  HTMotor,  none,     none)
+#pragma config(Sensor, S3,     sensor_gyro,    sensorI2CCustomFastSkipStates9V)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop)
 
 #include "includes.h"
 
@@ -11,6 +11,8 @@
 
 task main()
 {
+	float orientation = 0.0;
+	float time_delta = 0.0;
 	float translation_x = 0.0;
 	float translation_y = 0.0;
 	float rotation = 0.0;
@@ -24,10 +26,15 @@ task main()
 
 	while (true)
 	{
+		orientation += Time_GetTime(T1)*HTGYROreadRot(sensor_gyro);
+		Time_ClearTimer(T1);
+
 		Joystick_UpdateData();
 		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), 10), 128, 100);
 		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y), 10), 128, 100);
 		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), 10), 128, 100);
+
+		Math_RotateVector(translation_x, translation_y, -orientation);
 
 		power_FR = translation_y-translation_x-rotation;
 		power_FL = translation_y+translation_x+rotation;

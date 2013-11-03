@@ -37,6 +37,10 @@ void initializeGlobalVariables() {
 		g_PrevJoystickData[i].buttonMap = 0;
 		g_PrevJoystickData[i].direction = DIRECTION_NONE;
 	}
+
+	// Disable the "samostat.rxe"-like diagnostics screen which comes
+	// with "JoystickDriver.c" (so we can actually see stuff).
+	disableDiagnosticsDisplay();
 }
 
 

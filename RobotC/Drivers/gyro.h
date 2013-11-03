@@ -27,12 +27,12 @@ float HTGYRO_offsets[][] =	{{620.0, 620.0, 620.0, 620.0},
 							 {620.0, 620.0, 620.0, 620.0},
 							 {620.0, 620.0, 620.0, 620.0}};
 
-							 
+
 
 // Reads the value of the gyro.
 // `link`:	Port number of gyro.
 float HTGYROreadRot(tSensors link) {
-	// Make sure the sensor is configured as type sensorRawValue
+	// Make sure the sensor is configured as type sensorRawValue.
 	if (SensorType[link] != sensorAnalogInactive) {
 		SetSensorType(link, sensorAnalogInactive);
 		wait1Msec(100);
@@ -46,7 +46,7 @@ float HTGYROreadRot(tSensors link) {
 // `link`:	Port number of gyro.
 float HTGYROstartCal(tSensors link) {
 	long _avgdata = 0;
-	
+
 	// Make sure the sensor is configured as type sensorRawValue.
 	if (SensorType[link] != sensorAnalogInactive) {
 		SetSensorType(link, sensorAnalogInactive);
@@ -88,13 +88,13 @@ float HTGYROreadRot(tMUXSensor muxsensor) {
 // `muxsensor`:	SMUX sensor port number.
 float HTGYROstartCal(tMUXSensor muxsensor) {
 	long _avgdata = 0;
-	
+
 	// Take 5 readings and average them out.
 	for (int i = 0; i < 50; i++) {
 		_avgdata += HTSMUXreadAnalogue(muxsensor);
 		wait1Msec(50);
 	}
-	
+
 	// Store new offset value.
 	HTGYRO_offsets[SPORT(muxsensor)][MPORT(muxsensor)] = (_avgdata / 50.0);
 	// Return new offset value.

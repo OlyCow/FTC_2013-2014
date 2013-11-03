@@ -1,13 +1,34 @@
 #ifndef MATH_H
 #define MATH_H
 #pragma systemFile
-#include "..\Headers\enums.h"
+
+
+
+typedef enum Quadrant {
+	QUADRANT_I		= 0,
+	QUADRANT_II		= 1,
+	QUADRANT_III	= 2,
+	QUADRANT_IV		= 3,
+	QUADRANT_NUM,
+};
+
+typedef enum AngleUnit {
+	UNIT_DEG		= 0,
+	UNIT_DEGREE		= 0,
+	UNIT_RAD		= 1,
+	UNIT_RADIAN		= 1,
+	UNIT_GRAD		= 2,
+	UNIT_GRADIAN	= 2,
+};
 
 
 
 const float pi	= 3.141592653589793238462643383279502884197169399375105820974944592; // 64 sig figs
 const float e	= 2.718281828459045235360287471352662497757247093699959574966967628; // 64 sig figs
 const float phi	= 1.618033988749894848204586834365638117720309179805762862135448623; // 64 sig figs
+
+
+
 int   Math_TrimDeadband(int input, int deadband=g_JoystickDeadband);
 float Math_TrimDeadband(float input, float deadband=g_JoystickDeadband);
 int   Math_Limit(int input, int max);

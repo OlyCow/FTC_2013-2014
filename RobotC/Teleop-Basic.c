@@ -76,8 +76,6 @@ float gyro_increment = 0.0;
 
 task main() {
 	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
-	disableDiagnosticsDisplay(); // Disables the "samostat.rxe"-like diagnostics screen which
-	// comes with "JoystickDriver.c".
 
 	//// For finding target values:
 	////g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.

@@ -6,16 +6,16 @@
 
 
 
-int   Math_TrimDeadzone(int input, int deadzone) {
+int   Math_TrimDeadband(int input, int deadband) {
 	int output = 0;
-	if (abs(input)>deadzone==true) {
+	if (abs(input)>deadband==true) {
 		output = input;
 	}
 	return output;
 }
-float Math_TrimDeadzone(float input, float deadzone) {
+float Math_TrimDeadband(float input, float deadband) {
 	float output = 0;
-	if (abs(input)>deadzone==true) {
+	if (abs(input)>deadband==true) {
 		output = input;
 	}
 	return output;
@@ -24,8 +24,8 @@ int   Math_Limit(int input, int max) {
 	int output = input;
 	if (input>max) {
 		output = max;
-	} else if (input<-max) {
-		output = -max;
+	} else if (input<(-max)) {
+		output = (-max);
 	}
 	return output;
 }
@@ -33,8 +33,8 @@ float Math_Limit(float input, float max) {
 	float output = input;
 	if (input>max) {
 		output = max;
-	} else if (input<-max) {
-		output = -max;
+	} else if (input<(-max)) {
+		output = (-max);
 	}
 	return output;
 }
@@ -85,6 +85,10 @@ int   Math_Normalize(int input, int originalMax, int newMax) {
 }
 float Math_Normalize(float input, float originalMax, float newMax) {
 	return input*newMax/originalMax;
+}
+void  Math_RotateVector(float x, float y, float theta, AngleUnit rotateUnit) {
+	x = x*cosDegrees(theta)-y*sinDegrees(theta);
+	y = x*sinDegrees(theta)+y*cosDegrees(theta);
 }
 float Math_Sin(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
 }

@@ -8,13 +8,14 @@
 const float pi	= 3.141592653589793238462643383279502884197169399375105820974944592; // 64 sig figs
 const float e	= 2.718281828459045235360287471352662497757247093699959574966967628; // 64 sig figs
 const float phi	= 1.618033988749894848204586834365638117720309179805762862135448623; // 64 sig figs
-int   Math_TrimDeadzone(int input, int deadzone=g_JoystickDeadZone);
-float Math_TrimDeadzone(float input, float deadzone=g_JoystickDeadZone);
+int   Math_TrimDeadband(int input, int deadband=g_JoystickDeadband);
+float Math_TrimDeadband(float input, float deadband=g_JoystickDeadband);
 int   Math_Limit(int input, int max);
 float Math_Limit(float input, float max);
 float Math_ConvertAngle(float input, AngleUnit inputUnit, AngleUnit outputUnit);
 int   Math_Normalize(int input, int originalMax, int newMax);
 float Math_Normalize(float input, float originalMax, float newMax);
+void  Math_RotateVector(float x, float y, float theta, AngleUnit rotateUnit=UNIT_DEG);
 float Math_Sin(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);
 float Math_Cos(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);
 float Math_Tan(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);

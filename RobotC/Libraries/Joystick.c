@@ -6,9 +6,6 @@
 
 
 
-void Joystick_WaitForStart() {
-	waitForStart();
-}
 void Joystick_UpdateData() {
 	//"joystick" is a magic number (struct?) that RobotC forces upon us.
 	getJoystickSettings(joystick);

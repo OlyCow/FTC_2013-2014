@@ -1,6 +1,6 @@
-// I really don't know what this is for.
-
-#include "\Headers\includes.h"
+// The 'Oly Cow: (C) 2012~2013, All Rights Reserved.
+// Outstanding in our field (TM).
+#include "includes.h"
 
 task main() {
 	Sound_Unmute();

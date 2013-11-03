@@ -12,7 +12,7 @@
 #pragma config(Servo,  srvo_S2_C1_5,    servo_transmission,   tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_lock,           tServoStandard)
 
-#include "Headers\includes.h"
+#include "includes.h"
 #include "Teleop-Basic.h"
 
 // Automatically starts all tasks defined in this file.
@@ -28,7 +28,7 @@
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with 3D-printed gears should
 // face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
-// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`). 
+// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`).
 //
 //     The code is currently split into 3 loops, which will be split into their
 // own tasks once they are completed. #1 Find the target angle, velocity, etc.

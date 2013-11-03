@@ -1,7 +1,14 @@
 #ifndef TIME_H
 #define TIME_H
 #pragma systemFile
-#include "..\Headers\enums.h"
+
+
+
+typedef enum TimerType {
+	TIMER_CLOCK		= 0,
+	TIMER_SYSTEM	= 1,
+	TIMER_PROGRAM	= 2,
+};
 
 
 

@@ -1,7 +1,23 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 #pragma systemFile
-#include "..\Headers\enums.h"
+
+
+
+typedef enum Motor {
+	MOTOR_FR = 0,
+	MOTOR_FL = 1,
+	MOTOR_BL = 2,
+	MOTOR_BR = 3,
+	MOTOR_NUM,
+};
+
+typedef enum MotorType {
+	MOTORTYPE_NXT	= 0,
+	MOTORTYPE_12V	= 1,
+	MOTORTYPE_ALL	= 2,
+	MOTORTYPE_NUM,
+};
 
 
 

@@ -8,6 +8,7 @@
 typedef struct motorData {
 	bool isReversed;
 	int angleOffset;
+	float fineTuneFactor;
 	int power;
 } motorData;
 

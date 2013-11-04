@@ -37,7 +37,7 @@ void initializeGlobalVariables() {
 	}
 
 	// Initialize NXT buttons' data for use in "Buttons.h" (and "Buttons.c").
-	for (int i=NXT_BUTTON_YES; i<=(int)NXT_BUTTON_ESC; i++) {
+	for (int i=NXT_BUTTON_ESC; i<=(int)NXT_BUTTON_YES; i++) {
 		g_NXTButtonsData[i] = false;
 		g_NXTButtonsData_prev[i] = false;
 	}

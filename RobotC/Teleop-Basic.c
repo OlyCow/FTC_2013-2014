@@ -1,16 +1,29 @@
-#pragma config(Hubs,  S1, HTMotor,  HTMotor,  none,     none)
-#pragma config(Hubs,  S2, HTServo,  none,     none,     none)
-#pragma config(Sensor, S3,     ,               sensorI2CHiTechnicGyro)
+#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
+#pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S3,     sensor_gyro,    sensorI2CCustomFastSkipStates9V)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_transmission,   tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_lock,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_stick,          tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo7,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
 
 #include "includes.h"
 #include "Teleop-Basic.h"
@@ -119,12 +132,6 @@ task main() {
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 
 	// Miscellaneous variables:
-	bool isLocked = false;
-	const int lockedPosition = 100; // I just made up these numbers.
-	const int unlockedPosition = 20; // I just made up these numbers.
-	bool isLowGear = false;
-	const int lowGearPosition = 0; // I just made up these numbers.
-	const int highGearPosition = 255; // I just made up these numbers.
 	bool isPlaying = false;
 
 
@@ -316,26 +323,6 @@ task main() {
 		//	servo[placeholder] = -total_correction[i];
 		//	//Servo_SetPower(Servo_Convert((Servo)i), -total_correction[i]); // Servos are backwards (geared once).
 		//}
-
-		// Check if we should lock/release wheelpods.
-		if (Joystick_ButtonPressed(BUTTON_A)==true) {
-			isLocked = !isLocked;
-		}
-		if (isLocked==true) {
-			Servo_SetPosition(servo_lock, lockedPosition);
-		} else {
-			Servo_SetPosition(servo_lock, unlockedPosition);
-		}
-
-		// Check if we want to activate the transmission.
-		if (Joystick_ButtonPressed(BUTTON_X)==true) {
-			isLowGear = !isLowGear;
-		}
-		if (isLowGear==true) {
-			Servo_SetPosition(servo_transmission, lowGearPosition);
-		} else {
-			Servo_SetPosition(servo_transmission, highGearPosition);
-		}
 
 
 

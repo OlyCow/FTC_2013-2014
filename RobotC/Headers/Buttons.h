@@ -4,12 +4,11 @@
 
 
 
-// NOT TESTED YET
 typedef enum NXTButtons {
-	NXT_BUTTON_YES	= 0,
-	NXT_BUTTON_L	= 1,
-	NXT_BUTTON_R	= 2,
-	NXT_BUTTON_ESC	= 3,
+	NXT_BUTTON_ESC	= 0,
+	NXT_BUTTON_R	= 1,
+	NXT_BUTTON_L	= 2,
+	NXT_BUTTON_YES	= 3,
 	NXT_BUTTON_NUM,
 };
 

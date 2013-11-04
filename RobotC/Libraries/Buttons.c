@@ -7,7 +7,7 @@
 
 
 void Buttons_UpdateData() {
-	for (int i=NXT_BUTTON_YES; i<=(int)NXT_BUTTON_ESC; i++) {
+	for (int i=NXT_BUTTON_ESC; i<=(int)NXT_BUTTON_YES; i++) {
 		g_NXTButtonsData_prev[i] = g_NXTButtonsData[i];
 		g_NXTButtonsData[i] = (nNxtButtonPressed==i);
 	}

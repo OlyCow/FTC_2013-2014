@@ -388,12 +388,12 @@ task CommLink() {
 // Task for displaying stuff on the LCD screen.
 task Display() {
 
-	typedef enum {
+	typedef enum DisplayMode {
 		DISP_FCS			= 0, // Default FCS screen.
 		DISP_SWERVE_DEBUG	= 1, // Encoders, target values, PID output, power levels.
 		DISP_PID_DEBUG		= 2, // Error, P-term, I-term, D-term.
 		DISP_COMM_STATUS	= 3, // Each line of each frame.
-	} DisplayMode;
+	};
 
 	DisplayMode isMode = DISP_FCS;
 	Joystick_WaitForStart();

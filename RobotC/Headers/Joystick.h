@@ -1,7 +1,6 @@
 #ifndef JOYSTICK_H
 #define JOYSTICK_H
 #pragma systemFile
-#include "..\Headers\global vars.h"
 
 
 
@@ -71,6 +70,7 @@ const int g_JoystickDeadband = 10;
 const int g_JoystickMax = 127;
 
 // For detecting changes in state of the controllers.
+// Initialized in the initialization routine ("initialize.h").
 joystickData g_JoystickData[2]; // 2 controllers.
 joystickData g_PrevJoystickData[2]; // 2 controllers.
 

@@ -20,11 +20,11 @@ typedef enum Servo {
 	SERVO_NUM,
 };
 
-typedef enum Aligned {
-	ALIGNED_FAR		= 0,
-	ALIGNED_MEDIUM	= 1,
-	ALIGNED_CLOSE	= 2,
-};
+//typedef enum Aligned {
+//	ALIGNED_FAR		= 0,
+//	ALIGNED_MEDIUM	= 1,
+//	ALIGNED_CLOSE	= 2,
+//};
 
 
 

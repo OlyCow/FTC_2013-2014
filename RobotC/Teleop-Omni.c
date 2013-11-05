@@ -1,5 +1,7 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_gyro,    sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop)
@@ -8,16 +10,16 @@
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motorK,        tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S2_C1_1,    servo1,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_2,    servo2,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_4,    servo4,               tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S2_C1_6,    servo6,               tServoNone)
-#pragma config(Servo,  srvo_S2_C2_1,    servo7,               tServoNone)
-#pragma config(Servo,  srvo_S2_C2_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_funnel_R,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
@@ -29,8 +31,10 @@
 
 task main()
 {
-	bool isSweeping = false; // For the stweet streeper motor. Controlled by BUTTON_A. Reversible?
-	float orientation = 0.0;
+	// For the stweet streeper motor; controlled by BUTTON_A.
+	// Currently not reversible--should it be?
+	bool isSweeping = false;
+	//float orientation = 0.0;
 	float translation_x = 0.0;
 	float translation_y = 0.0;
 	float rotation = 0.0;
@@ -40,6 +44,8 @@ task main()
 	float power_BR = 0.0;
 	float power_cap = 0.0;
 	bool doNormalizePower = false;
+	float power_lift = 0.0;
+	bool isRaisingFlag = false;
 	//HTGYROstartCal(sensor_gyro);
 	Joystick_WaitForStart();
 
@@ -89,6 +95,22 @@ task main()
 			isSweeping = (!isSweeping);
 		}
 
+		power_lift = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2), 10), 128, 100);
+		if (Joystick_Direction(DIRECTION_NONE)==false) {
+			power_lift = 0;
+			if (Joystick_Direction(DIRECTION_F)==true) {
+				power_lift = 100;
+			} else if (Joystick_Direction(DIRECTION_B)==true) {
+				power_lift = -100;
+			}
+		}
+
+		if (Joystick_Button(BUTTON_Y)==true) {
+			isRaisingFlag = true;
+		} else {
+			isRaisingFlag = false;
+		}
+
 		Motor_SetPower(power_FR, motor_FR);
 		Motor_SetPower(power_FL, motor_FL);
 		Motor_SetPower(power_BL, motor_BL);
@@ -97,6 +119,12 @@ task main()
 			Motor_SetPower(100, motor_sweeper);
 		} else {
 			Motor_SetPower(0, motor_sweeper);
+		}
+		Motor_SetPower(power_lift, motor_lift);
+		if (isRaisingFlag==true) {
+			Motor_SetPower(100, motor_flag);
+		} else {
+			Motor_SetPower(0, motor_flag);
 		}
 	}
 }

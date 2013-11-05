@@ -31,6 +31,9 @@ task drive();
 task setLift();
 task waveFlag();
 
+// 1 = L, -1 = R; only applies in x-direction
+const int AUTON_L_R = 1;
+
 float g_translation_x = 0.0;
 float g_translation_y = 0.0;
 float g_rotation = 0.0;
@@ -75,7 +78,7 @@ task main() {
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
 
 	// Raise the lift and move sideways until in front of the IR beacon.
-	g_translation_x = -fine_tune_power;
+	g_translation_x = AUTON_L_R*(-fine_tune_power);
 	g_lift_target = LIFT_MED_POS;
 
 	// These will later trigger breaking out of the next loop to dump the
@@ -114,13 +117,13 @@ task main() {
 
 	// And move onto the ramp.
 	g_lift_target = LIFT_LOW_POS;
-	g_translation_x = -fine_tune_power;
+	g_translation_x = AUTON_L_R*(-fine_tune_power);
 	Time_Wait(start_to_first_turn_time-drive_time);
 	g_translation_x = 0;
 	g_translation_y = fine_tune_power;
 	Time_Wait(first_turn_to_second_turn_time);
 	g_translation_y = 0;
-	g_translation_x = fine_tune_power;
+	g_translation_x = AUTON_L_R*fine_tune_power;
 	Time_Wait(second_turn_to_ramp_time);
 	g_translation_x = 0;
 

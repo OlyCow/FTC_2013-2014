@@ -10,8 +10,8 @@
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
@@ -33,6 +33,11 @@
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif
+
+task PID();
+task CommLink();
+task Display();
+task Autonomous();
 
 //---------------- README!!! ------------------------------------------------>>
 //
@@ -63,6 +68,8 @@
 //
 //--------------------------------------------------------------------------->>
 
+bool isAutonomous = false;
+
 // For finding target values:
 float gyro_angle = 0.0;
 float rotation_magnitude = 0.0; // Components of the vector of rotation.
@@ -81,10 +88,12 @@ float combined_y[POD_NUM] = {0,0,0,0};
 bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
 
 task main() {
-	initializeGlobalVariables(); // Defined in "global vars.h", this intializes all struct members.
+	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	Task_Spawn(PID);
+	Task_Spawn(CommLink);
+	Task_Spawn(Display);
 
 	//// For finding target values:
-	////g_task_main = Task_GetCurrentIndex(); // This was used when we had multiple tasks.
 	//float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
 	//float gyro_y = 0.0;
 	//float gyro_angle = 0.0;
@@ -130,6 +139,7 @@ task main() {
 	//Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 
 	// Miscellaneous variables:
+	bool isSweeping = false;
 	bool isPlaying = false;
 
 	Joystick_WaitForStart();
@@ -209,96 +219,46 @@ task main() {
 
 
 
-		//// PID control loop:
-		//time_previous = time_current;
-		//time_current = Time_GetTime(TIMER_PROGRAM);
-		//time_difference = time_current-time_previous;
-		//// TEMPORARY!!!
-		////gyro_angle += time_difference*SensorValue[S3];
-		//for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		//	current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
-		//	current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
-		//	current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between -360 ~ 360.
-		//	current_encoder[i] += 360; // Value is now >= 0.
-		//	current_encoder[i] = (float)(round(current_encoder[i])%360); // Value is now between 0 ~ 360.
-		//	error_prev[i] = error[i];
-		//	error[i] = g_ServoData[i].angle-current_encoder[i];
-		//	if (error[i]>180) {
-		//		error[i] = error[i]-360;
-		//	} else if (error[i]<-180) {
-		//		error[i] = error[i]+360;
-		//	} // TODO: Can the above chain be simplified to something having to do with modulo 180?
-		//	//// This works, but doesn't eliminate the 180 deg turns. :?
-		//	//if (error[i]>90) {
-		//	//	error[i] = error[i]-180;
-		//	//	g_MotorData[i].isReversed = true;
-		//	//} else if (error[i]<90) {
-		//	//	error[i] = error[i]+180;
-		//	//	g_MotorData[i].isReversed = true;
-		//	//} else {
-		//	//	g_MotorData[i].isReversed = false;
-		//	//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
-		//	Math_TrimDeadband(error[i], g_EncoderDeadband);
-		//	error_accumulated_total[i] -= error_accumulated[i][kI_delay-1]; // Array indices.
-		//	error_accumulated_total[i] += error_accumulated[i][0];
-		//	for (int j=kI_delay-1; j>0; j--) { //`j=kI_delay-1` because we are dealing with array indices.
-		//		error_accumulated[i][j] = error_accumulated[i][j-1];
-		//	}
-		//	error_accumulated[i][0] = error[i]*time_difference;
-		//	error_rate[i] = (error[i]-error_prev[i])/time_difference;
-		//	if (abs(error[i])>36) { //36 is an arbitrary number :P
-		//		isAligned = ALIGNED_FAR;
-		//	} else if (abs(error[i])>12) {
-		//		isAligned = ALIGNED_MEDIUM;
-		//	} else {
-		//		isAligned = ALIGNED_CLOSE;
-		//	}
-		//	term_P[i] = kP[i]*error[i];
-		//	term_I[i] = kI[i]*error_accumulated_total[i];
-		//	term_D[i] = kD[i]*error_rate[i];
-		//	total_correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
-		//}
-		//for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		//	switch (isAligned) {
-		//		case ALIGNED_FAR:
-		//			g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
-		//			break;
-		//		case ALIGNED_MEDIUM:
-		//			g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
-		//			break;
-		//		// Not checking the "ALIGNED_CLOSE" condition may increase performance.
-		//	}
-		//}
+		// Other joystick input processing:
+		// Toggle autonomous mode when `BUTTON_START` is pressed on both controllers.
+		if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
+			switch (isAutonomous) {
+				case true :
+					isAutonomous = false;
+					Task_Kill(Autonomous);
+					break;
+				case false :
+					isAutonomous = true;
+					Task_Spawn(Autonomous);
+					break;
+			}
+		}
+		// If the flag is already waving, add 3 more waves.
+		if (Joystick_ButtonPressed(BUTTON_X, CONTROLLER_2)==true) {
+			switch (g_isWavingFlag) {
+				case true :
+					g_WaveNum += 3; // MAGIC_NUM.
+					break;
+				case false :
+					waveFlag();
+					break;
+			}
+		}
+		if ((Joystick_ButtonPressed(BUTTON_A))||(Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2))==true) {
+			isSweeping = !isSweeping; // TODO: see if `= !isSweeping` can be replaced with `^=`.
+		}
+
+		// Set motor and servo values:
+		if (isSweeping==true) {
+			power_sweeper = 100;
+		} else {
+			power_sweeper = 0;
+		}
+		Motor_SetPower(power_sweeper, motor_sweeper);
 
 
 
-		//// Assign the power settings to the motors (already parsed).
-		//for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		//	// The following line requires a PID loop on velocity, it seems.
-		//	//g_MotorData[i].power += total_correction[i]/(float)(10); // Correcting for servo rotation (doesn't work yet).
-		//	g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
-		//	if (g_MotorData[i].isReversed==true) {
-		//		g_MotorData[i].power *= -1;
-		//	}
-		//	g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
-		//	Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
-		//}
-
-		//// Assign the power settings to the servos.
-		//Servo_SetPower(servo_FR, -total_correction[POD_FR]);
-		//Servo_SetPower(servo_FL, -total_correction[POD_FL]);
-		//Servo_SetPower(servo_BL, -total_correction[POD_BL]);
-		//Servo_SetPower(servo_BR, -total_correction[POD_BR]);
-		////// This isn't working :'( Something to do with `enum TServoIndex` being an undefined macro?
-		////for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		////	int placeholder = (int)(Servo_Convert(SERVO_FR));
-		////	servo[placeholder] = -total_correction[i];
-		////	//Servo_SetPower(Servo_Convert((Servo)i), -total_correction[i]); // Servos are backwards (geared once).
-		////}
-
-
-
-		// TODO: FOLLOWING CODE BLOCK NOT IMPLEMENTED ANYWHERE (COMPILE ERRORS)
+		//// TODO: FOLLOWING CODE BLOCK NOT IMPLEMENTED ANYWHERE (COMPILE ERRORS)
 		//// Troubleshooting display:
 		//nxtDisplayTextLine(0, "FR set%d chg%d", g_ServoData[POD_FR].angle, total_correction[POD_FR]);
 		//nxtDisplayTextLine(1, "FL set%d chg%d", g_ServoData[POD_FL].angle, total_correction[POD_FL]);
@@ -308,22 +268,6 @@ task main() {
 		//nxtDisplayTextLine(5, "FL encdr%d pow%d", current_encoder[POD_FL], g_MotorData[POD_FL].power);
 		//nxtDisplayTextLine(6, "BL encdr%d pow%d", current_encoder[POD_BL], g_MotorData[POD_BL].power);
 		//nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
-
-
-
-		// Check if "moo.rso" should be playing. (EASTER EGG!)
-		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
-			isPlaying = !isPlaying;
-		}
-		if (isPlaying==true) {
-			if (Sound_IsPlaying()==false) {
-				Sound_Moo();
-			}
-		} else {
-			if (Sound_IsPlaying()==true) {
-				Sound_ClearQueue();
-			}
-		}
 	}
 }
 
@@ -359,6 +303,8 @@ task PID() {
 	float term_D[POD_NUM] = {0,0,0,0};
 	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
+
+	Joystick_WaitForStart();
 
 	while (true) {
 		// PID control loop:
@@ -460,10 +406,15 @@ task CommLink() {
 task Display() {
 
 	typedef enum DisplayMode {
-		DISP_FCS			= 0, // Default FCS screen.
-		DISP_SWERVE_DEBUG	= 1, // Encoders, target values, PID output, power levels.
-		DISP_PID_DEBUG		= 2, // Error, P-term, I-term, D-term.
-		DISP_COMM_STATUS	= 3, // Each line of each frame.
+		DISP_FCS,				// Default FCS screen.
+		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
+		DISP_PID_DEBUG,			// Error, P-term, I-term, D-term.
+		DISP_COMM_STATUS,		// Each line of each frame.
+		DISP_ENCODERS,			// Raw encoder values (7? 8?).
+		DISP_SENSORS,			// Might need to split this into two screens.
+		DISP_SERVOS,			// Show each servo's position.
+		DISP_TASKS,				// Which tasks are running.
+		DISP_AUTONOMOUS_INFO,	// Misc. status info.
 	};
 
 	DisplayMode isMode = DISP_FCS;
@@ -525,4 +476,21 @@ task Display() {
 				break;
 		}
 	}
+}
+
+
+
+task Autonomous() {
+
+	isAutonomous = true;
+
+	while (true) {
+		if (isAutonomous==false) {
+			break;
+		}
+		// TODO: Do stuff. I have no idea how.
+	}
+
+	isAutonomous = false;
+	Task_Kill(Autonomous);
 }

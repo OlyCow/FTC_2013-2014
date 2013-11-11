@@ -5,12 +5,12 @@
 
 
 
-bool g_isWavingFlag = false;
-int g_waveNum = 3;
+bool f_isWavingFlag = false;
+int f_waveNum = 3;
 
 void dumpCubes(int num=4);
 void waveFlag(int waveNum=4);
-task waveFlag();
+task waveFlagTask();
 
 
 
@@ -27,17 +27,17 @@ void dumpCubes(int num) {
 }
 
 void waveFlag(int waveNum) {
-	g_waveNum = waveNum;
-	Task_Spawn(waveFlag);
+	f_waveNum = waveNum;
+	Task_Spawn(waveFlagTask);
 }
 
-task waveFlag() {
-	g_isWavingFlag = true;
+task waveFlagTask() {
+	f_isWavingFlag = true;
 
 	// MAGIC_NUM: TODO.
 	const int delay = 0;
 
-	for (int i=0; i<g_waveNum; i++) {
+	for (int i=0; i<f_waveNum; i++) {
 		Servo_SetPosition(servo_flag, servo_flag_L);
 		Time_Wait(delay);
 		Servo_SetPosition(servo_flag, servo_flag_R);
@@ -46,8 +46,8 @@ task waveFlag() {
 	Servo_SetPosition(servo_flag, servo_flag_M);
 	Time_Wait(delay);
 
-	g_isWavingFlag = false;
-	Task_Kill(waveFlag);
+	f_isWavingFlag = false;
+	Task_Kill(waveFlagTask);
 }
 
 

@@ -70,22 +70,15 @@ task Autonomous();
 
 bool isAutonomous = false;
 
-// For finding target values:
-float gyro_angle = 0.0;
-float rotation_magnitude = 0.0; // Components of the vector of rotation.
-float rotation_angle[POD_NUM] = {0,0,0,0};
-float rotation_x[POD_NUM] = {0,0,0,0};
-float rotation_y[POD_NUM] = {0,0,0,0};
-float translation_magnitude = 0.0; // Components of the vector of translation.
-float translation_angle = 0.0;
-float translation_x = 0.0;
-float translation_y = 0.0;
-float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
-float combined_angle[POD_NUM] = {0,0,0,0};
-float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
-float combined_x[POD_NUM] = {0,0,0,0};
-float combined_y[POD_NUM] = {0,0,0,0};
-bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+float power_FR = 0.0;
+float power_FL = 0.0;
+float power_BL = 0.0;
+float power_BR = 0.0;
+float power_sweeper = 0.0;
+float power_lift = 0.0;
+float power_flag = 0.0;
+int servo_funnel_L_pos = servo_funnel_L_open;
+int servo_funnel_R_pos = servo_funnel_R_open;
 
 task main() {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
@@ -93,54 +86,26 @@ task main() {
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	//// For finding target values:
-	//float gyro_x = 0.0; // These two will be unnecessary once we get an actual gyro.
-	//float gyro_y = 0.0;
-	//float gyro_angle = 0.0;
-	//float rotation_magnitude = 0.0; // Components of the vector of rotation.
-	//float rotation_angle[POD_NUM] = {0,0,0,0};
-	//float rotation_x[POD_NUM] = {0,0,0,0};
-	//float rotation_y[POD_NUM] = {0,0,0,0};
-	//float translation_magnitude = 0.0; // Components of the vector of translation.
-	//float translation_angle = 0.0;
-	//float translation_x = 0.0;
-	//float translation_y = 0.0;
-	//float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
-	//float combined_angle[POD_NUM] = {0,0,0,0};
-	//float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
-	//float combined_x[POD_NUM] = {0,0,0,0};
-	//float combined_y[POD_NUM] = {0,0,0,0};
-	//bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
-	//float gyro_increment = 0.0;
-
-	//// For PID control:
-	//float time_current = Time_GetTime(TIMER_PROGRAM);
-	//float time_previous = time_current;
-	//float time_difference = time_current-time_previous;
-	//const int kI_delay = 10;
-	//float error_accumulated[POD_NUM][kI_delay];
-	//for (int i=0; i<(int)POD_NUM; i++) {
-	//	for (int j=0; j<kI_delay; j++) {
-	//		error_accumulated[i][j] = 0;
-	//	}
-	//}
-	//float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	//float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // Still very rough. (1.1)
-	//float kI[POD_NUM] = {0.008,	0.008,	0.008,	0.008}; //  {0.003,	0.01,	0.01,	0.03}
-	//float kD[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // .08
-	//float current_encoder[POD_NUM] = {0,0,0,0};
-	//float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
-	//float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
-	//float error_rate[POD_NUM] = {0,0,0,0};
-	//float term_P[POD_NUM] = {0,0,0,0};
-	//float term_I[POD_NUM] = {0,0,0,0};
-	//float term_D[POD_NUM] = {0,0,0,0};
-	//float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
-	//Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
+	// For finding target values:
+	float gyro_angle = 0.0;
+	float rotation_magnitude = 0.0; // Components of the vector of rotation.
+	float rotation_angle[POD_NUM] = {0,0,0,0};
+	float rotation_x[POD_NUM] = {0,0,0,0};
+	float rotation_y[POD_NUM] = {0,0,0,0};
+	float translation_magnitude = 0.0; // Components of the vector of translation.
+	float translation_angle = 0.0;
+	float translation_x = 0.0;
+	float translation_y = 0.0;
+	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
+	float combined_angle[POD_NUM] = {0,0,0,0};
+	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
+	float combined_x[POD_NUM] = {0,0,0,0};
+	float combined_y[POD_NUM] = {0,0,0,0};
+	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
+	float gyro_increment = 0.0;
 
 	// Miscellaneous variables:
 	bool isSweeping = false;
-	bool isPlaying = false;
 
 	Joystick_WaitForStart();
 
@@ -220,6 +185,39 @@ task main() {
 
 
 		// Other joystick input processing:
+		// On conflicting input, 2 cubes are dumped instead of 4.
+		if ((Joystick_ButtonReleased(BUTTON_A))||(Joystick_ButtonReleased(BUTTON_A, CONTROLLER_2))==true) {
+			dumpCubes(2); // MAGIC_NUM.
+		} else if ((Joystick_ButtonReleased(BUTTON_B))||(Joystick_ButtonReleased(BUTTON_B, CONTROLLER_2))==true) {
+			dumpCubes(4); // MAGIC_NUM.
+		}
+		// Only `CONTROLLER_2` can funnel cubes in.
+		if (Joystick_ButtonPressed(BUTTON_LT, CONTROLLER_2)==true) {
+			switch (servo_funnel_L_pos) {
+				case servo_funnel_L_closed :
+					servo_funnel_L_pos = servo_funnel_L_open;
+					break;
+				case servo_funnel_L_open :
+					servo_funnel_L_pos = servo_funnel_L_closed;
+					break;
+				default:
+					servo_funnel_L_pos = servo_funnel_L_closed;
+					break;
+			}
+		}
+		if (Joystick_ButtonPressed(BUTTON_RT, CONTROLLER_2)==true) {
+			switch (servo_funnel_R_pos) {
+				case servo_funnel_R_closed :
+					servo_funnel_R_pos = servo_funnel_R_open;
+					break;
+				case servo_funnel_L_open :
+					servo_funnel_R_pos = servo_funnel_R_closed;
+					break;
+				default:
+					servo_funnel_R_pos = servo_funnel_R_closed;
+					break;
+			}
+		}
 		// Toggle autonomous mode when `BUTTON_START` is pressed on both controllers.
 		if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
 			switch (isAutonomous) {
@@ -235,16 +233,16 @@ task main() {
 		}
 		// If the flag is already waving, add 3 more waves.
 		if (Joystick_ButtonPressed(BUTTON_X, CONTROLLER_2)==true) {
-			switch (g_isWavingFlag) {
+			switch (f_isWavingFlag) {
 				case true :
-					g_WaveNum += 3; // MAGIC_NUM.
+					f_waveNum += 3; // MAGIC_NUM.
 					break;
 				case false :
 					waveFlag();
 					break;
 			}
 		}
-		if ((Joystick_ButtonPressed(BUTTON_A))||(Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2))==true) {
+		if ((Joystick_ButtonPressed(BUTTON_Y))||(Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2))==true) {
 			isSweeping = !isSweeping; // TODO: see if `= !isSweeping` can be replaced with `^=`.
 		}
 
@@ -255,6 +253,11 @@ task main() {
 			power_sweeper = 0;
 		}
 		Motor_SetPower(power_sweeper, motor_sweeper);
+		Motor_SetPower(power_lift, motor_lift);
+		Motor_SetPower(power_flag, motor_flag_L);
+		Motor_SetPower(power_flag, motor_flag_R);
+		Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
+		Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
 
 
 

@@ -21,7 +21,10 @@ motorData g_MotorData[4]; //4 drive base motors.
 servoData g_ServoData[4]; //4 continuous rotation servos.
 
 // Various servo positions.
-// MAGIC_NUM: TODO.
+// MAGIC_NUM: TODO (all).
+const int lift_pos_pickup = 0;
+const int lift_pos_dump = 100;
+const int lift_pos_top = 200;
 const int servo_funnel_L_open = 0;
 const int servo_funnel_L_closed = 255;
 const int servo_funnel_R_open = 0;

@@ -1,8 +1,6 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S3,     sensor_gyro,    sensorI2CCustomFastSkipStates9V)
+#pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
@@ -34,13 +32,12 @@
 #warn "This code will explode!"
 #endif
 
-task PID();
-task CommLink();
-task Display();
-task Autonomous();
+task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
+task CommLink(); // Reads/writes to the protoboard as tightly as possible.
+task Display(); // A separate task for updating the NXT's LCD display.
+task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
-//
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with 3D-printed gears should
 // face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
@@ -54,22 +51,24 @@ task Autonomous();
 //
 // CONTROLS:	Controller_1, Joystick_R:	Translational movement.
 //				Controller_1, Button_LB/RB:	Rotational movement.
-//				Controller_1, Button_A:		Toggles servo locking.
-//				Controller_1, Button_X:		Toggles transmission gearing.
 //				Controller_1, Button_LT:	Stop motors (adjust pod direction).
 //				Controller_1, Button_RT:	Fine-tune motors.
 //				Controller_1, Button_Y:		Moo.
 //
-//     To troubleshoot, simply download the code, give the robot some input, and
-// look at the screen. "FR/FL/BL/BR" refers to the wheel pod. "set" refers to
+//     Troubleshooting: "FR/FL/BL/BR" refers to the wheel pod. "set" refers to
 // the target angle for the servo, while "chg" refers to the correction force
 // applied by the servo. "encdr" prints the reading of the encoder (normalized,
 // to compensate for gearing), and "pow" is the power applied to the motor.
-//
 //--------------------------------------------------------------------------->>
 
 bool isAutonomous = false;
-
+bool isSweeping = false;
+int f_angle_z = 0;
+int f_angle_y = 0;
+int f_angle_x = 0;
+int f_pos_z = 0;
+int f_pos_y = 0;
+int f_pos_x = 0;
 float power_FR = 0.0;
 float power_FL = 0.0;
 float power_BL = 0.0;
@@ -77,6 +76,7 @@ float power_BR = 0.0;
 float power_sweeper = 0.0;
 float power_lift = 0.0;
 float power_flag = 0.0;
+int lift_pos = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
 
@@ -86,8 +86,11 @@ task main() {
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	// For finding target values:
-	float gyro_angle = 0.0;
+	vector2D rotation[POD_NUM];
+	vector2D translation; // Not a struct because all wheel pods share the same values.
+	vector2D comnbined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
+
 	float rotation_magnitude = 0.0; // Components of the vector of rotation.
 	float rotation_angle[POD_NUM] = {0,0,0,0};
 	float rotation_x[POD_NUM] = {0,0,0,0};
@@ -101,11 +104,6 @@ task main() {
 	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
 	float combined_x[POD_NUM] = {0,0,0,0};
 	float combined_y[POD_NUM] = {0,0,0,0};
-	bool shouldNormalize = false; // This flag is set if motor values go over 100. All motor values will be scaled down.
-	float gyro_increment = 0.0;
-
-	// Miscellaneous variables:
-	bool isSweeping = false;
 
 	Joystick_WaitForStart();
 
@@ -114,14 +112,10 @@ task main() {
 	while (true) {
 		Joystick_UpdateData();
 
-		// Actual code starts here. It is ridiculously simple, but oddly counter-
-		// intuitive. The rotation vector and the translation vector are combined,
-		// then the final vector is normalized. That is it. This algorithm has the
-		// property of seeming like the direction of the resultant vector is the
-		// average of the input vectors' directions, which it is. It might seem like
-		// there would be inevitable slipping involved in this scheme, but a simple
-		// derivative analysis of a generalized cycloid shows the above algorithm
-		// to describe the direction of the wheel pods perfectly.
+		// Rotation vector is added to translation vector, and the resultant vector
+		// is normalized. A differential analysis of the parametric equations of
+		// each wheel pod confirms that the above algorithm works perfectly, despite
+		// its apparent simplicity.
 		rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
 		translation_x = Joystick_GetTranslationX();
 		translation_y = Joystick_GetTranslationY();
@@ -138,7 +132,7 @@ task main() {
 			if (combined_magnitude[i]>g_FullPower) {
 				shouldNormalize = true;
 			}
-			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+gyro_angle+360)%360;
+			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+f_angle_z+360)%360;
 			if ((combined_angle[i]==0)&&(combined_magnitude[i]==0)) {
 				combined_angle[i] = combined_angle_prev[i];
 			} else {
@@ -185,14 +179,32 @@ task main() {
 
 
 		// Other joystick input processing:
+
+		// Second driver's lift controls are overridden by the first's. The first
+		// driver can also lock the lift position by pressing the D-pad (L or R).
+		if (Joystick_Direction(DIRECTION_F)==true) {
+			lift_pos += 100;
+		} else if (Joystick_Direction(DIRECTION_B)==true) {
+			lift_pos -= 100;
+		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
+			lift_pos += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+			if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
+				lift_pos = lift_pos_dump;
+			}
+			if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
+				lift_pos = lift_pos_pickup;
+			}
+		}
+
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_A))||(Joystick_ButtonReleased(BUTTON_A, CONTROLLER_2))==true) {
 			dumpCubes(2); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_B))||(Joystick_ButtonReleased(BUTTON_B, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		}
+
 		// Only `CONTROLLER_2` can funnel cubes in.
-		if (Joystick_ButtonPressed(BUTTON_LT, CONTROLLER_2)==true) {
+		if (Joystick_ButtonPressed(BUTTON_LB, CONTROLLER_2)==true) {
 			switch (servo_funnel_L_pos) {
 				case servo_funnel_L_closed :
 					servo_funnel_L_pos = servo_funnel_L_open;
@@ -205,7 +217,7 @@ task main() {
 					break;
 			}
 		}
-		if (Joystick_ButtonPressed(BUTTON_RT, CONTROLLER_2)==true) {
+		if (Joystick_ButtonPressed(BUTTON_RB, CONTROLLER_2)==true) {
 			switch (servo_funnel_R_pos) {
 				case servo_funnel_R_closed :
 					servo_funnel_R_pos = servo_funnel_R_open;
@@ -218,6 +230,7 @@ task main() {
 					break;
 			}
 		}
+
 		// Toggle autonomous mode when `BUTTON_START` is pressed on both controllers.
 		if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
 			switch (isAutonomous) {
@@ -231,6 +244,7 @@ task main() {
 					break;
 			}
 		}
+
 		// If the flag is already waving, add 3 more waves.
 		if (Joystick_ButtonPressed(BUTTON_X, CONTROLLER_2)==true) {
 			switch (f_isWavingFlag) {
@@ -246,31 +260,19 @@ task main() {
 			isSweeping = !isSweeping; // TODO: see if `= !isSweeping` can be replaced with `^=`.
 		}
 
-		// Set motor and servo values:
+
+
+		// Set motor and servo values (lift motor is set in PID()):
 		if (isSweeping==true) {
 			power_sweeper = 100;
 		} else {
 			power_sweeper = 0;
 		}
 		Motor_SetPower(power_sweeper, motor_sweeper);
-		Motor_SetPower(power_lift, motor_lift);
 		Motor_SetPower(power_flag, motor_flag_L);
 		Motor_SetPower(power_flag, motor_flag_R);
 		Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
 		Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
-
-
-
-		//// TODO: FOLLOWING CODE BLOCK NOT IMPLEMENTED ANYWHERE (COMPILE ERRORS)
-		//// Troubleshooting display:
-		//nxtDisplayTextLine(0, "FR set%d chg%d", g_ServoData[POD_FR].angle, total_correction[POD_FR]);
-		//nxtDisplayTextLine(1, "FL set%d chg%d", g_ServoData[POD_FL].angle, total_correction[POD_FL]);
-		//nxtDisplayTextLine(2, "BL set%d chg%d", g_ServoData[POD_BL].angle, total_correction[POD_BL]);
-		//nxtDisplayTextLine(3, "BR set%d chg%d", g_ServoData[POD_BR].angle, total_correction[POD_BR]);
-		//nxtDisplayTextLine(4, "FR encdr%d pow%d", current_encoder[POD_FR], g_MotorData[POD_FR].power);
-		//nxtDisplayTextLine(5, "FL encdr%d pow%d", current_encoder[POD_FL], g_MotorData[POD_FL].power);
-		//nxtDisplayTextLine(6, "BL encdr%d pow%d", current_encoder[POD_BL], g_MotorData[POD_BL].power);
-		//nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
 	}
 }
 
@@ -384,18 +386,13 @@ task PID() {
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
 		}
+		Motor_SetPower(power_lift, motor_lift);
 
 		// Assign the power settings to the servos.
 		Servo_SetPower(servo_FR, -total_correction[POD_FR]);
 		Servo_SetPower(servo_FL, -total_correction[POD_FL]);
 		Servo_SetPower(servo_BL, -total_correction[POD_BL]);
 		Servo_SetPower(servo_BR, -total_correction[POD_BR]);
-		//// This isn't working :'( Something to do with `enum TServoIndex` being an undefined macro?
-		//for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		//	int placeholder = (int)(Servo_Convert(SERVO_FR));
-		//	servo[placeholder] = -total_correction[i];
-		//	//Servo_SetPower(Servo_Convert((Servo)i), -total_correction[i]); // Servos are backwards (geared once).
-		//}
 }
 
 
@@ -449,6 +446,16 @@ task Display() {
 						isMode = DISP_PID_DEBUG;
 						break;
 					}
+					//// TODO: FOLLOWING CODE BLOCK NOT IMPLEMENTED ANYWHERE (COMPILE ERRORS)
+					//// Troubleshooting display:
+					//nxtDisplayTextLine(0, "FR set%d chg%d", g_ServoData[POD_FR].angle, total_correction[POD_FR]);
+					//nxtDisplayTextLine(1, "FL set%d chg%d", g_ServoData[POD_FL].angle, total_correction[POD_FL]);
+					//nxtDisplayTextLine(2, "BL set%d chg%d", g_ServoData[POD_BL].angle, total_correction[POD_BL]);
+					//nxtDisplayTextLine(3, "BR set%d chg%d", g_ServoData[POD_BR].angle, total_correction[POD_BR]);
+					//nxtDisplayTextLine(4, "FR encdr%d pow%d", current_encoder[POD_FR], g_MotorData[POD_FR].power);
+					//nxtDisplayTextLine(5, "FL encdr%d pow%d", current_encoder[POD_FL], g_MotorData[POD_FL].power);
+					//nxtDisplayTextLine(6, "BL encdr%d pow%d", current_encoder[POD_BL], g_MotorData[POD_BL].power);
+					//nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
 				}
 				break;
 			case DISP_PID_DEBUG :

@@ -94,20 +94,6 @@ task main() {
 	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 
-	//float rotation_magnitude = 0.0; // Components of the vector of rotation.
-	//float rotation_angle[POD_NUM] = {0,0,0,0};
-	//float rotation_x[POD_NUM] = {0,0,0,0};
-	//float rotation_y[POD_NUM] = {0,0,0,0};
-	//float translation_magnitude = 0.0; // Components of the vector of translation.
-	//float translation_angle = 0.0;
-	//float translation_x = 0.0;
-	//float translation_y = 0.0;
-	//float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
-	//float combined_angle[POD_NUM] = {0,0,0,0};
-	//float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
-	//float combined_x[POD_NUM] = {0,0,0,0};
-	//float combined_y[POD_NUM] = {0,0,0,0};
-
 	Joystick_WaitForStart();
 
 
@@ -161,71 +147,23 @@ task main() {
 			g_MotorData[i].power = combined[i].r;
 		}
 
-		// TODO: Add trigger modifications, etc.
-
-		//rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
-		//translation_x = Joystick_GetTranslationX();
-		//translation_y = Joystick_GetTranslationY();
-		//translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
-		//translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
-		//for (int i=POD_FR; i<=(int)POD_BR; i++) {
-		//	rotation_angle[i] = g_MotorData[i].angleOffset+90; // Tangent to circle, so +90deg.
-		//	rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
-		//	rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
-		//	combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
-		//	combined_x[i] = combined_x[i];
-		//	combined_y[i] = translation_y+rotation_y[i];
-		//	combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
-		//	if (combined_magnitude[i]>g_FullPower) {
-		//		shouldNormalize = true;
-		//	}
-		//	combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+f_angle_z+360)%360;
-		//	if ((combined_angle[i]==0)&&(combined_magnitude[i]==0)) {
-		//		combined_angle[i] = combined_angle_prev[i];
-		//	} else {
-		//		combined_angle_prev[i] = combined_angle[i];
-		//	}
-		//	g_ServoData[i].angle = combined_angle[i];
-		//}
-
-		//// Normalize our motors' power values if a motor's power went above g_FullPower.
-		//if (shouldNormalize==true) {
-		//	float originalMaxPower = combined_magnitude[0];
-		//	for (int i=POD_FR; i<=(int)POD_BR; i++) {
-		//		if (combined_magnitude[i]>originalMaxPower) {
-		//			originalMaxPower = combined_magnitude[i];
-		//		}
-		//	}
-		//	for (int i=POD_FR; i<=(int)POD_BR; i++) {
-		//		combined_magnitude[i] = Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
-		//	}
-		//	shouldNormalize = false; // Reset this for the next iteration.
-		//}
-		//for (int i=POD_FR; i<=(int)POD_BR; i++) {
-		//	g_MotorData[i].power = combined_magnitude[i];
-		//}
-
-		//// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
-		//// while holding both triggers stops movement? The `if... else if...` structure
-		//// is also a problem (BUTTON_LT takes precedence over BUTTON_RT).
-		//// Set our "fine-tune" factor (amount motor power is divided by).
-		//if (Joystick_Button(BUTTON_LT)==true) {
-		//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		//		g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
-		//	}
-		//} else if (Joystick_Button(BUTTON_RT)==true) {
-		//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		//		g_MotorData[i].fineTuneFactor = 0.2;
-		//	}
-		//} else {
-		//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		//		g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
-		//	}
-		//}
-
-
-
-		// Other joystick input processing:
+		// Set our "fine-tune" factor (amount motor power is divided by).
+		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
+		// while holding both triggers stops movement? The `if... else if...` structure
+		// is also a problem, since BUTTON_LT will take precedence over BUTTON_RT.
+		if (Joystick_Button(BUTTON_LT)==true) {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
+			}
+		} else if (Joystick_Button(BUTTON_RT)==true) {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 0.2; // MAGIC_NUM.
+			}
+		} else {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
+			}
+		}
 
 		// Second driver's lift controls are overridden by the first's. The first
 		// driver can also lock the lift position by pressing the D-pad (L or R).
@@ -307,8 +245,6 @@ task main() {
 			isSweeping = !isSweeping; // TODO: see if `= !isSweeping` can be replaced with `^=`.
 		}
 
-
-
 		// Set motor and servo values (lift motor is set in PID()):
 		if (isSweeping==true) {
 			power_sweeper = 100;
@@ -326,6 +262,7 @@ task main() {
 
 
 task PID() {
+
 	typedef enum Aligned {
 		ALIGNED_FAR		= 0,
 		ALIGNED_MEDIUM	= 1,
@@ -343,9 +280,9 @@ task PID() {
 		}
 	}
 	float error_accumulated_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // Still very rough. (1.1)
-	float kI[POD_NUM] = {0.008,	0.008,	0.008,	0.008}; //  {0.003,	0.01,	0.01,	0.03}
-	float kD[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // .08
+	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // TODO: PID tuning.
+	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
+	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -353,13 +290,12 @@ task PID() {
 	float term_P[POD_NUM] = {0,0,0,0};
 	float term_I[POD_NUM] = {0,0,0,0};
 	float term_D[POD_NUM] = {0,0,0,0};
-	float total_correction[POD_NUM] = {0,0,0,0}; // Simply "term_P + term_I + term_D".
+	float total_correction[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 
 	Joystick_WaitForStart();
 
 	while (true) {
-		// PID control loop:
 		time_previous = time_current;
 		time_current = Time_GetTime(TIMER_PROGRAM);
 		time_difference = time_current-time_previous;
@@ -445,6 +381,11 @@ task PID() {
 
 
 task CommLink() {
+	Joystick_WaitForStart();
+
+	while (true) {
+		// Continuously update stuff.
+	}
 }
 
 

@@ -51,7 +51,7 @@ bool Sound_GetQueueStatus() {
 	return bPlaySounds;
 }
 void Sound_Moo() {
-	PlaySoundFile("..\Resources\moo.rso");
+	PlaySoundFile("moo.rso");
 }
 
 

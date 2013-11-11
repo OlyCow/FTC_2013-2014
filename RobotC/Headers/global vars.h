@@ -20,6 +20,10 @@ const float g_EncoderDeadband = 1.0;
 motorData g_MotorData[4]; //4 drive base motors.
 servoData g_ServoData[4]; //4 continuous rotation servos.
 
+// Various servo positions.
+const int servo_dump_open = 0;
+const int servo_dump_closed = 0;
+
 
 
 #endif // GLOBAL_VARS_H

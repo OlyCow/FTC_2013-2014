@@ -16,10 +16,10 @@
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_stick,          tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo7,               tServoNone)
-#pragma config(Servo,  srvo_S2_C2_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_funnel_R,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
@@ -27,11 +27,9 @@
 
 #include "includes.h"
 #include "Teleop-Basic.h"
+#include "subroutines.h"
 
-// Automatically starts all tasks defined in this file.
-#pragma autoStartTasks
-
-#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
+//#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif

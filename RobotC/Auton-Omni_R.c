@@ -114,6 +114,7 @@ task main() {
 	// Now we dump the IR cube...
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	Time_Wait(servo_dump_delay);
+	Servo_SetPosition(servo_dump, servo_dump_closed);
 
 	// And move onto the ramp.
 	g_lift_target = LIFT_LOW_POS;

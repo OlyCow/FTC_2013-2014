@@ -86,24 +86,27 @@ task main() {
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
+	// Not initializing these structs for now: once data starts coming in
+	// from the controllers, all the members of these will get updated.
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
-	vector2D comnbined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 
-	float rotation_magnitude = 0.0; // Components of the vector of rotation.
-	float rotation_angle[POD_NUM] = {0,0,0,0};
-	float rotation_x[POD_NUM] = {0,0,0,0};
-	float rotation_y[POD_NUM] = {0,0,0,0};
-	float translation_magnitude = 0.0; // Components of the vector of translation.
-	float translation_angle = 0.0;
-	float translation_x = 0.0;
-	float translation_y = 0.0;
-	float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
-	float combined_angle[POD_NUM] = {0,0,0,0};
-	float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
-	float combined_x[POD_NUM] = {0,0,0,0};
-	float combined_y[POD_NUM] = {0,0,0,0};
+	//float rotation_magnitude = 0.0; // Components of the vector of rotation.
+	//float rotation_angle[POD_NUM] = {0,0,0,0};
+	//float rotation_x[POD_NUM] = {0,0,0,0};
+	//float rotation_y[POD_NUM] = {0,0,0,0};
+	//float translation_magnitude = 0.0; // Components of the vector of translation.
+	//float translation_angle = 0.0;
+	//float translation_x = 0.0;
+	//float translation_y = 0.0;
+	//float combined_magnitude[POD_NUM] = {0,0,0,0}; // Components of the final (assigned) vector.
+	//float combined_angle[POD_NUM] = {0,0,0,0};
+	//float combined_angle_prev[POD_NUM] = {90,90,90,90}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. Start facing forward.
+	//float combined_x[POD_NUM] = {0,0,0,0};
+	//float combined_y[POD_NUM] = {0,0,0,0};
 
 	Joystick_WaitForStart();
 
@@ -112,69 +115,113 @@ task main() {
 	while (true) {
 		Joystick_UpdateData();
 
-		// Rotation vector is added to translation vector, and the resultant vector
+		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
 		// each wheel pod confirms that the above algorithm works perfectly, despite
-		// its apparent simplicity.
-		rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
-		translation_x = Joystick_GetTranslationX();
-		translation_y = Joystick_GetTranslationY();
-		translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
-		translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
-		for (int i=POD_FR; i<=(int)POD_BR; i++) {
-			rotation_angle[i] = g_MotorData[i].angleOffset+90; // Tangent to circle, so +90deg.
-			rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
-			rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
-			combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
-			combined_x[i] = combined_x[i];
-			combined_y[i] = translation_y+rotation_y[i];
-			combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
-			if (combined_magnitude[i]>g_FullPower) {
+		// its apparent simplicity. Use of the Vector2D library makes some of this
+		// slightly less efficient (there are some unnecessary update calculations)
+		// but the benefit of increased readability is well worth it.
+		translation.x = Joystick_GetTranslationX();
+		translation.y = Joystick_GetTranslationY();
+		Vector2D_UpdateRot(translation);
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			rotation[i].r = Joystick_GetRotationMagnitude();
+			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
+			Vector2D_UpdatePos(rotation[i]);
+			Vector2D_Add(rotation[i], translation, combined[i]);
+			//combined[i].x = -combined[i].x; // Flipping a sign can work wonders (sometimes).
+			if (combined[i].r>g_FullPower) {
 				shouldNormalize = true;
 			}
-			combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+f_angle_z+360)%360;
-			if ((combined_angle[i]==0)&&(combined_magnitude[i]==0)) {
-				combined_angle[i] = combined_angle_prev[i];
+			if ((combined[i].theta==0)&&(combined[i].r==0)) { // AND encoder is within however many turns
+				combined[i].theta = combined_angle_prev[i];
+				// No need to update `combined_angle_prev[i]` because it stays the same.
+				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
 			} else {
-				combined_angle_prev[i] = combined_angle[i];
+				combined_angle_prev[i] = combined[i].theta;
 			}
-			g_ServoData[i].angle = combined_angle[i];
+			g_ServoData[i].angle = combined[i].theta;
 		}
 
 		// Normalize our motors' power values if a motor's power went above g_FullPower.
 		if (shouldNormalize==true) {
-			float originalMaxPower = combined_magnitude[0];
-			for (int i=POD_FR; i<=(int)POD_BR; i++) {
-				if (combined_magnitude[i]>originalMaxPower) {
-					originalMaxPower = combined_magnitude[i];
+			float originalMaxPower = g_FullPower; // If there was a false positive, this ensures nothing changes.
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				if (combined[i].r>originalMaxPower) {
+					originalMaxPower = combined[i].r;
 				}
 			}
-			for (int i=POD_FR; i<=(int)POD_BR; i++) {
-				combined_magnitude[i] = Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				combined[i].r = Math_Normalize(combined[i].r, originalMaxPower, g_FullPower);
+				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
 			}
 			shouldNormalize = false; // Reset this for the next iteration.
 		}
-		for (int i=POD_FR; i<=(int)POD_BR; i++) {
-			g_MotorData[i].power = combined_magnitude[i];
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			g_MotorData[i].power = combined[i].r;
 		}
 
-		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
-		// while holding both triggers stops movement? The `if... else if...` structure
-		// is also a problem (BUTTON_LT takes precedence over BUTTON_RT).
-		// Set our "fine-tune" factor (amount motor power is divided by).
-		if (Joystick_Button(BUTTON_LT)==true) {
-			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
-			}
-		} else if (Joystick_Button(BUTTON_RT)==true) {
-			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 0.2;
-			}
-		} else {
-			for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
-			}
-		}
+		// TODO: Add trigger modifications, etc.
+
+		//rotation_magnitude = Joystick_GetRotationMagnitude(); // Either LB/RB or X-axis of other joystick.
+		//translation_x = Joystick_GetTranslationX();
+		//translation_y = Joystick_GetTranslationY();
+		//translation_magnitude = sqrt(pow(translation_x,2)+pow(translation_y,2)); // Pythagorean Theorem.
+		//translation_angle = Math_RadToDeg(atan2(translation_y, translation_x)); // -180deg ~ 180deg
+		//for (int i=POD_FR; i<=(int)POD_BR; i++) {
+		//	rotation_angle[i] = g_MotorData[i].angleOffset+90; // Tangent to circle, so +90deg.
+		//	rotation_x[i] = rotation_magnitude*cosDegrees(rotation_angle[i]); // Simple algebra.
+		//	rotation_y[i] = rotation_magnitude*sinDegrees(rotation_angle[i]);
+		//	combined_x[i] = translation_x+rotation_x[i]; // Combining the vectors' components.
+		//	combined_x[i] = combined_x[i];
+		//	combined_y[i] = translation_y+rotation_y[i];
+		//	combined_magnitude[i] = sqrt(pow(combined_x[i],2)+pow(combined_y[i],2));
+		//	if (combined_magnitude[i]>g_FullPower) {
+		//		shouldNormalize = true;
+		//	}
+		//	combined_angle[i] = (Math_RadToDeg(atan2(combined_y[i], combined_x[i]))+f_angle_z+360)%360;
+		//	if ((combined_angle[i]==0)&&(combined_magnitude[i]==0)) {
+		//		combined_angle[i] = combined_angle_prev[i];
+		//	} else {
+		//		combined_angle_prev[i] = combined_angle[i];
+		//	}
+		//	g_ServoData[i].angle = combined_angle[i];
+		//}
+
+		//// Normalize our motors' power values if a motor's power went above g_FullPower.
+		//if (shouldNormalize==true) {
+		//	float originalMaxPower = combined_magnitude[0];
+		//	for (int i=POD_FR; i<=(int)POD_BR; i++) {
+		//		if (combined_magnitude[i]>originalMaxPower) {
+		//			originalMaxPower = combined_magnitude[i];
+		//		}
+		//	}
+		//	for (int i=POD_FR; i<=(int)POD_BR; i++) {
+		//		combined_magnitude[i] = Math_Normalize(combined_magnitude[i], originalMaxPower, g_FullPower);
+		//	}
+		//	shouldNormalize = false; // Reset this for the next iteration.
+		//}
+		//for (int i=POD_FR; i<=(int)POD_BR; i++) {
+		//	g_MotorData[i].power = combined_magnitude[i];
+		//}
+
+		//// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
+		//// while holding both triggers stops movement? The `if... else if...` structure
+		//// is also a problem (BUTTON_LT takes precedence over BUTTON_RT).
+		//// Set our "fine-tune" factor (amount motor power is divided by).
+		//if (Joystick_Button(BUTTON_LT)==true) {
+		//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		//		g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
+		//	}
+		//} else if (Joystick_Button(BUTTON_RT)==true) {
+		//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		//		g_MotorData[i].fineTuneFactor = 0.2;
+		//	}
+		//} else {
+		//	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		//		g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
+		//	}
+		//}
 
 
 

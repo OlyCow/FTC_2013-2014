@@ -31,7 +31,7 @@ task drive();
 task setLift();
 task waveFlag();
 
-// 1 = L, -1 = R; only applies in x-direction
+// 1 = L, -1 = R; this should only affect horizontal movements.
 const int AUTON_L_R = -1;
 
 float g_translation_x = 0.0;
@@ -198,7 +198,8 @@ task drive() {
 task setLift() {
 	const float kP = 1.0;
 	float current_position = 0.0;
-	float error = g_lift_target-current_position;
+	// `error` would be `g_lift_target-current_position`, but that crashes RobotC :/
+	float error = 0.0;
 	float power_lift = 0;
 	Motor_ResetEncoder(motor_lift);
 	Joystick_WaitForStart();

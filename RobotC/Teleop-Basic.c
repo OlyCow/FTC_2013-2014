@@ -75,9 +75,9 @@ float power_flag = 0.0;
 int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
-float term_P[POD_NUM] = {0,0,0,0};
-float term_I[POD_NUM] = {0,0,0,0};
-float term_D[POD_NUM] = {0,0,0,0};
+float term_P_pod[POD_NUM] = {0,0,0,0};
+float term_I_pod[POD_NUM] = {0,0,0,0};
+float term_D_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
@@ -282,7 +282,7 @@ task PID() {
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // TODO: PID tuning.
+	float kP[POD_NUM] = {1.0,	1.0,	1.0,	1.0}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -355,10 +355,10 @@ task PID() {
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
-			term_P[i] = kP[i]*error_pod[i];
-			term_I[i] = kI[i]*error_sum_total_pod[i];
-			term_D[i] = kD[i]*error_rate_pod[i];
-			correction_pod[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
+			term_P_pod[i] = kP[i]*error_pod[i];
+			term_I_pod[i] = kI[i]*error_sum_total_pod[i];
+			term_D_pod[i] = kD[i]*error_rate_pod[i];
+			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
 		}
 
 		// "Damp" motors depending on how far the wheel pods are from their targets.
@@ -424,8 +424,8 @@ task Display() {
 		DISP_FCS,				// Default FCS screen.
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
-		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
+		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_SERVOS,			// Show each servo's position.
 		DISP_TASKS,				// Which tasks are running.
@@ -465,10 +465,10 @@ task Display() {
 					nxtDisplayTextLine(1, "FL rot%d trgt%d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
 					nxtDisplayTextLine(2, "BL rot%d trgt%d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
 					nxtDisplayTextLine(3, "BR rot%d trgt%d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-					nxtDisplayTextLine(4, "FR err%d chg%d", error_pod[POD_FR], correction_pod[POD_FR]);
-					nxtDisplayTextLine(5, "FL err%d chg%d", error_pod[POD_FL], correction_pod[POD_FL]);
-					nxtDisplayTextLine(6, "BL err%d chg%d", error_pod[POD_BL], correction_pod[POD_BL]);
-					nxtDisplayTextLine(7, "BR err%d chg%d", error_pod[POD_BR], correction_pod[POD_BR]);
+					nxtDisplayTextLine(4, "FR chg%d pow%d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
+					nxtDisplayTextLine(5, "FL chg%d pow%d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
+					nxtDisplayTextLine(6, "BL chg%d pow%d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
+					nxtDisplayTextLine(7, "BR chg%d pow%d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
 				}
 				break;
 			case DISP_SWERVE_PID :
@@ -482,6 +482,14 @@ task Display() {
 						isMode = DISP_COMM_STATUS;
 						break;
 					}
+					nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);
+					nxtDisplayTextLine(1, "FL err%d P:%d", error_pod[POD_FL], term_P_pod[POD_FL]);
+					nxtDisplayTextLine(2, "BL err%d P:%d", error_pod[POD_BL], term_P_pod[POD_BL]);
+					nxtDisplayTextLine(3, "BR err%d P:%d", error_pod[POD_BR], term_P_pod[POD_BR]);
+					nxtDisplayTextLine(4, "FR I:%d D:%d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
+					nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
+					nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
+					nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				}
 				break;
 			case DISP_COMM_STATUS :
@@ -495,6 +503,7 @@ task Display() {
 						isMode = DISP_FCS;
 						break;
 					}
+					nxtDisplayCenteredBigTextLine(3, "Doesn't work yet. :(");
 				}
 				break;
 		}

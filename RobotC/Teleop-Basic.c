@@ -418,6 +418,7 @@ task CommLink() {
 
 
 // Task for displaying data on the NXT's LCD screen.
+// TODO: Put a lot of the display stuff into loops. Do we want to?
 task Display() {
 
 	typedef enum DisplayMode {
@@ -433,80 +434,77 @@ task Display() {
 	};
 
 	DisplayMode isMode = DISP_FCS;
+
 	Joystick_WaitForStart();
 
 	while (true) {
+		Buttons_UpdateData();
+
 		switch (isMode) {
 			case DISP_FCS :
-				while (true) {
-					bDisplayDiagnostics = true;
-					if (Buttons_Released(NXT_BUTTON_L)==true) {
-						isMode = DISP_COMM_STATUS;
-						break;
-					}
-					if (Buttons_Released(NXT_BUTTON_R)==true) {
-						isMode = DISP_SWERVE_DEBUG;
-						break;
-					}
+				if (Buttons_Released(NXT_BUTTON_L)==true) {
+					Display_Clear();
+					bDisplayDiagnostics = false;
+					isMode = DISP_COMM_STATUS;
+				}
+				if (Buttons_Released(NXT_BUTTON_R)==true) {
+					Display_Clear();
+					bDisplayDiagnostics = false;
+					isMode = DISP_SWERVE_DEBUG;
 				}
 				break;
 			case DISP_SWERVE_DEBUG :
-				while (true) {
-					bDisplayDiagnostics = false;
-					if (Buttons_Released(NXT_BUTTON_L)==true) {
-						isMode = DISP_FCS;
-						break;
-					}
-					if (Buttons_Released(NXT_BUTTON_R)==true) {
-						isMode = DISP_SWERVE_PID;
-						break;
-					}
-					nxtDisplayTextLine(0, "FR rot%d trgt%d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
-					nxtDisplayTextLine(1, "FL rot%d trgt%d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
-					nxtDisplayTextLine(2, "BL rot%d trgt%d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
-					nxtDisplayTextLine(3, "BR rot%d trgt%d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-					nxtDisplayTextLine(4, "FR chg%d pow%d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-					nxtDisplayTextLine(5, "FL chg%d pow%d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-					nxtDisplayTextLine(6, "BL chg%d pow%d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-					nxtDisplayTextLine(7, "BR chg%d pow%d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				nxtDisplayTextLine(0, "FR rot%d trgt%d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
+				nxtDisplayTextLine(1, "FL rot%d trgt%d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
+				nxtDisplayTextLine(2, "BL rot%d trgt%d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
+				nxtDisplayTextLine(3, "BR rot%d trgt%d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
+				nxtDisplayTextLine(4, "FR chg%d pow%d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
+				nxtDisplayTextLine(5, "FL chg%d pow%d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
+				nxtDisplayTextLine(6, "BL chg%d pow%d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
+				nxtDisplayTextLine(7, "BR chg%d pow%d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				if (Buttons_Released(NXT_BUTTON_L)==true) {
+					Display_Clear();
+					bDisplayDiagnostics = true;
+					isMode = DISP_FCS;
+				}
+				if (Buttons_Released(NXT_BUTTON_R)==true) {
+					Display_Clear();
+					isMode = DISP_SWERVE_PID;
 				}
 				break;
 			case DISP_SWERVE_PID :
-				while (true) {
-					bDisplayDiagnostics = false;
-					if (Buttons_Released(NXT_BUTTON_L)==true) {
-						isMode = DISP_SWERVE_DEBUG;
-						break;
-					}
-					if (Buttons_Released(NXT_BUTTON_R)==true) {
-						isMode = DISP_COMM_STATUS;
-						break;
-					}
-					nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);
-					nxtDisplayTextLine(1, "FL err%d P:%d", error_pod[POD_FL], term_P_pod[POD_FL]);
-					nxtDisplayTextLine(2, "BL err%d P:%d", error_pod[POD_BL], term_P_pod[POD_BL]);
-					nxtDisplayTextLine(3, "BR err%d P:%d", error_pod[POD_BR], term_P_pod[POD_BR]);
-					nxtDisplayTextLine(4, "FR I:%d D:%d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
-					nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
-					nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
-					nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);
+				nxtDisplayTextLine(1, "FL err%d P:%d", error_pod[POD_FL], term_P_pod[POD_FL]);
+				nxtDisplayTextLine(2, "BL err%d P:%d", error_pod[POD_BL], term_P_pod[POD_BL]);
+				nxtDisplayTextLine(3, "BR err%d P:%d", error_pod[POD_BR], term_P_pod[POD_BR]);
+				nxtDisplayTextLine(4, "FR I:%d D:%d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
+				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
+				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
+				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				if (Buttons_Released(NXT_BUTTON_L)==true) {
+					Display_Clear();
+					isMode = DISP_SWERVE_DEBUG;
+				}
+				if (Buttons_Released(NXT_BUTTON_R)==true) {
+					Display_Clear();
+					isMode = DISP_COMM_STATUS;
 				}
 				break;
 			case DISP_COMM_STATUS :
-				while (true) {
-					bDisplayDiagnostics = false;
-					if (Buttons_Released(NXT_BUTTON_L)==true) {
-						isMode = DISP_SWERVE_PID;
-						break;
-					}
-					if (Buttons_Released(NXT_BUTTON_R)==true) {
-						isMode = DISP_FCS;
-						break;
-					}
-					nxtDisplayCenteredBigTextLine(3, "Doesn't work yet. :(");
+				nxtDisplayCenteredTextLine(3, "Doesn't work...");
+				nxtDisplayCenteredTextLine(4, "Yet. >:(");
+				if (Buttons_Released(NXT_BUTTON_L)==true) {
+					Display_Clear();
+					isMode = DISP_SWERVE_PID;
+				}
+				if (Buttons_Released(NXT_BUTTON_R)==true) {
+					Display_Clear();
+					bDisplayDiagnostics = true;
+					isMode = DISP_FCS;
 				}
 				break;
 		}
+
 		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
 	}
 }

@@ -76,9 +76,11 @@ float power_BR = 0.0;
 float power_sweeper = 0.0;
 float power_lift = 0.0;
 float power_flag = 0.0;
-int lift_pos = 0;
+int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
+
+float current_encoder[POD_NUM] = {0,0,0,0};
 
 task main() {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
@@ -119,7 +121,7 @@ task main() {
 			if (combined[i].r>g_FullPower) {
 				shouldNormalize = true;
 			}
-			if ((combined[i].theta==0)&&(combined[i].r==0)) { // AND encoder is within however many turns
+			if ((combined[i].theta==0)&&(combined[i].r==0)&&(current_encoder[i]<720)&&(current_encoder>-720)==true) { // AND encoder is within 2 turns.
 				combined[i].theta = combined_angle_prev[i];
 				// No need to update `combined_angle_prev[i]` because it stays the same.
 				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
@@ -168,16 +170,16 @@ task main() {
 		// Second driver's lift controls are overridden by the first's. The first
 		// driver can also lock the lift position by pressing the D-pad (L or R).
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_pos += 100;
+			lift_target += 100;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_pos -= 100;
+			lift_target -= 100;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_pos += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+			lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 			if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
-				lift_pos = lift_pos_dump;
+				lift_target = lift_pos_dump;
 			}
 			if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
-				lift_pos = lift_pos_pickup;
+				lift_target = lift_pos_pickup;
 			}
 		}
 
@@ -283,7 +285,7 @@ task PID() {
 	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	float current_encoder[POD_NUM] = {0,0,0,0};
+	//float current_encoder[POD_NUM] = {0,0,0,0};
 	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
 	float error_rate[POD_NUM] = {0,0,0,0};
@@ -293,14 +295,23 @@ task PID() {
 	float total_correction[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 
+	float lift_pos = 0.0; // Really should be an int.
+	float kP_lift = 1.0; // TODO: PID tuning.
+	float kD_lift = 0.0;
+	float error_lift = 0.0;
+	float error_prev_lift = 0.0;
+	float error_rate_lift = 0.0;
+	float term_P_lift = 0.0;
+	float term_D_lift = 0.0;
+
 	Joystick_WaitForStart();
 
 	while (true) {
+		// Update timer first, in case something happens later during the loop.
 		time_previous = time_current;
 		time_current = Time_GetTime(TIMER_PROGRAM);
 		time_difference = time_current-time_previous;
-		// TEMPORARY!!!
-		//gyro_angle += time_difference*SensorValue[S3];
+
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			current_encoder[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			current_encoder[i] = Math_Normalize(current_encoder[i], (float)1440, 360);
@@ -352,7 +363,7 @@ task PID() {
 				case ALIGNED_MEDIUM:
 					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
 					break;
-				// Not checking the "ALIGNED_CLOSE" condition may increase performance.
+				// Skipping the "ALIGNED_CLOSE" condition might increase performance.
 			}
 		}
 	}
@@ -369,13 +380,22 @@ task PID() {
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((Motor)i));
 		}
-		Motor_SetPower(power_lift, motor_lift);
 
 		// Assign the power settings to the servos.
 		Servo_SetPower(servo_FR, -total_correction[POD_FR]);
 		Servo_SetPower(servo_FL, -total_correction[POD_FL]);
 		Servo_SetPower(servo_BL, -total_correction[POD_BL]);
 		Servo_SetPower(servo_BR, -total_correction[POD_BR]);
+
+		// Another PID loop, this time for the lift.
+		lift_pos = Motor_GetEncoder(motor_lift);
+		error_prev_lift = error_lift;
+		error_lift = lift_target-lift_pos;
+		error_rate_lift = (error_lift-error_prev_lift)/time_difference;
+		term_P_lift = kP_lift*error_lift;
+		term_D_lift = kD_lift*error_rate_lift;
+		power_lift = term_P_lift+term_D_lift;
+		Motor_SetPower(power_lift, motor_lift);
 }
 
 

@@ -75,12 +75,12 @@ float power_flag = 0.0;
 int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
-
 float term_P[POD_NUM] = {0,0,0,0};
 float term_I[POD_NUM] = {0,0,0,0};
 float term_D[POD_NUM] = {0,0,0,0};
-
 float pod_current[POD_NUM] = {0,0,0,0};
+float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
+float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 
 task main() {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
@@ -275,21 +275,18 @@ task PID() {
 	float t_prev = t_current;
 	float t_delta = t_current-t_prev;
 	const int kI_delay = 10;
-	float error_sum[POD_NUM][kI_delay];
+	float error_sum_pod[POD_NUM][kI_delay];
 	for (int i=0; i<(int)POD_NUM; i++) {
 		for (int j=0; j<kI_delay; j++) {
-			error_sum[i][j] = 0;
+			error_sum_pod[i][j] = 0;
 		}
 	}
-	float error_sum_total[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
+	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
 	float kP[POD_NUM] = {0.6,	0.6,	0.6,	0.6}; // TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	//float current_encoder[POD_NUM] = {0,0,0,0};
-	float error[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
-	float error_prev[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
-	float error_rate[POD_NUM] = {0,0,0,0};
-	float correction[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
+	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
+	float error_rate_pod[POD_NUM] = {0,0,0,0};
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 
 	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
@@ -309,65 +306,76 @@ task PID() {
 		t_current = Time_GetTime(TIMER_PROGRAM);
 		t_delta = t_current-t_prev;
 
+		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			pod_current[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
-			pod_current[i] = Math_Normalize(pod_current[i], (float)1440, 360);
+			pod_current[i] = Math_Normalize(pod_current[i], (float)1440, 360); // Encoders are 1440 CPR.
 			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between -360 ~ 360.
-			pod_current[i] += 360; // Value is now >= 0.
+			pod_current[i] += 360; // Value is now >= 0 (between 0 ~ 720).
 			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between 0 ~ 360.
-			error_prev[i] = error[i];
-			error[i] = g_ServoData[i].angle-pod_current[i];
-			if (error[i]>180) {
-				error[i] = error[i]-360;
-			} else if (error[i]<-180) {
-				error[i] = error[i]+360;
-			} // TODO: Can the above chain be simplified to something having to do with modulo 180?
-			//// This works, but doesn't eliminate the 180 deg turns. :?
-			//if (error[i]>90) {
-			//	error[i] = error[i]-180;
-			//	g_MotorData[i].isReversed = true;
-			//} else if (error[i]<90) {
-			//	error[i] = error[i]+180;
-			//	g_MotorData[i].isReversed = true;
-			//} else {
-			//	g_MotorData[i].isReversed = false;
-			//} // TODO: Can the above chain be simplified to something having to do with modulo 90?
-			Math_TrimDeadband(error[i], g_EncoderDeadband);
-			error_sum_total[i] -= error_sum[i][kI_delay-1]; // Array indices.
-			error_sum_total[i] += error_sum[i][0];
-			for (int j=kI_delay-1; j>0; j--) { //`j=kI_delay-1` because we are dealing with array indices.
-				error_sum[i][j] = error_sum[i][j-1];
+			error_prev_pod[i] = error_pod[i];
+			error_pod[i] = g_ServoData[i].angle-pod_current[i];
+
+			// TODO: Simplify the below to something having to do with modulo 180.
+			// Make sure we turn at most 180 degrees:
+			if (error_pod[i]>180) {
+				error_pod[i] = error_pod[i]-360;
+			} else if (error_pod[i]<-180) {
+				error_pod[i] = error_pod[i]+360;
 			}
-			error_sum[i][0] = error[i]*t_delta;
-			error_rate[i] = (error[i]-error_prev[i])/t_delta;
-			if (abs(error[i])>36) { //36 is an arbitrary number :P
+
+			// TODO: Simplify the below to something having to do with modulo 90.
+			// Make sure we turn at most 90 degrees:
+			if (error_pod[i]>90) {
+				error_pod[i] = error_pod[i]-180;
+				g_MotorData[i].isReversed = true;
+			} else if (error_pod[i]<90) {
+				error_pod[i] = error_pod[i]+180;
+				g_MotorData[i].isReversed = true;
+			} else {
+				g_MotorData[i].isReversed = false;
+			}
+
+			// TODO: Encoders might have a tiny deadband (depends on backlash).
+			//Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
+
+			// Calculate various aspects of the errors, for the I- and D- terms.
+			error_sum_total_pod[i] -= error_sum_pod[i][kI_delay-1]; // -1: Array indices.
+			error_sum_total_pod[i] += error_sum_pod[i][0];
+			// TODO: Figure out whether this really needs to count down instead of up :P
+			for (int j=kI_delay-1; j>0; j--) { //`j=kI_delay-1` because we are dealing with array indices.
+				error_sum_pod[i][j] = error_sum_pod[i][j-1];
+			}
+			error_sum_pod[i][0] = error_pod[i]*t_delta;
+			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
+			if (abs(error_pod[i])>36) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error[i])>12) {
+			} else if (abs(error_pod[i])>12) {
 				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
-			term_P[i] = kP[i]*error[i];
-			term_I[i] = kI[i]*error_sum_total[i];
-			term_D[i] = kD[i]*error_rate[i];
-			correction[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
+			term_P[i] = kP[i]*error_pod[i];
+			term_I[i] = kI[i]*error_sum_total_pod[i];
+			term_D[i] = kD[i]*error_rate_pod[i];
+			correction_pod[i] = Math_Limit((term_P[i]+term_I[i]+term_D[i]), 128);
 		}
-		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+
+		// "Damp" motors depending on how far the wheel pods are from their targets.
+		for (int i=MOTOR_FR; i<(int)MOTOR_NUM; i++) {
 			switch (isAligned) {
 				case ALIGNED_FAR:
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
 				case ALIGNED_MEDIUM:
-					g_MotorData[i].fineTuneFactor *= 1/abs(error[i])*10; // Ranges from 28~83%.
+					g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
 					break;
 				// Skipping the "ALIGNED_CLOSE" condition could increase performance.
 			}
 		}
-	}
-
 
 		// Assign the power settings to the motors (already parsed).
-		for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+		for (int i=MOTOR_FR; i<(int)MOTOR_NUM; i++) {
 			// The following line requires a PID loop on velocity, it seems.
 			//g_MotorData[i].power += total_correction[i]/(float)(10); // Correcting for servo rotation (doesn't work yet).
 			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
@@ -379,12 +387,13 @@ task PID() {
 		}
 
 		// Assign the power settings to the servos.
-		Servo_SetPower(servo_FR, -correction[POD_FR]);
-		Servo_SetPower(servo_FL, -correction[POD_FL]);
-		Servo_SetPower(servo_BL, -correction[POD_BL]);
-		Servo_SetPower(servo_BR, -correction[POD_BR]);
+		Servo_SetPower(servo_FR, -correction_pod[POD_FR]);
+		Servo_SetPower(servo_FL, -correction_pod[POD_FL]);
+		Servo_SetPower(servo_BL, -correction_pod[POD_BL]);
+		Servo_SetPower(servo_BR, -correction_pod[POD_BR]);
 
 		// Another PID loop, this time for the lift.
+		// Yes, it is a complete PID loop, despite being so much shorter. :)
 		lift_pos = Motor_GetEncoder(motor_lift);
 		error_prev_lift = error_lift;
 		error_lift = lift_target-lift_pos;
@@ -393,6 +402,7 @@ task PID() {
 		term_D_lift = kD_lift*error_rate_lift;
 		power_lift = term_P_lift+term_D_lift;
 		Motor_SetPower(power_lift, motor_lift);
+	}
 }
 
 
@@ -413,7 +423,7 @@ task Display() {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
-		DISP_PID_TUNING,		// Error, P-term, I-term, D-term.
+		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_SENSORS,			// Might need to split this into two screens.
@@ -448,22 +458,20 @@ task Display() {
 						break;
 					}
 					if (Buttons_Released(NXT_BUTTON_R)==true) {
-						isMode = DISP_PID_TUNING;
+						isMode = DISP_SWERVE_PID;
 						break;
 					}
-					//// TODO: FOLLOWING CODE BLOCK NOT IMPLEMENTED ANYWHERE (COMPILE ERRORS)
-					//// Troubleshooting display:
-					//nxtDisplayTextLine(0, "FR set%d chg%d", g_ServoData[POD_FR].angle, total_correction[POD_FR]);
-					//nxtDisplayTextLine(1, "FL set%d chg%d", g_ServoData[POD_FL].angle, total_correction[POD_FL]);
-					//nxtDisplayTextLine(2, "BL set%d chg%d", g_ServoData[POD_BL].angle, total_correction[POD_BL]);
-					//nxtDisplayTextLine(3, "BR set%d chg%d", g_ServoData[POD_BR].angle, total_correction[POD_BR]);
-					//nxtDisplayTextLine(4, "FR encdr%d pow%d", current_encoder[POD_FR], g_MotorData[POD_FR].power);
-					//nxtDisplayTextLine(5, "FL encdr%d pow%d", current_encoder[POD_FL], g_MotorData[POD_FL].power);
-					//nxtDisplayTextLine(6, "BL encdr%d pow%d", current_encoder[POD_BL], g_MotorData[POD_BL].power);
-					//nxtDisplayTextLine(7, "BR encdr%d pow%d", current_encoder[POD_BR], g_MotorData[POD_BR].power);
+					nxtDisplayTextLine(0, "FR rot%d trgt%d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
+					nxtDisplayTextLine(1, "FL rot%d trgt%d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
+					nxtDisplayTextLine(2, "BL rot%d trgt%d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
+					nxtDisplayTextLine(3, "BR rot%d trgt%d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
+					nxtDisplayTextLine(4, "FR err%d chg%d", error_pod[POD_FR], correction_pod[POD_FR]);
+					nxtDisplayTextLine(5, "FL err%d chg%d", error_pod[POD_FL], correction_pod[POD_FL]);
+					nxtDisplayTextLine(6, "BL err%d chg%d", error_pod[POD_BL], correction_pod[POD_BL]);
+					nxtDisplayTextLine(7, "BR err%d chg%d", error_pod[POD_BR], correction_pod[POD_BR]);
 				}
 				break;
-			case DISP_PID_TUNING :
+			case DISP_SWERVE_PID :
 				while (true) {
 					bDisplayDiagnostics = false;
 					if (Buttons_Released(NXT_BUTTON_L)==true) {
@@ -480,7 +488,7 @@ task Display() {
 				while (true) {
 					bDisplayDiagnostics = false;
 					if (Buttons_Released(NXT_BUTTON_L)==true) {
-						isMode = DISP_PID_TUNING;
+						isMode = DISP_SWERVE_PID;
 						break;
 					}
 					if (Buttons_Released(NXT_BUTTON_R)==true) {
@@ -490,6 +498,7 @@ task Display() {
 				}
 				break;
 		}
+		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
 	}
 }
 

@@ -61,24 +61,24 @@ task main() {
 	const float LIFT_LOW_POS = 0.0;
 	const float LIFT_MED_POS = 0.0;
 	const float LIFT_HIGH_POS = 0.0;
-	const short IR_threshold = 500;
+	const short IR_threshold = 50;
 	const int servo_dump_open = 0;
 	const int servo_dump_closed = 0;
-	const int servo_dump_delay = 0;
+	const int servo_dump_delay = 1000;
 	const int drive_time_low[CRATE_NUM] = {0.0, 0.0, 0.0, 0.0};
 	const int drive_time_high[CRATE_NUM] = {0.0, 0.0, 0.0, 0.0};
-	const int start_to_first_turn_time = 1000; // milliseconds?
+	const int start_to_first_turn_time = 3000+servo_dump_delay; // milliseconds?
 	const int first_turn_to_second_turn_time = 1000; // milliseconds?
 	const int second_turn_to_ramp_time = 1000; // milliseconds?
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
-	Joystick_WaitForStart();
+	//Joystick_WaitForStart();
 
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
 
 	// Raise the lift and move sideways until in front of the IR beacon.
-	g_translation_x = AUTON_L_R*(-fine_tune_power);
+	g_translation_x = AUTON_L_R*(fine_tune_power);
 	g_lift_target = LIFT_MED_POS;
 
 	// These will later trigger breaking out of the next loop to dump the
@@ -118,13 +118,13 @@ task main() {
 
 	// And move onto the ramp.
 	g_lift_target = LIFT_LOW_POS;
-	g_translation_x = AUTON_L_R*(-fine_tune_power);
+	g_translation_x = AUTON_L_R*(fine_tune_power);
 	Time_Wait(start_to_first_turn_time-drive_time);
 	g_translation_x = 0;
-	g_translation_y = fine_tune_power;
+	g_translation_y = AUTON_L_R*(-fine_tune_power);
 	Time_Wait(first_turn_to_second_turn_time);
 	g_translation_y = 0;
-	g_translation_x = AUTON_L_R*fine_tune_power;
+	g_translation_x = AUTON_L_R*(-fine_tune_power);
 	Time_Wait(second_turn_to_ramp_time);
 	g_translation_x = 0;
 

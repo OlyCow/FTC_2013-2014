@@ -8,10 +8,10 @@
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motorK,        tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_lift,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S2_C1_1,    servo1,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_2,    servo2,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_3,    servo3,               tServoNone)
@@ -31,8 +31,9 @@
 
 task main()
 {
+	float loopDelay = 10;		// Milliseconds.
 	bool isSweeping = false;	// Currently not reversible--should it be?
-	float orientation = 0.0;	// Degrees.
+	float heading = 0.0;		// Degrees.
 	float translation_x = 0.0;
 	float translation_y = 0.0;
 	float rotation = 0.0;
@@ -43,7 +44,16 @@ task main()
 	float power_cap = 0.0;		// The max value to normalize to.
 	bool doNormalizePower = false;
 	float power_lift = 0.0;
+	float power_climb = 0.0;
 	bool isRaisingFlag = false;
+	//bool isClimbing = false;
+	//bool isReleasingArm = false;
+	typedef enum ClimbMode {
+		CLIMB_NEUTRAL	= 1,
+		CLIMB_RELEASE	= 2,
+		CLIMB_PULL		= 3,
+	} ClimbMode;
+	ClimbMode climbingMode = CLIMB_NEUTRAL;
 
 	// The gyro needs to be calibrated before the match because it actually
 	// takes a significant amount of time to do so (approx. 250 milliseconds).
@@ -58,15 +68,16 @@ task main()
 		// Read from the gyro (integrate another delta t) and clear timer T1 for
 		// the next loop. This way we don't need separate variables to keep track
 		// of the current time, previous time, and delta t for this iteration.
-		orientation += Time_GetTime(T1)*HTGYROreadRot(sensor_gyro);
-		Time_ClearTimer(T1);
+		heading += HTGYROreadRot(sensor_gyro)*loopDelay/1000; // 1000 milliseconds per second.
+		Time_Wait(loopDelay);
 
 		Joystick_UpdateData();
 		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 
-		Math_RotateVector(translation_x, translation_y, -orientation);
+		//// Uncomment this line of code to "add" gyro correction.
+		//Math_RotateVector(translation_x, translation_y, -(heading*4)); // MAGIC_NUM: 4 is a magic constant. :P
 
 		// For the derivation of this dark wizardry algorithm, refer to our
 		// engineering notebook, or talk to Ernest, Kieran, or Nathan.
@@ -120,12 +131,39 @@ task main()
 			}
 		}
 
+		// Only the second driver can control climbing. (This should be an agreed
+		// upon decision anyway; plus, climbing isn't time-critical either.)
+		if (Joystick_ButtonReleased(BUTTON_A, CONTROLLER_2)==true) {
+			climbingMode = CLIMB_RELEASE;
+		} else if (Joystick_ButtonReleased(BUTTON_B, CONTROLLER_2)==true) {
+			climbingMode = CLIMB_PULL;
+		} else if (Joystick_ButtonReleased(BUTTON_X, CONTROLLER_2)==true) {
+			climbingMode = CLIMB_NEUTRAL;
+		}
+		switch (climbingMode) {
+			case CLIMB_NEUTRAL :
+				power_climb = 0;
+				break;
+			case CLIMB_RELEASE :
+				power_climb = -100;
+				break;
+			case CLIMB_PULL :
+				power_climb = 100;
+		}
+
 		// `BUTTON_Y` has to be held down to raise the flag; this is safer since a
 		// toggle actually requires more work (given the speed we raise the flag at).
 		if (Joystick_Button(BUTTON_Y)==true) {
 			isRaisingFlag = true;
 		} else {
 			isRaisingFlag = false;
+		}
+
+		// `BUTTON_B` will reset the heading (to compensate for gyro drift). TODO:
+		// Make this function only work if the button is pressed a few times in
+		// succession, to prevent accidental presses from confusing the driver.
+		if (Joystick_ButtonReleased(BUTTON_B)==true) {
+			heading = 0.0;
 		}
 
 		// Set power levels to all motors. The motors that have their power levels
@@ -145,5 +183,6 @@ task main()
 		} else {
 			Motor_SetPower(0, motor_flag);
 		}
+		Motor_SetPower(power_climb, motor_climb);
 	}
 }

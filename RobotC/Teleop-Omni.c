@@ -31,6 +31,7 @@
 
 task main()
 {
+	bDisplayDiagnostics = false;
 	float loopDelay = 10;		// Milliseconds.
 	bool isSweeping = false;	// Currently not reversible--should it be?
 	float heading = 0.0;		// Degrees.
@@ -46,8 +47,6 @@ task main()
 	float power_lift = 0.0;
 	float power_climb = 0.0;
 	bool isRaisingFlag = false;
-	//bool isClimbing = false;
-	//bool isReleasingArm = false;
 	typedef enum ClimbMode {
 		CLIMB_NEUTRAL	= 1,
 		CLIMB_RELEASE	= 2,
@@ -68,16 +67,27 @@ task main()
 		// Read from the gyro (integrate another delta t) and clear timer T1 for
 		// the next loop. This way we don't need separate variables to keep track
 		// of the current time, previous time, and delta t for this iteration.
-		heading += HTGYROreadRot(sensor_gyro)*loopDelay/1000; // 1000 milliseconds per second.
-		Time_Wait(loopDelay);
+		heading += (-1)*((float)HTGYROreadRot(sensor_gyro))*((float)Time_GetTime(T1))/((float)1000); // 1000 milliseconds per second.
+		loopDelay = Time_GetTime(T1);
+		Time_ClearTimer(T1);
+		//Time_Wait(loopDelay);
 
 		Joystick_UpdateData();
 		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 
-		//// Uncomment this line of code to "add" gyro correction.
-		//Math_RotateVector(translation_x, translation_y, -(heading*4)); // MAGIC_NUM: 4 is a magic constant. :P
+		nxtDisplayTextLine(2, "x0:%f", translation_x);
+		nxtDisplayTextLine(3, "y0:%f", translation_y);
+
+		// Uncomment this line of code to "add" gyro correction.
+		Math_RotateVector(translation_x, translation_y, -(heading)); // MAGIC_NUM: 4 is a magic constant. :P
+
+		// TEMP: debugging stuff.
+		nxtDisplayTextLine(0, "rot:%f", heading);
+		nxtDisplayTextLine(4, "x':%f", translation_x);
+		nxtDisplayTextLine(5, "y':%f", translation_y);
+		nxtDisplayTextLine(7, "dt:%d", loopDelay);
 
 		// For the derivation of this dark wizardry algorithm, refer to our
 		// engineering notebook, or talk to Ernest, Kieran, or Nathan.

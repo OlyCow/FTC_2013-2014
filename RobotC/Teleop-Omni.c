@@ -73,9 +73,9 @@ task main()
 		//Time_Wait(loopDelay);
 
 		Joystick_UpdateData();
-		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
-		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
-		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 
 		nxtDisplayTextLine(2, "x0:%f", translation_x);
 		nxtDisplayTextLine(3, "y0:%f", translation_y);

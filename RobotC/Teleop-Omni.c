@@ -77,6 +77,16 @@ task main()
 		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 
+		// Pressing `BUTTON_RT` slows down translation; `BUTTON_LT` slows rotation.
+		// Both can be pressed at once (so we can't use an if...else statement).
+		if (Joystick_Button(BUTTON_RT)==true) {
+			translation_x /= (float)g_FineTuneFactor;
+			translation_y /= (float)g_FineTuneFactor;
+		}
+		if (Joystick_Button(BUTTON_LT)==true) {
+			rotation /= (float)g_FineTuneFactor;
+		}
+
 		// TEMP(?): debugging stuff.
 		nxtDisplayTextLine(2, "x0:%f", translation_x);
 		nxtDisplayTextLine(3, "y0:%f", translation_y);

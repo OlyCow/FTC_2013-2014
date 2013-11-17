@@ -77,7 +77,7 @@ task main() {
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
-	//Joystick_WaitForStart();
+	Joystick_WaitForStart();
 
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
 	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.

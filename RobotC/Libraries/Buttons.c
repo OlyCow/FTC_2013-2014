@@ -1,13 +1,16 @@
 #ifndef BUTTONS_C
 #define BUTTONS_C
 #pragma systemFile
+
+#ifndef BUTTONS_H
 #include "..\Headers\Buttons.h"
+#endif // BUTTONS_H
 // For default values, see above header file.
 
 
 
 void Buttons_UpdateData() {
-	for (int i=NXT_BUTTON_ESC; i<=(int)NXT_BUTTON_YES; i++) {
+	for (int i=NXT_BUTTON_ESC; i<(int)NXT_BUTTON_NUM; i++) {
 		g_NXTButtonsData_prev[i] = g_NXTButtonsData[i];
 		g_NXTButtonsData[i] = (nNxtButtonPressed==i);
 	}

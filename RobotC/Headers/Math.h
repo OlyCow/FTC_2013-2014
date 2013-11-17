@@ -36,7 +36,7 @@ float Math_Limit(float input, float max);
 float Math_ConvertAngle(float input, AngleUnit inputUnit, AngleUnit outputUnit);
 int   Math_Normalize(int input, int originalMax, int newMax);
 float Math_Normalize(float input, float originalMax, float newMax);
-void  Math_RotateVector(float x, float y, float theta, AngleUnit rotateUnit=UNIT_DEG);
+void  Math_RotateVector(float &x, float &y, float theta, AngleUnit rotateUnit=UNIT_DEG);
 float Math_Sin(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);
 float Math_Cos(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);
 float Math_Tan(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);

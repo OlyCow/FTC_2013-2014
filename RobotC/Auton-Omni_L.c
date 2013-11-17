@@ -32,7 +32,7 @@ task setLift();
 task waveFlag();
 
 // 1 = L, -1 = R; this should only affect horizontal movements.
-const int AUTON_L_R = 1;
+const int AUTON_L_R = - 1;
 
 float g_translation_x = 0.0;
 float g_translation_y = 0.0;
@@ -43,6 +43,7 @@ bool g_isWavingFlag = false;
 
 
 task main() {
+	bDisplayDiagnostics = false;
 	Task_Spawn(drive);
 	Task_Spawn(setLift);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
@@ -57,28 +58,32 @@ task main() {
 	};
 
 	// TODO: Determine all the following values.
-	const int fine_tune_power = 100;
+	const int fine_tune_power = 40;
 	const float LIFT_LOW_POS = 0.0;
 	const float LIFT_MED_POS = 0.0;
 	const float LIFT_HIGH_POS = 0.0;
-	const short IR_threshold = 50;
+	const short IR_threshold = 45;
 	const int servo_dump_open = 0;
 	const int servo_dump_closed = 0;
-	const int servo_dump_delay = 1000;
-	const int drive_time_low[CRATE_NUM] = {0.0, 0.0, 0.0, 0.0};
-	const int drive_time_high[CRATE_NUM] = {0.0, 0.0, 0.0, 0.0};
-	const int start_to_first_turn_time = 3000+servo_dump_delay; // milliseconds?
-	const int first_turn_to_second_turn_time = 1000; // milliseconds?
-	const int second_turn_to_ramp_time = 1000; // milliseconds?
+	const int servo_dump_delay = 0;
+	// Some example values: {602, 640, 666-636}, {1152, 1204, 1237-1331}, {2108, 2111, 213-2116}, {2852, 2610, 2614-2602}
+	const int drive_time_low[CRATE_NUM] = {100, 980, 1720, 2360};
+	const int drive_time_high[CRATE_NUM] = {980, 1720, 2360, 3500};
+	const int drive_time_mid[CRATE_NUM] = {790, 1310, 2320, 2740};
+	const int dump_time = 490;
+	const int start_to_first_turn_time = 3800; // milliseconds?
+	const int first_turn_to_second_turn_time = 1800; // milliseconds?
+	const int second_turn_to_ramp_time = 2550; // milliseconds?
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
-	//Joystick_WaitForStart();
+	Joystick_WaitForStart();
 
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
+	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
 
 	// Raise the lift and move sideways until in front of the IR beacon.
-	g_translation_x = AUTON_L_R*(fine_tune_power);
+	g_translation_y = fine_tune_power;
 	g_lift_target = LIFT_MED_POS;
 
 	// These will later trigger breaking out of the next loop to dump the
@@ -106,27 +111,38 @@ task main() {
 			} else if ((drive_time>drive_time_low[CRATE_OUTER_B])&&(drive_time<drive_time_high[CRATE_OUTER_B])) {
 				crate_IR = CRATE_OUTER_B;
 			} // else it defaults to the initial "CRATE_UNKNOWN" value.
+			nxtDisplayTextLine(0, "detected:%d", drive_time);
 			break;
 		}
-		Time_Wait(5); // Magic number! (Do we even need this line?)
+		//Time_Wait(5); // Magic number! (Do we even need this line?)
 	}
+	while (Time_GetTime(T2)<drive_time_mid[crate_IR]) {
+		Time_Wait(1); // Also a magic number (5 might be too much :P).
+	}
+	g_translation_y = 0;
 
 	// Now we dump the IR cube...
+	g_translation_x = -AUTON_L_R*(fine_tune_power);
+	Time_Wait(dump_time);
+	g_translation_x = 0;
+	g_translation_x = AUTON_L_R*(fine_tune_power);
+	Time_Wait(((float)dump_time)/((float)2));
+	g_translation_x = 0;
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	Time_Wait(servo_dump_delay);
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 
 	// And move onto the ramp.
 	g_lift_target = LIFT_LOW_POS;
-	g_translation_x = AUTON_L_R*(fine_tune_power);
-	Time_Wait(start_to_first_turn_time-drive_time);
-	g_translation_x = 0;
-	g_translation_y = AUTON_L_R*(-fine_tune_power);
-	Time_Wait(first_turn_to_second_turn_time);
+	g_translation_y = fine_tune_power;
+	Time_Wait(start_to_first_turn_time-drive_time_mid[crate_IR]);
 	g_translation_y = 0;
 	g_translation_x = AUTON_L_R*(-fine_tune_power);
-	Time_Wait(second_turn_to_ramp_time);
+	Time_Wait(first_turn_to_second_turn_time);
 	g_translation_x = 0;
+	g_translation_y = -fine_tune_power;
+	Time_Wait(second_turn_to_ramp_time);
+	g_translation_y = 0;
 
 	// Celebrate!
 	while (true) {

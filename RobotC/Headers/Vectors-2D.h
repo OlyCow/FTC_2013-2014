@@ -21,6 +21,7 @@ void Vector2D_Subtract(vector2D vectorA, vector2D vectorB, vector2D &result);
 void Vector2D_Scale(float scalar, vector2D inputVector, vector2D &result);
 void Vector2D_Translate(vector2D &inputVector, float x, float y);
 void Vector2D_Rotate(vector2D &inputVector, float theta, AngleUnit units=UNIT_DEG);
+// TODO: Add access functions?
 
 
 

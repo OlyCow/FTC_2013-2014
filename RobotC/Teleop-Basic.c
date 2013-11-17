@@ -79,6 +79,7 @@ float term_P_pod[POD_NUM] = {0,0,0,0};
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
+float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 
@@ -95,6 +96,7 @@ task main() {
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
 	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
+	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
 	Joystick_WaitForStart();
 
@@ -121,7 +123,7 @@ task main() {
 			if (combined[i].r>g_FullPower) {
 				shouldNormalize = true;
 			}
-			if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<720)&&(pod_current>-720)==true) { // AND encoder is within 2 turns.
+			if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) { // AND encoder is within 2 turns.
 				combined[i].theta = combined_angle_prev[i];
 				// No need to update `combined_angle_prev[i]` because it stays the same.
 				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
@@ -264,17 +266,19 @@ task main() {
 
 
 task PID() {
-
 	typedef enum Aligned {
 		ALIGNED_FAR		= 0,
 		ALIGNED_MEDIUM	= 1,
 		ALIGNED_CLOSE	= 2,
 	};
 
+	// Variables used in both wheel pod and lift PID calculations.
 	float t_current = Time_GetTime(TIMER_PROGRAM);
 	float t_prev = t_current;
 	float t_delta = t_current-t_prev;
-	const int kI_delay = 10;
+
+	// Variables for wheel pod PID calculations.
+	const int kI_delay = 10; // Iterations.
 	float error_sum_pod[POD_NUM][kI_delay];
 	for (int i=0; i<(int)POD_NUM; i++) {
 		for (int j=0; j<kI_delay; j++) {
@@ -288,7 +292,9 @@ task PID() {
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
 	float error_rate_pod[POD_NUM] = {0,0,0,0};
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
+	const int turnLimit = 3; // On each side. To prevent the wires from getting too twisted.
 
+	// Variables for lift PID calculations.
 	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 	float kP_lift = 1.0; // TODO: PID tuning.
 	float kD_lift = 0.0;
@@ -308,9 +314,9 @@ task PID() {
 
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			pod_current[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
-			pod_current[i] = Math_Normalize(pod_current[i], (float)1440, 360); // Encoders are 1440 CPR.
-			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between -360 ~ 360.
+			pod_raw[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
+			pod_raw[i] = Math_Normalize(pod_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
+			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
 			pod_current[i] += 360; // Value is now >= 0 (between 0 ~ 720).
 			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between 0 ~ 360.
 			error_prev_pod[i] = error_pod[i];
@@ -325,6 +331,9 @@ task PID() {
 			}
 
 			// TODO: Simplify the below to something having to do with modulo 90.
+			// Motor reversals are being explicitly assigned (instead of XOR-ing)
+			// because they aren't cleared each iteration and this is the first
+			// time this iteration we access them. (Later we can XOR them.)
 			// Make sure we turn at most 90 degrees:
 			if (error_pod[i]>90) {
 				error_pod[i] = error_pod[i]-180;
@@ -334,6 +343,17 @@ task PID() {
 				g_MotorData[i].isReversed = true;
 			} else {
 				g_MotorData[i].isReversed = false;
+			}
+
+			// Make sure we don't hit the maximum turning limit:
+			if (error_pod[i]+pod_raw[i]>turnLimit*360) {
+				//TODO: Add even more limits so if the pods get off >90deg, bad things don't happen.
+				error_pod[i] = error_pod[i]-180;
+				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
+			} else if (error_pod[i]+pod_raw[i]<turnLimit*(-360)) {
+				//TODO: Add even more limits so if the pods get off >90deg, bad things don't happen.
+				error_pod[i] = error_pod[i]+180;
+				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
 			}
 
 			// TODO: Encoders might have a tiny deadband (depends on backlash).

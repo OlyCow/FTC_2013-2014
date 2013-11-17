@@ -21,8 +21,9 @@ typedef enum MotorType {
 
 
 
-// The various motor-regulation speeds.
+// MAGIC_NUM: Handy, convenient variables to define.
 const int g_FullPower = 100;
+const int g_FineTuneFactor = 4;
 
 
 

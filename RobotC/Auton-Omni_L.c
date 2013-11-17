@@ -27,6 +27,7 @@
 
 #include "includes.h"
 
+task gyro();
 task drive();
 task setLift();
 task waveFlag();
@@ -34,6 +35,7 @@ task waveFlag();
 // 1 = L, -1 = R; this should only affect horizontal movements.
 const int AUTON_L_R = 1;
 
+float f_heading = 90.0+AUTON_L_R*45.0; // The initial heading of the robot (degrees).
 float g_translation_x = 0.0;
 float g_translation_y = 0.0;
 float g_rotation = 0.0;
@@ -44,6 +46,7 @@ bool g_isWavingFlag = false;
 
 task main() {
 	bDisplayDiagnostics = false;
+	Task_Spawn(gyro);
 	Task_Spawn(drive);
 	Task_Spawn(setLift);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
@@ -152,6 +155,18 @@ task main() {
 			Task_Spawn(waveFlag);
 		}
 		Time_Wait(iteration_delay);
+	}
+}
+
+
+
+task gyro() {
+	HTGYROstartCal(sensor_gyro);
+	Time_ClearTimer(T4);
+	while (true) {
+		f_heading += ((float)Time_GetTime(T4))*((float)HTGYROreadRot(sensor_gyro))/((float)1000.0); // 1000 milliseconds per second.
+		Time_ClearTimer(T4);
+		Time_Wait(10); // MAGIC_NUM. Seems like a decent amount of time to wait. :P
 	}
 }
 

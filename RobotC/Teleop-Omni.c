@@ -32,7 +32,7 @@
 task main()
 {
 	bDisplayDiagnostics = false;
-	float loopDelay = 10;		// Milliseconds.
+	float loopDelay = 0.0;		// Milliseconds.
 	bool isSweeping = false;	// Currently not reversible--should it be?
 	float heading = 0.0;		// Degrees.
 	float translation_x = 0.0;
@@ -56,6 +56,7 @@ task main()
 
 	// The gyro needs to be calibrated before the match because it actually
 	// takes a significant amount of time to do so (approx. 250 milliseconds).
+	// The wait-time for this is included when the function is called.
 	HTGYROstartCal(sensor_gyro);
 	Joystick_WaitForStart();
 
@@ -70,20 +71,19 @@ task main()
 		heading += (-1)*((float)HTGYROreadRot(sensor_gyro))*((float)Time_GetTime(T1))/((float)1000); // 1000 milliseconds per second.
 		loopDelay = Time_GetTime(T1);
 		Time_ClearTimer(T1);
-		//Time_Wait(loopDelay);
 
 		Joystick_UpdateData();
 		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 
+		// TEMP(?): debugging stuff.
 		nxtDisplayTextLine(2, "x0:%f", translation_x);
 		nxtDisplayTextLine(3, "y0:%f", translation_y);
 
-		// Uncomment this line of code to "add" gyro correction.
 		Math_RotateVector(translation_x, translation_y, -(heading)); // MAGIC_NUM: 4 is a magic constant. :P
 
-		// TEMP: debugging stuff.
+		// TEMP(?): debugging stuff.
 		nxtDisplayTextLine(0, "rot:%f", heading);
 		nxtDisplayTextLine(4, "x':%f", translation_x);
 		nxtDisplayTextLine(5, "y':%f", translation_y);
@@ -169,8 +169,8 @@ task main()
 			isRaisingFlag = false;
 		}
 
-		// `BUTTON_B` will reset the heading (to compensate for gyro drift). TODO:
-		// Make this function only work if the button is pressed a few times in
+		// `BUTTON_B` will reset the heading (to compensate for gyro drift).
+		// TODO: Limit function to work only when button is pressed quickly in
 		// succession, to prevent accidental presses from confusing the driver.
 		if (Joystick_ButtonReleased(BUTTON_B)==true) {
 			heading = 0.0;

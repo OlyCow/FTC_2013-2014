@@ -37,11 +37,11 @@ float HTGYROreadRot(tSensors link) {
 		SetSensorType(link, sensorAnalogInactive);
 		wait1Msec(100);
 	}
-	return (SensorValue[link] - HTGYRO_offsets[link][0]);
+	return (SensorValue[link]-HTGYRO_offsets[link][0]);
 }
 
-// Calibrate gyro by calculating the avg offset of 50 raw
-// readings. Takes about 50*5=250ms, or 1/4th of a second.
+// Calibrate gyro by calculating the average offset of 25
+// readings. Takes about 25*10=250ms, or 1/4th of a second.
 // Returns the new offset value for the gyro.
 // `link`:	Port number of gyro.
 float HTGYROstartCal(tSensors link) {
@@ -52,14 +52,15 @@ float HTGYROstartCal(tSensors link) {
 		SetSensorType(link, sensorAnalogInactive);
 		wait1Msec(100);
 	}
-	// Take 50 readings and average them out.
-	for (int i = 0; i < 50; i++) {
+
+	// Take 25 readings and average them out.
+	for (int i=0; i<25; i++) {
 		_avgdata += SensorValue[link];
-		wait1Msec(5);
+		wait1Msec(10);
 	}
-	// Store new offset value.
-	HTGYRO_offsets[link][0] = (_avgdata / 50.0);
-	// Return new offset value.
+
+	// Store & return new offset value.
+	HTGYRO_offsets[link][0] = (((float)_avgdata)/((float)50.0));
 	return HTGYRO_offsets[link][0];
 }
 

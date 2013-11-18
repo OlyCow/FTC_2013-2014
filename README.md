@@ -1,41 +1,44 @@
 The 'Oly Cow: FTC '13-'14
 =========================
 
-The code for The 'Oly Cow's 2013-2014 robot (team 6424). You are welcome to use our code, although there is no warranty :P
-
-An explanation of the code will be added shortly--of course, it would help to actually have code :)
-Also, our code is pretty specific to our robot, but the #pragma motor/servo assignments should make it reasonably clear.
-If you dare to read on, remember that this is all still very preliminary :)
-
-//TODO: update README.md
+This repository contains most of the code for the 'Oly Cow's 2013-2014 robot (Team #6424). You are welcome to use our
+code as-is, but there is no warranty. We hope you can learn from our mistakes and maybe even glean some inspiration.
+Few will do this, but we would really appreciate an attribution if you found the code here helpful, useful, or cool.
+Since our robot is constantly changing, this code will never be finished--until perhaps the World Championships--and
+the documentation for the code will probably never be up-to-date. If you have specific questions regarding the code,
+one of the "release" versions should be reasonably well-commented, or you can directly contact one of our programmers
+(Ernest, Kieran, or Nathan). You can also email us at mooovingforward [at] gmail [dot] com.
 
 -------------------------
-The "\Competition\" folder contains the ".rxe"s which should be loaded during competition if something goes wrong.
-ONLY working stuff gets to go in here. And no modifying code during competition (of course there are exceptions ;).
 
-In our "\RobotC\" folder, there are a few sub-folders: Documentation, Drivers, Headers, Libraries, and Resources.
-All the "main" programs are found in the root of this folder as well.
+## Directory Structure
+In addition to the files in the "Documentation" folder, there should/will be additional READMEs inside each folder with
+even more information/help.
 
-- "Swerving Test.c"
-	- A quick program whipped up to demonstrate a single swerve drive wheel pod; utilizes a single "normal" servo
-	  instead of a continuous rotation servo (which we plan on using for our final robot).
+### "Atmel"
+This folder contains various files having to do with extra microcontrollers we use.
 
-## "\Documentation\"
-Includes documentation on what everything does -  so when you're done reading this, go take a look at that :)
+### "Competition"
+This folder contains .hex files for NXT bricks. These can be directly downloaded to any NXT with RobotC firmware on
+them. (These should only be used in case of an emergency.) As a rule, these will be updated around a week before each
+competition we attend. There should be minimal modification to the code during that last week (there should also be a
+corresponding "release" of the code in preparation for the same competition).
 
-## "\Drivers\"
-These are the headers (which we use) from Xander's Driver Suite. These are compiled separately to increase compatibility
-between platforms, and to ensure our code is always using the same versions of drivers. All of these drivers should be
-periodically updated when new versions of the driver suite come out; but never w/out extensive testing to make sure the
-current codebase (esp. encapsulation) is updated correspondingly.
+### "Documentation"
+This folder will (might?) (someday) have documents regarding use of our code, and maybe even extra explanations.
 
-## "\Headers\"
-Includes headers that some (or all) programs may use; if you don't want to read documentation you can try reading this.
+### "RobotC"
+This folder contains all of our RobotC code, as well as some programs we wrote for our sister team (Team #7973, The One
+and Oly). This folder will be updated the most frequently. There are additional goodies in here, such as a medium-sized
+library of convenience functions (now including basic 2-D vector operations!), and a good dose of "utilities" just for
+testing random sensors and whatnot.
 
-## "\Libraries\"
-Includes the actual ".c" files which some of the headers are for. Technically these are "header files" as well, since they
-need to be #included into their respective programs. (This is because RobotC doesn't currently have a linker, and judging
-by forum posts one won't be added any time soon.)
+-------------------------
 
-## "\Resources\"
-Includes some sound files (".rso") that we might attempt to play. However, competitions are usually too noisy :(
+## Contact Information & Attribution
+
+You can contact our team at our email: mooovingforward [at] gmail [dot] com.
+
+Our Facebook page is here: https://www.facebook.com/pages/OHS-Oly-Cow-Robotics/160019847470634
+
+And we are very active on the FTC and RobotC forums. As always, the 'Oly Cow: Outstanding in our field.

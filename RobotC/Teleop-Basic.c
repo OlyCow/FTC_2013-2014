@@ -61,14 +61,11 @@ task Autonomous(); // Ooooh.
 // to compensate for gearing), and "pow" is the power applied to the motor.
 //--------------------------------------------------------------------------->>
 
+// For control flow:
 bool isAutonomous = false;
+
+// For main task:
 bool isSweeping = false;
-int f_angle_z = 0;
-int f_angle_y = 0;
-int f_angle_x = 0;
-int f_pos_z = 0;
-int f_pos_y = 0;
-int f_pos_x = 0;
 float power_sweeper = 0.0;
 float power_lift = 0.0;
 float power_flag = 0.0;
@@ -76,6 +73,8 @@ int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
 float term_P_pod[POD_NUM] = {0,0,0,0};
+
+// For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
@@ -83,7 +82,38 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 
-task main() {
+// For comms link:
+typedef enum CardinalDirection {
+	CARDINAL_DIR_N	= 0,
+	CARDINAL_DIR_W	= 1,
+	CARDINAL_DIR_S	= 2,
+	CARDINAL_DIR_E	= 3,
+	CARDINAL_DIR_NUM,
+} CardinalDirection;
+// TODO: If there are too many variables here, start combining them, esp. the bitmaps.
+int f_angle_x = 0; // RobotC doesn't support unsigned ints???
+int f_angle_y = 0;
+int f_angle_z = 0;
+int f_pos_x = 0;
+int f_pos_y = 0;
+int f_pos_z = 0;
+ubyte f_closeRange[CARDINAL_DIR_NUM] = {0,0,0,0};
+int f_longRange[CARDINAL_DIR_NUM] = {0,0,0,0};
+ubyte f_lineSensorCenter[CARDINAL_DIR_NUM] = {0,0,0,0};
+ubyte f_lineSensor[CARDINAL_DIR_NUM][CARDINAL_DIR_NUM] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+byte f_cubeNum = 0;
+bool f_liftReset = false;
+bool f_podReset[POD_NUM] = {false, false, false, false};
+bool f_cubeDetectedCenter = false;
+bool f_cubeDetected[CARDINAL_DIR_NUM][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+bool f_flagBumperTriggered = false;
+bool f_climbBumperTriggered = false;
+bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
+
+
+
+task main()
+{
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
@@ -265,7 +295,8 @@ task main() {
 
 
 
-task PID() {
+task PID()
+{
 	typedef enum Aligned {
 		ALIGNED_FAR		= 0,
 		ALIGNED_MEDIUM	= 1,
@@ -427,11 +458,44 @@ task PID() {
 
 
 
-task CommLink() {
+task CommLink()
+{
+	typedef enum ClockState {
+		CLOCK_HIGH	= 0,
+		CLOCK_LOW	= 1,
+	} ClockState;
+	typedef enum CommState {
+		COMM_REQ_RESET		= -1,
+		COMM_INIT_RESET		= -2,
+		COMM_SIGNAL_START	= -3,
+		//COMM_SIGNAL_ACK	= -4, // Might be unnecessary.
+		COMM_READ_HEADER	= 0,
+		COMM_READ_DATA		= 1,
+		COMM_READ_CHECK		= 2,
+	} CommState;
+
+	const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
+	const ubyte mask_write = 0b11000000; // We write to the first 2 bits.
+	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
+
+	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
+	ClockState clockState = CLOCK_HIGH;
+	CommState commState = COMM_REQ_RESET;
+
+	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
 	Joystick_WaitForStart();
 
 	while (true) {
-		// Continuously update stuff.
+		// Process:
+		{
+			// header bit (1 bit).
+			// data bits (32 bits).
+			// check bits.
+			{
+				// write to clock and output.
+				// read data bit.
+			}
+		}
 	}
 }
 
@@ -439,8 +503,8 @@ task CommLink() {
 
 // Task for displaying data on the NXT's LCD screen.
 // TODO: Put a lot of the display stuff into loops. Do we want to?
-task Display() {
-
+task Display()
+{
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
@@ -531,8 +595,8 @@ task Display() {
 
 
 
-task Autonomous() {
-
+task Autonomous()
+{
 	isAutonomous = true;
 
 	while (true) {

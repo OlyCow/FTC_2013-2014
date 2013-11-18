@@ -503,7 +503,6 @@ task CommLink()
 	Joystick_WaitForStart();
 
 	while (true) {
-		// Process:
 		{
 			switch (commState) {
 				case COMM_READ_HEADER :
@@ -521,11 +520,19 @@ task CommLink()
 					current_index_mask = (0|(1<<(bit_index%8)));
 					f_byte_write |= (((frame_write[bit_index/8])&current_index_mask)<<6); // NOT SKETCHY AT ALL
 					processCommTick();
+					for (int i=0; i<6; i++) {
+						frame_read[i][bit_index/8] &= ~(1<<(bit_index%8));
+						current_index_mask = (0|(1<<(i%8)));
+						frame_read[i][bit_index/8] |= (((f_byte_read&current_index_mask)>>i)<<(bit_index/8)); // TOTES NOT SKETCH
+					}
 					bit_index++;
 					if (bit_index==32) {
 						bit_index = 0;
 						commState = COMM_READ_CHECK;
 					}
+					break;
+				case COMM_READ_CHECK :
+					// MY HEAD HURTETH. G'night.
 					break;
 			}
 		}

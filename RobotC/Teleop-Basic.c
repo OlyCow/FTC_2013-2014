@@ -515,6 +515,7 @@ task Display()
 		DISP_SERVOS,			// Show each servo's position.
 		DISP_TASKS,				// Which tasks are running.
 		DISP_AUTONOMOUS_INFO,	// Misc. status info.
+		DISP_NUM,
 	};
 
 	DisplayMode isMode = DISP_FCS;
@@ -526,16 +527,6 @@ task Display()
 
 		switch (isMode) {
 			case DISP_FCS :
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = false;
-					isMode = DISP_COMM_STATUS;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = false;
-					isMode = DISP_SWERVE_DEBUG;
-				}
 				break;
 			case DISP_SWERVE_DEBUG :
 				nxtDisplayTextLine(0, "FR rot%d trgt%d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
@@ -546,15 +537,6 @@ task Display()
 				nxtDisplayTextLine(5, "FL chg%d pow%d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
 				nxtDisplayTextLine(6, "BL chg%d pow%d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
 				nxtDisplayTextLine(7, "BR chg%d pow%d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = true;
-					isMode = DISP_FCS;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					isMode = DISP_SWERVE_PID;
-				}
 				break;
 			case DISP_SWERVE_PID :
 				nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);
@@ -565,30 +547,31 @@ task Display()
 				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					isMode = DISP_SWERVE_DEBUG;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					isMode = DISP_COMM_STATUS;
-				}
 				break;
-			case DISP_COMM_STATUS :
+			default :
 				nxtDisplayCenteredTextLine(3, "Doesn't work...");
 				nxtDisplayCenteredTextLine(4, "Yet. >:(");
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					isMode = DISP_SWERVE_PID;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = true;
-					isMode = DISP_FCS;
-				}
 				break;
 		}
 
+		if (Buttons_Released(NXT_BUTTON_L)==true) {
+			Display_Clear();
+			isMode = (DisplayMode)((isMode+DISP_NUM-1)%DISP_NUM);
+			if (isMode==DISP_FCS) {
+				bDisplayDiagnostics = true;
+			} else {
+				bDisplayDiagnostics = false;
+			}
+		}
+		if (Buttons_Released(NXT_BUTTON_R)==true) {
+			Display_Clear();
+			isMode = (DisplayMode)((isMode+DISP_NUM+1)%DISP_NUM);
+			if (isMode==DISP_FCS) {
+				bDisplayDiagnostics = true;
+			} else {
+				bDisplayDiagnostics = false;
+			}
+		}
 		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
 	}
 }

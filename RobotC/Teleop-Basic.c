@@ -511,7 +511,7 @@ task CommLink()
 					processCommTick();
 					for (int i=0; i<6; i++) {
 						current_index_mask = (0|(1<<(i%8)));
-						header_read[i] = f_byte_read&current_index_mask; // Should be `true` for everything != 0.
+						header_read[i] = (bool)(f_byte_read&current_index_mask); // Should be `true` for everything != 0.
 					}
 					commState = COMM_READ_DATA;
 					break;

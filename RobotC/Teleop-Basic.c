@@ -91,6 +91,11 @@ typedef enum CardinalDirection {
 	CARDINAL_DIR_NUM,
 } CardinalDirection;
 // TODO: If there are too many variables here, start combining them, esp. the bitmaps.
+const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
+const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
+ubyte f_byte_write = 0;
+ubyte f_byte_read = 0;
+bool isClockHigh = true;
 int f_angle_x = 0; // RobotC doesn't support unsigned ints???
 int f_angle_y = 0;
 int f_angle_z = 0;
@@ -458,12 +463,18 @@ task PID()
 
 
 
+void processCommTick()
+{
+	f_byte_write &= ~(1<<7);
+	f_byte_write |= (isClockHigh<<7);
+	HTSPBwriteIO(sensor_protoboard, f_byte_write);
+	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
+	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. If possible.
+}
 task CommLink()
 {
-	typedef enum ClockState {
-		CLOCK_HIGH	= 0,
-		CLOCK_LOW	= 1,
-	} ClockState;
+
+
 	typedef enum CommState {
 		COMM_REQ_RESET		= -1,
 		COMM_INIT_RESET		= -2,
@@ -474,13 +485,19 @@ task CommLink()
 		COMM_READ_CHECK		= 2,
 	} CommState;
 
-	const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
-	const ubyte mask_write = 0b11000000; // We write to the first 2 bits.
+	int bit_index = 0;
+	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC THAT MIGHT NOT WORK)
 	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
-
 	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	ClockState clockState = CLOCK_HIGH;
 	CommState commState = COMM_REQ_RESET;
+	bool header_write = false;
+	bool header_read[6] = {false, false, false, false, false, false};
+	ubyte frame_write[4] = {0,0,0,0};
+	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+	ubyte check_write = 0;
+	ubyte check_write_ack = 0;
+	ubyte check_read[6] = {0,0,0,0,0,0};
+	ubyte check_read_ack[6] = {0,0,0,0,0,0};
 
 	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
 	Joystick_WaitForStart();
@@ -488,12 +505,28 @@ task CommLink()
 	while (true) {
 		// Process:
 		{
-			// header bit (1 bit).
-			// data bits (32 bits).
-			// check bits.
-			{
-				// write to clock and output.
-				// read data bit.
+			switch (commState) {
+				case COMM_READ_HEADER :
+					f_byte_write &= ~(1<<6);
+					f_byte_write |= (header_write<<6);
+					processCommTick();
+					for (int i=0; i<6; i++) {
+						current_index_mask = (0|(1<<(i%8)));
+						header_read[i] = f_byte_read&current_index_mask; // Should be `true` for everything != 0.
+					}
+					commState = COMM_READ_DATA;
+					break;
+				case COMM_READ_DATA :
+					f_byte_write &= ~(1<<6);
+					current_index_mask = (0|(1<<(bit_index%8)));
+					f_byte_write |= (((frame_write[bit_index/8])&current_index_mask)<<6); // NOT SKETCHY AT ALL
+					processCommTick();
+					bit_index++;
+					if (bit_index==32) {
+						bit_index = 0;
+						commState = COMM_READ_CHECK;
+					}
+					break;
 			}
 		}
 	}

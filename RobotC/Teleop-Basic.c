@@ -465,11 +465,11 @@ task PID()
 
 void processCommTick()
 {
-	f_byte_write &= ~(1<<7);
-	f_byte_write |= (isClockHigh<<7);
+	f_byte_write &= ~(1<<7); // Clear the clock bit.
+	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
 	HTSPBwriteIO(sensor_protoboard, f_byte_write);
 	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
-	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. If possible.
+	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
 }
 task CommLink()
 {
@@ -495,9 +495,8 @@ task CommLink()
 	ubyte frame_write[4] = {0,0,0,0};
 	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 	ubyte check_write = 0;
-	ubyte check_write_ack = 0;
-	ubyte check_read[6] = {0,0,0,0,0,0};
-	ubyte check_read_ack[6] = {0,0,0,0,0,0};
+	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
+	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
 
 	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
 	Joystick_WaitForStart();
@@ -506,8 +505,8 @@ task CommLink()
 		{
 			switch (commState) {
 				case COMM_READ_HEADER :
-					f_byte_write &= ~(1<<6);
-					f_byte_write |= (header_write<<6);
+					f_byte_write &= ~(1<<6); // Clear the data bit.
+					f_byte_write |= (header_write<<6); // Set the data bit to a data value.
 					processCommTick();
 					for (int i=0; i<6; i++) {
 						current_index_mask = (0|(1<<(i%8)));
@@ -516,7 +515,7 @@ task CommLink()
 					commState = COMM_READ_DATA;
 					break;
 				case COMM_READ_DATA :
-					f_byte_write &= ~(1<<6);
+					f_byte_write &= ~(1<<6); // Clear the data bit.
 					current_index_mask = (0|(1<<(bit_index%8)));
 					f_byte_write |= (((frame_write[bit_index/8])&current_index_mask)<<6); // NOT SKETCHY AT ALL
 					processCommTick();
@@ -532,7 +531,20 @@ task CommLink()
 					}
 					break;
 				case COMM_READ_CHECK :
-					// MY HEAD HURTETH. G'night.
+					f_byte_write &= ~(1<<6); // Clear the data bit.
+					current_index_mask = (0|(1<<bit_index));
+					f_byte_write |= (((check_write&current_index_mask)>>bit_index)<<6);
+					processCommTick();
+					for (int i=0; i<6; i++) {
+						check_read[i] &= ~(1<<bit_index);
+						current_index_mask = (0|(1<<bit_index));
+						check_read[i] |= (f_byte_read&current_index_mask);
+					}
+					bit_index++;
+					if (bit_index==4) {
+						bit_index = 0;
+						commState = COMM_READ_HEADER;
+					}
 					break;
 			}
 		}
@@ -551,10 +563,10 @@ task Display()
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
-		DISP_SENSORS,			// Might need to split this into two screens.
-		DISP_SERVOS,			// Show each servo's position.
-		DISP_TASKS,				// Which tasks are running.
-		DISP_AUTONOMOUS_INFO,	// Misc. status info.
+		//DISP_SENSORS,			// Might need to split this into two screens.
+		//DISP_SERVOS,			// Show each servo's position.
+		//DISP_TASKS,				// Which tasks are running.
+		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM,
 	};
 

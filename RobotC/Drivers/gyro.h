@@ -54,7 +54,7 @@ float HTGYROstartCal(tSensors link) {
 	}
 
 	// Take 25 readings and average them out.
-	for (int i=0; i<25; i++) {
+	for (int i=0; i<50; i++) {
 		_avgdata += SensorValue[link];
 		wait1Msec(10);
 	}

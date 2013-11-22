@@ -28,6 +28,7 @@
 #include "includes.h"
 
 task gyro();
+task rotateCorrect();
 task drive();
 task setLift();
 task waveFlag();
@@ -66,17 +67,18 @@ task main() {
 	const float LIFT_MED_POS = 0.0;
 	const float LIFT_HIGH_POS = 0.0;
 	const short IR_threshold = 45;
+	const int servo_dump_closed = 255;
 	const int servo_dump_open = 0;
-	const int servo_dump_closed = 200;
 	const int servo_dump_delay = 1000;
+	// Some new example values: {-636}, {-1331}, {-2116}, {-2602}
 	// Some example values: {602, 640, 666-636}, {1152, 1204, 1237-1331}, {2108, 2111, 213-2116}, {2852, 2610, 2614-2602}
 	const int drive_time_low[CRATE_NUM] = {100, 980, 1720, 2360};
 	const int drive_time_high[CRATE_NUM] = {980, 1720, 2360, 3500};
 	const int drive_time_mid[CRATE_NUM] = {790, 1310, 2240, 2690};
-	const int dump_time = 400;
-	const int start_to_first_turn_time = 4200; // milliseconds?
-	const int first_turn_to_second_turn_time = 1900; // milliseconds?
-	const int second_turn_to_ramp_time = 3500; // milliseconds?
+	const int dump_time = 430;
+	const int start_to_first_turn_time = 4600; // milliseconds?
+	const int first_turn_to_second_turn_time = 2100; // milliseconds?
+	const int second_turn_to_ramp_time = 3700; // milliseconds?
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
@@ -147,9 +149,12 @@ task main() {
 	g_translation_x = -AUTON_L_R*(-fine_tune_power);
 	Time_Wait(first_turn_to_second_turn_time);
 	g_translation_x = 0;
+	//Task_Spawn(rotateCorrect);
 	g_translation_y = -fine_tune_power;
 	Time_Wait(second_turn_to_ramp_time);
 	g_translation_y = 0;
+	//Time_Wait(1000);
+	//Task_Kill(rotateCorrect);
 
 	// Celebrate!
 	while (true) {
@@ -163,12 +168,27 @@ task main() {
 
 
 task gyro() {
+	Time_Wait(500);
 	HTGYROstartCal(sensor_gyro);
+	Joystick_WaitForStart();
 	Time_ClearTimer(T4);
 	while (true) {
-		f_heading += ((float)Time_GetTime(T4))*((float)HTGYROreadRot(sensor_gyro))/((float)1000.0); // 1000 milliseconds per second.
+		f_heading += ((float)Time_GetTime(T4))*((float)HTGYROreadRot(sensor_gyro))/((float)1000000.0); // 1000 milliseconds per second.
 		Time_ClearTimer(T4);
+		nxtDisplayTextLine(6, "gyro:%f", f_heading);
 		Time_Wait(10); // MAGIC_NUM. Seems like a decent amount of time to wait. :P
+	}
+}
+
+
+
+task rotateCorrect()
+{
+	const float kP = -0.05;
+	Joystick_WaitForStart();
+	while (true) {
+		g_rotation = (float)kP*(float)f_heading;
+		nxtDisplayTextLine(7, "rot*kP:%f", g_rotation);
 	}
 }
 

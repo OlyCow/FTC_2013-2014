@@ -153,11 +153,11 @@ task main()
 
 		// Only the second driver can control climbing. (This should be an agreed
 		// upon decision anyway; plus, climbing isn't time-critical either.)
-		if (Joystick_ButtonReleased(BUTTON_A, CONTROLLER_2)==true) {
+		if (Joystick_ButtonReleased(BUTTON_A)==true) {
 			climbingMode = CLIMB_RELEASE;
-		} else if (Joystick_ButtonReleased(BUTTON_B, CONTROLLER_2)==true) {
+		} else if (Joystick_ButtonReleased(BUTTON_B)==true) {
 			climbingMode = CLIMB_PULL;
-		} else if (Joystick_ButtonReleased(BUTTON_X, CONTROLLER_2)==true) {
+		} else if (Joystick_ButtonReleased(BUTTON_X)==true) {
 			climbingMode = CLIMB_NEUTRAL;
 		}
 		switch (climbingMode) {

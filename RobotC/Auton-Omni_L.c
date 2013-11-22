@@ -66,21 +66,22 @@ task main() {
 	const float LIFT_MED_POS = 0.0;
 	const float LIFT_HIGH_POS = 0.0;
 	const short IR_threshold = 45;
-	const int servo_dump_open = 255;
-	const int servo_dump_closed = 0;
-	const int servo_dump_delay = 500;
+	const int servo_dump_open = 0;
+	const int servo_dump_closed = 200;
+	const int servo_dump_delay = 1000;
 	// Some example values: {602, 640, 666-636}, {1152, 1204, 1237-1331}, {2108, 2111, 213-2116}, {2852, 2610, 2614-2602}
 	const int drive_time_low[CRATE_NUM] = {100, 980, 1720, 2360};
 	const int drive_time_high[CRATE_NUM] = {980, 1720, 2360, 3500};
-	const int drive_time_mid[CRATE_NUM] = {790, 1310, 2320, 2740};
-	const int dump_time = 490;
-	const int start_to_first_turn_time = 3800; // milliseconds?
-	const int first_turn_to_second_turn_time = 1800; // milliseconds?
-	const int second_turn_to_ramp_time = 2550; // milliseconds?
+	const int drive_time_mid[CRATE_NUM] = {790, 1310, 2240, 2690};
+	const int dump_time = 400;
+	const int start_to_first_turn_time = 4200; // milliseconds?
+	const int first_turn_to_second_turn_time = 1900; // milliseconds?
+	const int second_turn_to_ramp_time = 3500; // milliseconds?
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
 	Joystick_WaitForStart();
+	Servo_SetPosition(servo_dump, servo_dump_closed);
 
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
 	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
@@ -128,6 +129,7 @@ task main() {
 	g_translation_x = AUTON_L_R*(fine_tune_power);
 	Time_Wait(dump_time);
 	g_translation_x = 0;
+	Time_Wait(500);
 	// Open "claw" and wait a bit.
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	Time_Wait(servo_dump_delay);

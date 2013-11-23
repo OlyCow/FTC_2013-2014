@@ -36,14 +36,17 @@ task waveFlag();
 // 1 = L, -1 = R; this should only affect horizontal movements.
 const int AUTON_L_R = 1;
 
+// true = wait 15 seconds before starting, false = no delay.
+const bool AUTON_WAIT = false;
+
+
+
 float f_heading = 90.0+AUTON_L_R*45.0; // The initial heading of the robot (degrees).
 float g_translation_x = 0.0;
 float g_translation_y = 0.0;
 float g_rotation = 0.0;
 float g_lift_target = 0.0;
 bool g_isWavingFlag = false;
-
-
 
 task main() {
 	bDisplayDiagnostics = false;
@@ -82,6 +85,9 @@ task main() {
 	Crate crate_IR = CRATE_UNKNOWN;
 
 	Joystick_WaitForStart();
+	if (AUTON_WAIT==true) {
+		Time_Wait(15*1000);
+	}
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.

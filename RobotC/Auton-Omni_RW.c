@@ -37,7 +37,7 @@ task waveFlag();
 const int AUTON_L_R = -1;
 
 // true = wait 15 seconds before starting, false = no delay.
-const bool AUTON_WAIT = false;
+const bool AUTON_WAIT = true;
 
 
 

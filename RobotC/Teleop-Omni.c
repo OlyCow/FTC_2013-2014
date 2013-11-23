@@ -68,14 +68,14 @@ task main()
 		// Read from the gyro (integrate another delta t) and clear timer T1 for
 		// the next loop. This way we don't need separate variables to keep track
 		// of the current time, previous time, and delta t for this iteration.
-		heading += (-1)*((float)HTGYROreadRot(sensor_gyro))*((float)Time_GetTime(T1))/((float)1000); // 1000 milliseconds per second.
+		heading += (-1)*((float)HTGYROreadRot(sensor_gyro))*(float)Time_GetTime(T1)/(float)1000.0; // 1000 milliseconds per second.
 		loopDelay = Time_GetTime(T1);
 		Time_ClearTimer(T1);
 
 		Joystick_UpdateData();
-		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
-		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
-		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		translation_x = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		translation_y = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		rotation = Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_X), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 
 		// Pressing `BUTTON_RT` slows down translation; `BUTTON_LT` slows rotation.
 		// Both can be pressed at once (so we can't use an if...else statement).

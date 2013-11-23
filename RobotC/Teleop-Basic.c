@@ -61,14 +61,11 @@ task Autonomous(); // Ooooh.
 // to compensate for gearing), and "pow" is the power applied to the motor.
 //--------------------------------------------------------------------------->>
 
+// For control flow:
 bool isAutonomous = false;
+
+// For main task:
 bool isSweeping = false;
-int f_angle_z = 0;
-int f_angle_y = 0;
-int f_angle_x = 0;
-int f_pos_z = 0;
-int f_pos_y = 0;
-int f_pos_x = 0;
 float power_sweeper = 0.0;
 float power_lift = 0.0;
 float power_flag = 0.0;
@@ -76,6 +73,8 @@ int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
 float term_P_pod[POD_NUM] = {0,0,0,0};
+
+// For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
@@ -83,7 +82,43 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 
-task main() {
+// For comms link:
+typedef enum CardinalDirection {
+	CARDINAL_DIR_N	= 0,
+	CARDINAL_DIR_W	= 1,
+	CARDINAL_DIR_S	= 2,
+	CARDINAL_DIR_E	= 3,
+	CARDINAL_DIR_NUM,
+} CardinalDirection;
+// TODO: If there are too many variables here, start combining them, esp. the bitmaps.
+const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
+const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
+ubyte f_byte_write = 0;
+ubyte f_byte_read = 0;
+bool isClockHigh = true;
+int f_angle_x = 0; // RobotC doesn't support unsigned ints???
+int f_angle_y = 0;
+int f_angle_z = 0;
+int f_pos_x = 0;
+int f_pos_y = 0;
+int f_pos_z = 0;
+ubyte f_closeRange[CARDINAL_DIR_NUM] = {0,0,0,0};
+int f_longRange[CARDINAL_DIR_NUM] = {0,0,0,0};
+ubyte f_lineSensorCenter[CARDINAL_DIR_NUM] = {0,0,0,0};
+ubyte f_lineSensor[CARDINAL_DIR_NUM][CARDINAL_DIR_NUM] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+byte f_cubeNum = 0;
+bool f_liftReset = false;
+bool f_podReset[POD_NUM] = {false, false, false, false};
+bool f_cubeDetectedCenter = false;
+bool f_cubeDetected[CARDINAL_DIR_NUM][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+bool f_flagBumperTriggered = false;
+bool f_climbBumperTriggered = false;
+bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
+
+
+
+task main()
+{
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
@@ -265,7 +300,8 @@ task main() {
 
 
 
-task PID() {
+task PID()
+{
 	typedef enum Aligned {
 		ALIGNED_FAR		= 0,
 		ALIGNED_MEDIUM	= 1,
@@ -427,11 +463,91 @@ task PID() {
 
 
 
-task CommLink() {
+void processCommTick()
+{
+	f_byte_write &= ~(1<<7); // Clear the clock bit.
+	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
+	HTSPBwriteIO(sensor_protoboard, f_byte_write);
+	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
+	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
+}
+task CommLink()
+{
+
+
+	typedef enum CommState {
+		COMM_REQ_RESET		= -1,
+		COMM_INIT_RESET		= -2,
+		COMM_SIGNAL_START	= -3,
+		//COMM_SIGNAL_ACK	= -4, // Might be unnecessary.
+		COMM_READ_HEADER	= 0,
+		COMM_READ_DATA		= 1,
+		COMM_READ_CHECK		= 2,
+	} CommState;
+
+	int bit_index = 0;
+	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC THAT MIGHT NOT WORK)
+	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
+	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
+	CommState commState = COMM_REQ_RESET;
+	bool header_write = false;
+	bool header_read[6] = {false, false, false, false, false, false};
+	ubyte frame_write[4] = {0,0,0,0};
+	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+	ubyte check_write = 0;
+	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
+	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
+
+	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
 	Joystick_WaitForStart();
 
 	while (true) {
-		// Continuously update stuff.
+		{
+			switch (commState) {
+				case COMM_READ_HEADER :
+					f_byte_write &= ~(1<<6); // Clear the data bit.
+					f_byte_write |= (header_write<<6); // Set the data bit to a data value.
+					processCommTick();
+					for (int i=0; i<6; i++) {
+						current_index_mask = (0|(1<<(i%8)));
+						header_read[i] = (bool)(f_byte_read&current_index_mask); // Should be `true` for everything != 0.
+					}
+					commState = COMM_READ_DATA;
+					break;
+				case COMM_READ_DATA :
+					f_byte_write &= ~(1<<6); // Clear the data bit.
+					current_index_mask = (0|(1<<(bit_index%8)));
+					f_byte_write |= (((frame_write[bit_index/8])&current_index_mask)<<6); // NOT SKETCHY AT ALL
+					processCommTick();
+					for (int i=0; i<6; i++) {
+						frame_read[i][bit_index/8] &= ~(1<<(bit_index%8));
+						current_index_mask = (0|(1<<(i%8)));
+						frame_read[i][bit_index/8] |= (((f_byte_read&current_index_mask)>>i)<<(bit_index/8)); // TOTES NOT SKETCH
+					}
+					bit_index++;
+					if (bit_index==32) {
+						bit_index = 0;
+						commState = COMM_READ_CHECK;
+					}
+					break;
+				case COMM_READ_CHECK :
+					f_byte_write &= ~(1<<6); // Clear the data bit.
+					current_index_mask = (0|(1<<bit_index));
+					f_byte_write |= (((check_write&current_index_mask)>>bit_index)<<6);
+					processCommTick();
+					for (int i=0; i<6; i++) {
+						check_read[i] &= ~(1<<bit_index);
+						current_index_mask = (0|(1<<bit_index));
+						check_read[i] |= (f_byte_read&current_index_mask);
+					}
+					bit_index++;
+					if (bit_index==4) {
+						bit_index = 0;
+						commState = COMM_READ_HEADER;
+					}
+					break;
+			}
+		}
 	}
 }
 
@@ -439,18 +555,19 @@ task CommLink() {
 
 // Task for displaying data on the NXT's LCD screen.
 // TODO: Put a lot of the display stuff into loops. Do we want to?
-task Display() {
-
+task Display()
+{
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
-		DISP_SENSORS,			// Might need to split this into two screens.
-		DISP_SERVOS,			// Show each servo's position.
-		DISP_TASKS,				// Which tasks are running.
-		DISP_AUTONOMOUS_INFO,	// Misc. status info.
+		//DISP_SENSORS,			// Might need to split this into two screens.
+		//DISP_SERVOS,			// Show each servo's position.
+		//DISP_TASKS,				// Which tasks are running.
+		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
+		DISP_NUM,
 	};
 
 	DisplayMode isMode = DISP_FCS;
@@ -462,16 +579,6 @@ task Display() {
 
 		switch (isMode) {
 			case DISP_FCS :
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = false;
-					isMode = DISP_COMM_STATUS;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = false;
-					isMode = DISP_SWERVE_DEBUG;
-				}
 				break;
 			case DISP_SWERVE_DEBUG :
 				nxtDisplayTextLine(0, "FR rot%d trgt%d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
@@ -482,15 +589,6 @@ task Display() {
 				nxtDisplayTextLine(5, "FL chg%d pow%d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
 				nxtDisplayTextLine(6, "BL chg%d pow%d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
 				nxtDisplayTextLine(7, "BR chg%d pow%d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = true;
-					isMode = DISP_FCS;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					isMode = DISP_SWERVE_PID;
-				}
 				break;
 			case DISP_SWERVE_PID :
 				nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);
@@ -501,38 +599,39 @@ task Display() {
 				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					isMode = DISP_SWERVE_DEBUG;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					isMode = DISP_COMM_STATUS;
-				}
 				break;
-			case DISP_COMM_STATUS :
+			default :
 				nxtDisplayCenteredTextLine(3, "Doesn't work...");
 				nxtDisplayCenteredTextLine(4, "Yet. >:(");
-				if (Buttons_Released(NXT_BUTTON_L)==true) {
-					Display_Clear();
-					isMode = DISP_SWERVE_PID;
-				}
-				if (Buttons_Released(NXT_BUTTON_R)==true) {
-					Display_Clear();
-					bDisplayDiagnostics = true;
-					isMode = DISP_FCS;
-				}
 				break;
 		}
 
+		if (Buttons_Released(NXT_BUTTON_L)==true) {
+			Display_Clear();
+			isMode = (DisplayMode)((isMode+DISP_NUM-1)%DISP_NUM);
+			if (isMode==DISP_FCS) {
+				bDisplayDiagnostics = true;
+			} else {
+				bDisplayDiagnostics = false;
+			}
+		}
+		if (Buttons_Released(NXT_BUTTON_R)==true) {
+			Display_Clear();
+			isMode = (DisplayMode)((isMode+DISP_NUM+1)%DISP_NUM);
+			if (isMode==DISP_FCS) {
+				bDisplayDiagnostics = true;
+			} else {
+				bDisplayDiagnostics = false;
+			}
+		}
 		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
 	}
 }
 
 
 
-task Autonomous() {
-
+task Autonomous()
+{
 	isAutonomous = true;
 
 	while (true) {

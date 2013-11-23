@@ -46,6 +46,7 @@ float HTGYROreadRot(tSensors link) {
 // `link`:	Port number of gyro.
 float HTGYROstartCal(tSensors link) {
 	long _avgdata = 0;
+	wait1Msec(500);
 
 	// Make sure the sensor is configured as type sensorRawValue.
 	if (SensorType[link] != sensorAnalogInactive) {
@@ -54,13 +55,13 @@ float HTGYROstartCal(tSensors link) {
 	}
 
 	// Take 25 readings and average them out.
-	for (int i=0; i<25; i++) {
+	for (int i=0; i<100; i++) {
 		_avgdata += SensorValue[link];
 		wait1Msec(10);
 	}
 
 	// Store & return new offset value.
-	HTGYRO_offsets[link][0] = (((float)_avgdata)/((float)50.0));
+	HTGYRO_offsets[link][0] = (((float)_avgdata)/((float)100.0));
 	return HTGYRO_offsets[link][0];
 }
 

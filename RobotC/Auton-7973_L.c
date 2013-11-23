@@ -17,14 +17,16 @@ void stopAllMotors();
 
 task main() {
 	bDisplayDiagnostics = false;
-	int forward_time	= 3000;
+	int forward_time	= 1500;
 	int turn_time		= 500;
 	int ramp_time		= 2000;
 	Joystick_WaitForStart();
 
-	driveForward(50, forward_time);
+	// Fix numbers
+
+	driveForward(100, forward_time);
 	turnLeft(50, turn_time);
-	driveForward(50, ramp_time);
+	driveForward(100, ramp_time);
 	stopAllMotors();
 }
 

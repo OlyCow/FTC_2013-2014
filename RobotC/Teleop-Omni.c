@@ -68,7 +68,7 @@ task main()
 		// Read from the gyro (integrate another delta t) and clear timer T1 for
 		// the next loop. This way we don't need separate variables to keep track
 		// of the current time, previous time, and delta t for this iteration.
-		heading += (-1)*((float)HTGYROreadRot(sensor_gyro))*((float)Time_GetTime(T1))/((float)1000); // 1000 milliseconds per second.
+		heading += (-1)*((float)HTGYROreadRot(sensor_gyro))*(float)Time_GetTime(T1)/(float)1000.0; // 1000 milliseconds per second.
 		loopDelay = Time_GetTime(T1);
 		Time_ClearTimer(T1);
 
@@ -153,11 +153,11 @@ task main()
 
 		// Only the second driver can control climbing. (This should be an agreed
 		// upon decision anyway; plus, climbing isn't time-critical either.)
-		if (Joystick_ButtonReleased(BUTTON_A)==true) {
+		if (Joystick_ButtonReleased(BUTTON_A, CONTROLLER_2)==true) {
 			climbingMode = CLIMB_RELEASE;
-		} else if (Joystick_ButtonReleased(BUTTON_B)==true) {
+		} else if (Joystick_ButtonReleased(BUTTON_B, CONTROLLER_2)==true) {
 			climbingMode = CLIMB_PULL;
-		} else if (Joystick_ButtonReleased(BUTTON_X)==true) {
+		} else if (Joystick_ButtonReleased(BUTTON_X, CONTROLLER_2)==true) {
 			climbingMode = CLIMB_NEUTRAL;
 		}
 		switch (climbingMode) {

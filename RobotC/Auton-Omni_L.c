@@ -69,16 +69,15 @@ task main() {
 	const short IR_threshold = 45;
 	const int servo_dump_closed = 255;
 	const int servo_dump_open = 0;
-	const int servo_dump_delay = 1000;
-	// Some new example values: {-636}, {-1331}, {-2116}, {-2602}
-	// Some example values: {602, 640, 666-636}, {1152, 1204, 1237-1331}, {2108, 2111, 213-2116}, {2852, 2610, 2614-2602}
-	const int drive_time_low[CRATE_NUM] = {100, 980, 1720, 2360};
-	const int drive_time_high[CRATE_NUM] = {980, 1720, 2360, 3500};
-	const int drive_time_mid[CRATE_NUM] = {790, 1310, 2240, 2690};
-	const int dump_time = 430;
-	const int start_to_first_turn_time = 4600; // milliseconds?
-	const int first_turn_to_second_turn_time = 2100; // milliseconds?
-	const int second_turn_to_ramp_time = 3700; // milliseconds?
+	const int servo_dump_delay = 410;
+	// Some example values: {672,697,603-657}, {1212,1137,1218-1189}, {2246,2236,2254-2245}, {2772,2871,2960-2868}
+	const int drive_time_low[CRATE_NUM]		= {0,	920,	1720,	2550};
+	const int drive_time_high[CRATE_NUM]	= {920,	1720,	2550,	3500};
+	const int drive_time_mid[CRATE_NUM]		= {610,	1190,	1900,	2800};
+	const int dump_time = 380;
+	const int start_to_first_turn_time = 3840; // milliseconds?
+	const int first_turn_to_second_turn_time = 2000; // milliseconds?
+	const int second_turn_to_ramp_time = 3000; // milliseconds?
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
@@ -138,7 +137,7 @@ task main() {
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	// Move back.
 	g_translation_x = -AUTON_L_R*(fine_tune_power);
-	Time_Wait(((float)dump_time)/((float)2));
+	Time_Wait(((float)dump_time)/((float)1.3)); // MAGIC_NUM :(
 	g_translation_x = 0;
 
 	// And move onto the ramp.
@@ -168,12 +167,11 @@ task main() {
 
 
 task gyro() {
-	Time_Wait(500);
 	HTGYROstartCal(sensor_gyro);
 	Joystick_WaitForStart();
 	Time_ClearTimer(T4);
 	while (true) {
-		f_heading += ((float)Time_GetTime(T4))*((float)HTGYROreadRot(sensor_gyro))/((float)1000000.0); // 1000 milliseconds per second.
+		f_heading += ((float)Time_GetTime(T4))*((float)HTGYROreadRot(sensor_gyro))/((float)1000.0); // 1000 milliseconds per second.
 		Time_ClearTimer(T4);
 		nxtDisplayTextLine(6, "gyro:%f", f_heading);
 		Time_Wait(10); // MAGIC_NUM. Seems like a decent amount of time to wait. :P

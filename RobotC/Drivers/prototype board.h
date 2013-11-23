@@ -66,7 +66,7 @@ ubyte HTSPBreadIO(tSensors link, ubyte mask) {
 	return HTSPB_I2CReply[0] & mask;
 }
 
-// Write the values the digital outputs as specified by the mask.
+// Write the values to digital outputs as specified by the mask.
 // If a bit is masked out (not set; `0`) it is set to false (`0`).
 // Returns true if no error occurred, false if it did.
 // `link`:	Port number.

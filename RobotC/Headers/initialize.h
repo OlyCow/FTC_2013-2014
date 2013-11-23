@@ -32,15 +32,15 @@ void initializeGlobalVariables() {
 	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {
 		g_JoystickData[i].buttonMap = 0;
 		g_JoystickData[i].direction = DIRECTION_NONE;
-	}
-	for (int i=CONTROLLER_1; i<=(int)CONTROLLER_2; i++) {
 		g_PrevJoystickData[i].buttonMap = 0;
 		g_PrevJoystickData[i].direction = DIRECTION_NONE;
 	}
 
-	// Disable the "samostat.rxe"-like diagnostics screen which comes
-	// with "JoystickDriver.c" (so we can actually see stuff).
-	disableDiagnosticsDisplay();
+	// Initialize NXT buttons' data for use in "Buttons.h" (and "Buttons.c").
+	for (int i=NXT_BUTTON_ESC; i<=(int)NXT_BUTTON_YES; i++) {
+		g_NXTButtonsData[i] = false;
+		g_NXTButtonsData_prev[i] = false;
+	}
 }
 
 

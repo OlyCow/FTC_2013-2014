@@ -2,8 +2,8 @@
 
 #include "includes.h"
 
-volatile float x = 0;
-volatile float time_delta = 0;
+float x = 0;
+float time_delta = 0;
 
 task display() {
 	nxtDisplayCenteredTextLine(3, "----");

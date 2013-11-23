@@ -60,7 +60,7 @@ float HTGYROstartCal(tSensors link) {
 	}
 
 	// Store & return new offset value.
-	HTGYRO_offsets[link][0] = (((float)_avgdata)/((float)50.0));
+	HTGYRO_offsets[link][0] = (((float)_avgdata)/((float)100.0));
 	return HTGYRO_offsets[link][0];
 }
 

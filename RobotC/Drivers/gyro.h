@@ -46,6 +46,7 @@ float HTGYROreadRot(tSensors link) {
 // `link`:	Port number of gyro.
 float HTGYROstartCal(tSensors link) {
 	long _avgdata = 0;
+	wait1Msec(500);
 
 	// Make sure the sensor is configured as type sensorRawValue.
 	if (SensorType[link] != sensorAnalogInactive) {

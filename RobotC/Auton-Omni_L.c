@@ -75,8 +75,8 @@ task main() {
 	const int drive_time_high[CRATE_NUM]	= {920,	1720,	2550,	3500};
 	const int drive_time_mid[CRATE_NUM]		= {610,	1190,	1900,	2800};
 	const int dump_time = 380;
-	const int start_to_first_turn_time = 3500; // milliseconds?
-	const int first_turn_to_second_turn_time = 1800; // milliseconds?
+	const int start_to_first_turn_time = 3840; // milliseconds?
+	const int first_turn_to_second_turn_time = 2000; // milliseconds?
 	const int second_turn_to_ramp_time = 3000; // milliseconds?
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
@@ -137,7 +137,7 @@ task main() {
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	// Move back.
 	g_translation_x = -AUTON_L_R*(fine_tune_power);
-	Time_Wait(((float)dump_time)/((float)2));
+	Time_Wait(((float)dump_time)/((float)1.3)); // MAGIC_NUM :(
 	g_translation_x = 0;
 
 	// And move onto the ramp.
@@ -167,7 +167,6 @@ task main() {
 
 
 task gyro() {
-	Time_Wait(500);
 	HTGYROstartCal(sensor_gyro);
 	Joystick_WaitForStart();
 	Time_ClearTimer(T4);

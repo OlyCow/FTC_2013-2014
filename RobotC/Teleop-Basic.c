@@ -581,14 +581,15 @@ task Display()
 			case DISP_FCS :
 				break;
 			case DISP_SWERVE_DEBUG :
-				nxtDisplayTextLine(0, "FR rot%d trgt%d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
-				nxtDisplayTextLine(1, "FL rot%d trgt%d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
-				nxtDisplayTextLine(2, "BL rot%d trgt%d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
-				nxtDisplayTextLine(3, "BR rot%d trgt%d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, "FR chg%d pow%d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, "FL chg%d pow%d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, "BL chg%d pow%d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, "BR chg%d pow%d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				// The value of `pod_current[i]` is (should be?) between 0~360.
+				nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
+				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
+				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
+				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
+				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
+				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
+				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
+				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
 				break;
 			case DISP_SWERVE_PID :
 				nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);

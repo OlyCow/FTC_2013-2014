@@ -374,7 +374,7 @@ task PID()
 			if (error_pod[i]>90) {
 				error_pod[i] = error_pod[i]-180;
 				g_MotorData[i].isReversed = true;
-			} else if (error_pod[i]<90) {
+			} else if (error_pod[i]<-90) {
 				error_pod[i] = error_pod[i]+180;
 				g_MotorData[i].isReversed = true;
 			} else {

@@ -24,6 +24,7 @@
 #pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
 
 #include "includes.h"
+#include "Teleop-Basic.h"
 #include "subroutines.h"
 
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
@@ -44,15 +45,17 @@ task main()
 	Task_Spawn(PID);
 	Task_Spawn(Display);
 
+	TFileHandle resetDataHandle;
+	TFileIOResult resetDataResult;
+	string resetDataFilename = "_reset_data.txt";
+	int resetDataSize = 0;
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
-	// Read data from file.
-
-	// Set `g_ServoData[i].angle` to that number.
-
+	OpenRead(resetDataHandle, resetDataResult, resetDataFilename, resetDataSize);
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		g_ServoData[i].angle = 0; // TODO: Assign values here.
+		ReadShort(resetDataHandle, resetDataResult, g_ServoData[i].angle); // TODO: Assign values here.
 	}
+	Close(resetDataHandle, resetDataResult);
 }
 
 
@@ -66,11 +69,6 @@ task PID()
 	Joystick_WaitForStart();
 
 	while (true) {
-		// Update timer first, in case something happens later during the loop.
-		t_prev = t_current;
-		t_current = Time_GetTime(TIMER_PROGRAM);
-		t_delta = t_current-t_prev;
-
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			pod_raw[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
@@ -78,7 +76,6 @@ task PID()
 			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
 			pod_current[i] += 360; // Value is now >= 0 (between 0 ~ 720).
 			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between 0 ~ 360.
-			error_prev_pod[i] = error_pod[i];
 			error_pod[i] = g_ServoData[i].angle-pod_current[i];
 
 			// Make sure we don't hit the maximum turning limit:
@@ -144,10 +141,10 @@ task Display()
 				nxtDisplayTextLine(1, "FL err%d P:%d", error_pod[POD_FL], term_P_pod[POD_FL]);
 				nxtDisplayTextLine(2, "BL err%d P:%d", error_pod[POD_BL], term_P_pod[POD_BL]);
 				nxtDisplayTextLine(3, "BR err%d P:%d", error_pod[POD_BR], term_P_pod[POD_BR]);
-				nxtDisplayTextLine(4, "FR I:%d D:%d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
-				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
-				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
-				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				//nxtDisplayTextLine(4, "FR I:%d D:%d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
+				//nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
+				//nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
+				//nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
 			default :
 				nxtDisplayCenteredTextLine(3, "This debug screen");

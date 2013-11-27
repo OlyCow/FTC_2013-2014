@@ -31,8 +31,6 @@ task Display(); // A separate task for updating the NXT's LCD display.
 
 // For PID:
 float term_P_pod[POD_NUM] = {0,0,0,0};
-float term_I_pod[POD_NUM] = {0,0,0,0};
-float term_D_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
@@ -47,6 +45,10 @@ task main()
 	Task_Spawn(Display);
 
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
+
+	// Read data from file.
+
+	// Set `g_ServoData[i].angle` to that number.
 
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		g_ServoData[i].angle = 0; // TODO: Assign values here.
@@ -113,11 +115,6 @@ task Display()
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
-		DISP_COMM_STATUS,		// Each line of each frame.
-		//DISP_SENSORS,			// Might need to split this into two screens.
-		//DISP_SERVOS,			// Show each servo's position.
-		//DISP_TASKS,				// Which tasks are running.
-		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM,
 	};
 
@@ -153,8 +150,8 @@ task Display()
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
 			default :
-				nxtDisplayCenteredTextLine(3, "Doesn't work...");
-				nxtDisplayCenteredTextLine(4, "Yet. >:(");
+				nxtDisplayCenteredTextLine(3, "This debug screen");
+				nxtDisplayCenteredTextLine(4, "does not exist.");
 				break;
 		}
 

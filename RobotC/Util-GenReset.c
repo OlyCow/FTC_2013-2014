@@ -34,7 +34,7 @@ task main()
 	nxtDisplayTextLine(0, "Initializing...");
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 
-	const int finish_delay = 10*1000; // MAGIC_NUM: milliseconds to delay when program ends.
+	const int finish_delay = 4*1000; // MAGIC_NUM: milliseconds to delay when program ends.
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
 	const string file_name = "_reset_data.txt";
@@ -43,29 +43,29 @@ task main()
 	bool isConfirmed = false;
 
 	// Confirm that we want to proceed (slightly dangerous; could lose data).
-	nxtDisplayTextLine(1, "This program generates");
-	nxtDisplayTextLine(2, "a blank (all 0s) wheel");
-	nxtDisplayTextLine(3, "pod position file.");
+	nxtDisplayTextLine(1, "This will write");
+	nxtDisplayTextLine(2, "a blank wheel");
+	nxtDisplayTextLine(3, "pod pos. file.");
 	nxtDisplayCenteredTextLine(4, "Press [ENTER] to");
 	nxtDisplayCenteredTextLine(5, "continue.");
-	while (Buttons_Released(NXT_BUTTON_YES)==true) {
+	while (Buttons_Released(NXT_BUTTON_YES)==false) {
 		Buttons_UpdateData();
 		Time_Wait(100); // MAGIC_NUM: Arbitrary LCD refresh delay.
 	}
 
-	nxtDisplayTextLine(6, "Checking conflicts...");
+	nxtDisplayTextLine(6, "Checking...");
 	FindFirstFile(IO_handle, IO_result, file_name, file_name_found, file_size);
 	if (IO_result==ioRsltSuccess) {
 		Display_Clear();
-		nxtDisplayTextLine(0, "a blank (all 0s) wheel");
-		nxtDisplayTextLine(1, "pod position file.");
+		nxtDisplayTextLine(2, "a blank wheel");
+		nxtDisplayTextLine(1, "pod pos. file.");
 		nxtDisplayCenteredTextLine(2, "Press [ENTER] to");
 		nxtDisplayCenteredTextLine(3, "continue.");
-		nxtDisplayTextLine(4, "Checking conflicts...");
-		nxtDisplayTextLine(5, "File already exists.");
+		nxtDisplayTextLine(4, "Checking...");
+		nxtDisplayTextLine(5, "File exists.");
 		nxtDisplayTextLine(6, "Press [ENTER] to");
 		nxtDisplayTextLine(7, "overwrite file.");
-		while (Buttons_Released(NXT_BUTTON_YES)==true) {
+		while (Buttons_Released(NXT_BUTTON_YES)==false) {
 			Buttons_UpdateData();
 			Time_Wait(100); // MAGIC_NUM: Arbitrary LCD refresh delay.
 		}
@@ -75,23 +75,23 @@ task main()
 		isConfirmed = true;
 	} else {
 		Display_Clear();
-		nxtDisplayTextLine(0, "a blank (all 0s) wheel");
-		nxtDisplayTextLine(1, "pod position file.");
+		nxtDisplayTextLine(0, "a blank wheel");
+		nxtDisplayTextLine(1, "pod pos. file.");
 		nxtDisplayCenteredTextLine(2, "Press [ENTER] to");
 		nxtDisplayCenteredTextLine(3, "continue.");
-		nxtDisplayTextLine(4, "Checking conflicts...");
-		nxtDisplayTextLine(5, "Unknown error.");
-		nxtDisplayTextLine(6, "Debugging needed.");
+		nxtDisplayTextLine(4, "Checking...");
+		nxtDisplayTextLine(5, "Unknown err.");
+		nxtDisplayTextLine(6, "Debug!");
 		nxtDisplayTextLine(7, "Terminating.");
 		isConfirmed = false; // Already initialized thus; just making sure.
 	}
-	if ((IO_result==ioRsltFileNotFound)&&(isConfirmed==true)) {
+	if (isConfirmed==true) {
 		Display_Clear();
-		nxtDisplayTextLine(0, "Writing to file...");
-		// TODO: Set file_size to the correct value (4 shorts).
+		nxtDisplayTextLine(0, "Writing...");
+		file_size = 72; // 4 shorts, ea. 16-bits. I think? There's some buffer just in case.
 		OpenWrite(IO_handle, IO_result, file_name, file_size);
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			WriteShort(IO_handle, IO_result, 0);
+			WriteShort(IO_handle, IO_result, 1);
 		}
 		Close(IO_handle, IO_result);
 		nxtDisplayTextLine(2, "Done.");

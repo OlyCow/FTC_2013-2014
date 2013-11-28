@@ -50,7 +50,21 @@ task main()
 
 	// Read in all the values of the pods from a text file.
 	nxtDisplayTextLine(1, "Recovering data...");
-	OpenRead(IO_handle, IO_result, file_name, file_size);
+	OpenRead(IO_handle, IO_result, file_name, file_size); // TODO: Add more error handling.
+	if (	(IO_result==ioRsltFileNotFound) ||
+			(IO_result==ioRsltNoSpace) ||
+			(IO_result==ioRsltNoMoreFiles) ) {
+		nxtDisplayTextLine(2, "Data not found. :(");
+		nxtDisplayTextLine(3, "Terminating.");
+		Time_Wait(finish_delay);
+		return -1; // MAGIC_NUM: Means there was an error. Doesn't do anything, I don't think.
+	} else if (IO_result!=ioRsltSuccess) {
+		nxtDisplayCenteredTextLine(2, "Unknown error!");
+		nxtDisplayTextLine(3, "Debugging needed.");
+		nxtDisplayTextLine(4, "Terminating.");
+		Time_Wait(finish_delay);
+		return -1; // MAGIC_NUM: Means there was an error. Doesn't do anything, I don't think.
+	}
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		ReadShort(IO_handle, IO_result, g_ServoData[i].angle);
 		g_ServoData[i].angle = -g_ServoData[i].angle; // We're going "backwards" to 0 (centering principle!).
@@ -66,8 +80,13 @@ task main()
 	}
 
 	// Start pod reset (basic P-controller).
-	nxtDisplayTextLine(4, "Resetting pods...");
-	nxtDisplayCenteredTextLine(6, "|     |");
+	Display_Clear();
+	nxtDisplayTextLine(0, "Recovering data...");
+	nxtDisplayCenteredTextLine(1, "Press [ENTER] to");
+	nxtDisplayCenteredTextLine(2, "continue.");
+	nxtDisplayTextLine(3, "Resetting pods...");
+	nxtDisplayCenteredTextLine(5, "|     |");
+	nxtDisplayCenteredTextLine(7, "KEEP PROGRAM OPEN.");
 
 	while (isResetting==true) {
 
@@ -91,17 +110,17 @@ task main()
 		Servo_SetPower(servo_BR, term_P[POD_BR]);
 
 		// Update display.
-		nxtDisplayCenteredTextLine(5, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
-		nxtDisplayCenteredTextLine(7, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+		nxtDisplayCenteredTextLine(4, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
+		nxtDisplayCenteredTextLine(6, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
 	}
 
 	// Press orange button to confirm jig has been applied.
 	Display_Clear();
-	nxtDisplayCenteredTextLine(0, "continue.");
-	nxtDisplayTextLine(1, "Resetting pods...");
-	nxtDisplayCenteredTextLine(2, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
-	nxtDisplayCenteredTextLine(3, "|     |");
-	nxtDisplayCenteredTextLine(4, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+	nxtDisplayTextLine(0, "Resetting pods...");
+	nxtDisplayCenteredTextLine(1, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
+	nxtDisplayCenteredTextLine(2, "|     |");
+	nxtDisplayCenteredTextLine(3, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+	nxtDisplayCenteredTextLine(4, "KEEP PROGRAM OPEN.");
 	nxtDisplayCenteredTextLine(5, "Apply jig, then");
 	nxtDisplayCenteredTextLine(6, "press [ENTER] to");
 	nxtDisplayCenteredTextLine(7, "continue.");
@@ -112,10 +131,10 @@ task main()
 
 	// Delete old pod position file, create a new one, and write 0's to it.
 	Display_Clear();
-	nxtDisplayTextLine(0, "Resetting pods...");
-	nxtDisplayCenteredTextLine(1, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
-	nxtDisplayCenteredTextLine(2, "|     |");
-	nxtDisplayCenteredTextLine(3, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+	nxtDisplayCenteredTextLine(0, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
+	nxtDisplayCenteredTextLine(1, "|     |");
+	nxtDisplayCenteredTextLine(2, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+	nxtDisplayCenteredTextLine(3, "KEEP PROGRAM OPEN.");
 	nxtDisplayCenteredTextLine(4, "Apply jig, then");
 	nxtDisplayCenteredTextLine(5, "press [ENTER] to");
 	nxtDisplayCenteredTextLine(6, "continue.");
@@ -129,9 +148,9 @@ task main()
 
 	// Alert user that program has terminated, and delay before ending.
 	Display_Clear();
-	nxtDisplayCenteredTextLine(0, "%5d-%5d", -rot_error[POD_FL], -rot_error[POD_FR]);
-	nxtDisplayCenteredTextLine(1, "|     |");
-	nxtDisplayCenteredTextLine(2, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+	nxtDisplayCenteredTextLine(0, "|     |");
+	nxtDisplayCenteredTextLine(1, "%5d-%5d", -rot_error[POD_BL], -rot_error[POD_BR]);
+	nxtDisplayCenteredTextLine(2, "KEEP PROGRAM OPEN.");
 	nxtDisplayCenteredTextLine(3, "Apply jig, then");
 	nxtDisplayCenteredTextLine(4, "press [ENTER] to");
 	nxtDisplayCenteredTextLine(5, "continue.");

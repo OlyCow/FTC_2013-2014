@@ -37,7 +37,7 @@ task main()
 	const int finish_delay = 4*1000; // MAGIC_NUM: milliseconds to delay when program ends.
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
-	const string file_name = "_reset_data.txt";
+	const string file_name = "_reset_pods.txt";
 	int file_size = 0;
 	const int resetRange = 10; // MAGIC_NUM: How close the program resets each pod (deg).
 	bool isResetting = true;
@@ -139,6 +139,7 @@ task main()
 	nxtDisplayCenteredTextLine(6, "continue.");
 	nxtDisplayTextLine(7, "Rewriting...");
 	Delete(file_name, IO_result);
+	file_size = 72; // 4 shorts is 64, but a buffere is here just to be safe.
 	OpenWrite(IO_handle, IO_result, file_name, file_size);
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		WriteShort(IO_handle, IO_result, 0);

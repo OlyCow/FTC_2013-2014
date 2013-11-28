@@ -27,10 +27,6 @@
 #include "Teleop-Basic.h"
 #include "subroutines.h"
 
-float term_P[POD_NUM]		= {0,0,0,0}; // (P-controller.)
-float rot_raw[POD_NUM]		= {0,0,0,0}; // Encoder value (it's geared down by 2!).
-float rot_error[POD_NUM]	= {0,0,0,0}; // Difference between set-point and measured value.
-
 task main()
 {
 	Task_Kill(displayDiagnostics);
@@ -47,6 +43,9 @@ task main()
 	bool isResetting = true;
 	// kP is always negative because the servos are geared (and reversed).
 	float kP[POD_NUM] = {-1.0, -1.0, -1.0, -1.0}; // MAGIC_NUM: TODO: PID tuning.
+	float term_P[POD_NUM]		= {0,0,0,0}; // (P-controller.)
+	float rot_raw[POD_NUM]		= {0,0,0,0}; // Encoder value (it's geared down by 2!).
+	float rot_error[POD_NUM]	= {0,0,0,0}; // Difference between set-point and measured value.
 
 	// Read in all the values of the pods from a text file.
 	nxtDisplayTextLine(1, "Recovering data...");
@@ -57,13 +56,13 @@ task main()
 		nxtDisplayTextLine(2, "Data not found. :(");
 		nxtDisplayTextLine(3, "Terminating.");
 		Time_Wait(finish_delay);
-		return -1; // MAGIC_NUM: Means there was an error. Doesn't do anything, I don't think.
+		return; // The only way to break out of this function?
 	} else if (IO_result!=ioRsltSuccess) {
 		nxtDisplayCenteredTextLine(2, "Unknown error!");
 		nxtDisplayTextLine(3, "Debugging needed.");
 		nxtDisplayTextLine(4, "Terminating.");
 		Time_Wait(finish_delay);
-		return -1; // MAGIC_NUM: Means there was an error. Doesn't do anything, I don't think.
+		return; // The only way to break out of this function?
 	}
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		ReadShort(IO_handle, IO_result, g_ServoData[i].angle);

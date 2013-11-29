@@ -444,6 +444,7 @@ task PID()
 		}
 
 		// Assign the power settings to the servos.
+		// Negative because the servo is powers the pod via a gear.
 		Servo_SetPower(servo_FR, -correction_pod[POD_FR]);
 		Servo_SetPower(servo_FL, -correction_pod[POD_FL]);
 		Servo_SetPower(servo_BL, -correction_pod[POD_BL]);
@@ -487,7 +488,8 @@ task CommLink()
 	} CommState;
 
 	int bit_index = 0;
-	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC THAT MIGHT NOT WORK)
+	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
 	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
 	CommState commState = COMM_REQ_RESET;
@@ -503,52 +505,71 @@ task CommLink()
 	Joystick_WaitForStart();
 
 	while (true) {
-		{
-			switch (commState) {
-				case COMM_READ_HEADER :
-					f_byte_write &= ~(1<<6); // Clear the data bit.
-					f_byte_write |= (header_write<<6); // Set the data bit to a data value.
-					processCommTick();
-					for (int i=0; i<6; i++) {
-						current_index_mask = (0|(1<<(i%8)));
-						header_read[i] = (bool)(f_byte_read&current_index_mask); // Should be `true` for everything != 0.
-					}
-					commState = COMM_READ_DATA;
-					break;
-				case COMM_READ_DATA :
-					f_byte_write &= ~(1<<6); // Clear the data bit.
-					current_index_mask = (0|(1<<(bit_index%8)));
-					f_byte_write |= (((frame_write[bit_index/8])&current_index_mask)<<6); // NOT SKETCHY AT ALL
-					processCommTick();
-					for (int i=0; i<6; i++) {
-						frame_read[i][bit_index/8] &= ~(1<<(bit_index%8));
-						current_index_mask = (0|(1<<(i%8)));
-						frame_read[i][bit_index/8] |= (((f_byte_read&current_index_mask)>>i)<<(bit_index/8)); // TOTES NOT SKETCH
-					}
-					bit_index++;
-					if (bit_index==32) {
-						bit_index = 0;
-						commState = COMM_READ_CHECK;
-					}
-					break;
-				case COMM_READ_CHECK :
-					f_byte_write &= ~(1<<6); // Clear the data bit.
-					current_index_mask = (0|(1<<bit_index));
-					f_byte_write |= (((check_write&current_index_mask)>>bit_index)<<6);
-					processCommTick();
-					for (int i=0; i<6; i++) {
-						check_read[i] &= ~(1<<bit_index);
-						current_index_mask = (0|(1<<bit_index));
-						check_read[i] |= (f_byte_read&current_index_mask);
-					}
-					bit_index++;
-					if (bit_index==4) {
-						bit_index = 0;
-						commState = COMM_READ_HEADER;
-					}
-					break;
+		// Write header.
+		f_byte_write &= ~(1<<6); // Clear the data bit.
+		f_byte_write |= (header_write<<6); // Set the data bit.
+		processCommTick();
+
+		// Read in all 6 data lines.
+		for (int i=0; i<6; i++) {
+			current_index_mask = 0; // Clear mask.
+			current_index_mask |= (1<<(i%8)); // Shift a bit over to be the mask.
+
+			// No fancy shifting needed here (header_read is a bool).
+			header_read = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+		}
+
+		// Data:
+		for (int i=0; i<32; i++) {
+			// Set MOSI.
+			f_byte_write &= ~(1<<6); // Clear the data bit.
+			current_index_mask = 0; // Clear mask.
+			current_index_mask |= (1<<(i%8)); // Set the data bit; `i%8` because data is in bytes.
+
+			// Intentional int division (returns intended byte) (see next statement).
+			// Using a temp var because `true!=1` (can be any positive int); statement
+			// also clears byte_temp because the mask was cleared (and now AND'd).
+			byte_temp = (frame_write[i/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+
+			// TODO: combine the two shifts below into one shift.
+			byte_temp = byte_temp>>(i%32); // Shift data bit over to bit 0.
+			f_byte_write |= (byte_temp<<6); // Set the data bit.
+			processCommTick();
+
+			// Read in all 6 data lines (MISO).
+			// TODO: make `i`, `j` more intuitively named (line? bit? etc.).
+			for (int j=0; j<6; j++) {
+				// TODO: Optimize by (maybe?) making assigning this cyclically.
+				// Would only work for the inner-most loop, since this variable
+				// is reused outside of the loop (for every "for" statement).
+				current_index_mask = 0; // Clear mask.
+				current_index_mask |= (1<<(i%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
+				frame_read[j][i/8] &= ~(1<<(i%8)); // Clear bit to read. `i/8`=current byte, `i%8`=current bit.
+				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
+
+				// TODO: combine the two shifts below into one shift.
+				byte_temp = byte_temp>>j; // Shift the bit into bit 0.
+				frame_read[j][i/8] |= (byte_temp<<(i%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
 			}
 		}
+
+		//	case COMM_READ_CHECK :
+		//		f_byte_write &= ~(1<<6); // Clear the data bit.
+		//		current_index_mask = (0|(1<<bit_index));
+		//		f_byte_write |= (((check_write&current_index_mask)>>bit_index)<<6);
+		//		processCommTick();
+		//		for (int i=0; i<6; i++) {
+		//			check_read[i] &= ~(1<<bit_index);
+		//			current_index_mask = (0|(1<<bit_index));
+		//			check_read[i] |= (f_byte_read&current_index_mask);
+		//		}
+		//		bit_index++;
+		//		if (bit_index==4) {
+		//			bit_index = 0;
+		//			commState = COMM_READ_HEADER;
+		//		}
+		//		break;
+		//}
 	}
 }
 

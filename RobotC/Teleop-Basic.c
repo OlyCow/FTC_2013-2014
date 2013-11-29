@@ -121,6 +121,7 @@ bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 task main()
 {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
@@ -487,7 +488,6 @@ task CommLink()
 		COMM_READ_CHECK		= 2,
 	} CommState;
 
-	int bit_index = 0;
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
@@ -505,21 +505,22 @@ task CommLink()
 	Joystick_WaitForStart();
 
 	while (true) {
+
 		// Write header.
 		f_byte_write &= ~(1<<6); // Clear the data bit.
 		f_byte_write |= (header_write<<6); // Set the data bit.
 		processCommTick();
 
 		// Read in all 6 data lines.
-		for (int i=0; i<6; i++) {
+		for (int line=0; line<6; line++) {
 			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<(i%8)); // Shift a bit over to be the mask.
+			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
 
 			// No fancy shifting needed here (header_read is a bool).
-			header_read = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
 		}
 
-		// Data:
+		// Data: TODO: CHECK INTEGRITY!!!
 		for (int i=0; i<32; i++) {
 			// Set MOSI.
 			f_byte_write &= ~(1<<6); // Clear the data bit.
@@ -553,23 +554,29 @@ task CommLink()
 			}
 		}
 
-		//	case COMM_READ_CHECK :
-		//		f_byte_write &= ~(1<<6); // Clear the data bit.
-		//		current_index_mask = (0|(1<<bit_index));
-		//		f_byte_write |= (((check_write&current_index_mask)>>bit_index)<<6);
-		//		processCommTick();
-		//		for (int i=0; i<6; i++) {
-		//			check_read[i] &= ~(1<<bit_index);
-		//			current_index_mask = (0|(1<<bit_index));
-		//			check_read[i] |= (f_byte_read&current_index_mask);
-		//		}
-		//		bit_index++;
-		//		if (bit_index==4) {
-		//			bit_index = 0;
-		//			commState = COMM_READ_HEADER;
-		//		}
-		//		break;
-		//}
+		// Header bits. `bit`="current bit". TODO: Add checking.
+		for (int bit=0; bit<4; bit++) {
+			// Write check bit.
+			f_byte_write &= ~(1<<6); // Clear the data bit.
+			current_index_mask = 0; // Clear mask.
+			current_index_mask |= (1<<bit); // Set the data bit we want to find.
+
+			// See same operation for data. This is essentially the same logic.
+			byte_temp = check_write&current_index_mask;
+
+			// TODO: combine the two shifts below into one shift.
+			byte_temp = byte_temp>>bit;
+			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
+			processCommTick();
+
+			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
+			for (int line=0; line<6; line++) {
+				current_index_mask = 0; // Clear the mask.
+				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
+				check_read[line] &= ~(1<<bit); // Clear the bit.
+				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
+			}
+		}
 	}
 }
 
@@ -586,6 +593,7 @@ task Display()
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
 		//DISP_SENSORS,			// Might need to split this into two screens.
+		//DISP_JOYSTICKS,		// For convenience. Y-axis values would be corrected (flipped).
 		//DISP_SERVOS,			// Show each servo's position.
 		//DISP_TASKS,				// Which tasks are running.
 		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
@@ -593,6 +601,7 @@ task Display()
 	};
 
 	DisplayMode isMode = DISP_FCS;
+	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
 
 	Joystick_WaitForStart();
 
@@ -633,18 +642,18 @@ task Display()
 			Display_Clear();
 			isMode = (DisplayMode)((isMode+DISP_NUM-1)%DISP_NUM);
 			if (isMode==DISP_FCS) {
-				bDisplayDiagnostics = true;
+				Task_Spawn(displayDiagnostics);
 			} else {
-				bDisplayDiagnostics = false;
+				Task_Kill(displayDiagnostics);
 			}
 		}
 		if (Buttons_Released(NXT_BUTTON_R)==true) {
 			Display_Clear();
 			isMode = (DisplayMode)((isMode+DISP_NUM+1)%DISP_NUM);
 			if (isMode==DISP_FCS) {
-				bDisplayDiagnostics = true;
+				Task_Spawn(displayDiagnostics);
 			} else {
-				bDisplayDiagnostics = false;
+				Task_Kill(displayDiagnostics);
 			}
 		}
 		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)

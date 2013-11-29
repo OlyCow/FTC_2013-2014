@@ -520,37 +520,37 @@ task CommLink()
 			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
 		}
 
-		// Data: TODO: CHECK INTEGRITY!!!
-		for (int i=0; i<32; i++) {
+		// Data:
+		for (int bit=0; bit<32; bit++) {
 			// Set MOSI.
 			f_byte_write &= ~(1<<6); // Clear the data bit.
 			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<(i%8)); // Set the data bit; `i%8` because data is in bytes.
+			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
 
 			// Intentional int division (returns intended byte) (see next statement).
 			// Using a temp var because `true!=1` (can be any positive int); statement
 			// also clears byte_temp because the mask was cleared (and now AND'd).
-			byte_temp = (frame_write[i/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
 
 			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>(i%32); // Shift data bit over to bit 0.
+			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
 			f_byte_write |= (byte_temp<<6); // Set the data bit.
 			processCommTick();
 
 			// Read in all 6 data lines (MISO).
-			// TODO: make `i`, `j` more intuitively named (line? bit? etc.).
-			for (int j=0; j<6; j++) {
+			for (int line=0; line<6; line++) {
 				// TODO: Optimize by (maybe?) making assigning this cyclically.
 				// Would only work for the inner-most loop, since this variable
 				// is reused outside of the loop (for every "for" statement).
+				// Also see note in check bit part about eliminating "for" loop.
 				current_index_mask = 0; // Clear mask.
-				current_index_mask |= (1<<(i%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
-				frame_read[j][i/8] &= ~(1<<(i%8)); // Clear bit to read. `i/8`=current byte, `i%8`=current bit.
+				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
+				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
 				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
-				// TODO: combine the two shifts below into one shift.
-				byte_temp = byte_temp>>j; // Shift the bit into bit 0.
-				frame_read[j][i/8] |= (byte_temp<<(i%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
+				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
+				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
+				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
 			}
 		}
 

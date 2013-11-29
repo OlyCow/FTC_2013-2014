@@ -37,6 +37,7 @@ task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task Autonomous(); // Ooooh.
 
+// TODO: Update readme. :P
 //---------------- README!!! ------------------------------------------------>>
 //     Set the robot up as follows: with the front (where the NXT is mounted)
 // facing towards you, the side of the wheel pods with 3D-printed gears should

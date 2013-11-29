@@ -91,7 +91,7 @@ task main()
 		file_size = 72; // 4 shorts, ea. 16-bits. I think? There's some buffer just in case.
 		OpenWrite(IO_handle, IO_result, file_name, file_size);
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			WriteShort(IO_handle, IO_result, 1);
+			WriteShort(IO_handle, IO_result, 0);
 		}
 		Close(IO_handle, IO_result);
 		nxtDisplayTextLine(2, "Done.");

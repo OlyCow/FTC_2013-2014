@@ -476,23 +476,11 @@ void processCommTick()
 }
 task CommLink()
 {
-
-
-	typedef enum CommState {
-		COMM_REQ_RESET		= -1,
-		COMM_INIT_RESET		= -2,
-		COMM_SIGNAL_START	= -3,
-		//COMM_SIGNAL_ACK	= -4, // Might be unnecessary.
-		COMM_READ_HEADER	= 0,
-		COMM_READ_DATA		= 1,
-		COMM_READ_CHECK		= 2,
-	} CommState;
-
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
 	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	CommState commState = COMM_REQ_RESET;
+	bool isReset = true; // We start out with a reset.
 	bool header_write = false;
 	bool header_read[6] = {false, false, false, false, false, false};
 	ubyte frame_write[4] = {0,0,0,0};
@@ -593,7 +581,7 @@ task Display()
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
 		//DISP_SENSORS,			// Might need to split this into two screens.
-		//DISP_JOYSTICKS,		// For convenience. Y-axis values would be corrected (flipped).
+		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
 		//DISP_TASKS,				// Which tasks are running.
 		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
@@ -631,6 +619,14 @@ task Display()
 				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				break;
+			case DISP_JOYSTICKS :
+				nxtDisplayCenteredTextLine(0, "--Driver I:--");
+				nxtDisplayCenteredTextLine(1, "LX:%4d RX:%4d", joystick.joy1_x1, joystick.joy1_x2);
+				nxtDisplayCenteredTextLine(2, "LY:%4d RY:%4d", joystick.joy1_y1, joystick.joy1_y2);
+				nxtDisplayCenteredTextLine(4, "--Driver II:--");
+				nxtDisplayCenteredTextLine(5, "LX:%4d RX:%4d", joystick.joy2_x1, joystick.joy2_x2);
+				nxtDisplayCenteredTextLine(6, "LY:%4d RY:%4d", joystick.joy2_y1, joystick.joy2_y2);
 				break;
 			default :
 				nxtDisplayCenteredTextLine(3, "Doesn't work...");

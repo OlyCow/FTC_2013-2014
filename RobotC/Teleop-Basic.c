@@ -121,6 +121,7 @@ bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 task main()
 {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
@@ -444,6 +445,7 @@ task PID()
 		}
 
 		// Assign the power settings to the servos.
+		// Negative because the servo is powers the pod via a gear.
 		Servo_SetPower(servo_FR, -correction_pod[POD_FR]);
 		Servo_SetPower(servo_FL, -correction_pod[POD_FL]);
 		Servo_SetPower(servo_BL, -correction_pod[POD_BL]);
@@ -474,23 +476,11 @@ void processCommTick()
 }
 task CommLink()
 {
-
-
-	typedef enum CommState {
-		COMM_REQ_RESET		= -1,
-		COMM_INIT_RESET		= -2,
-		COMM_SIGNAL_START	= -3,
-		//COMM_SIGNAL_ACK	= -4, // Might be unnecessary.
-		COMM_READ_HEADER	= 0,
-		COMM_READ_DATA		= 1,
-		COMM_READ_CHECK		= 2,
-	} CommState;
-
-	int bit_index = 0;
-	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC THAT MIGHT NOT WORK)
+	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
 	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	CommState commState = COMM_REQ_RESET;
+	bool isReset = true; // We start out with a reset.
 	bool header_write = false;
 	bool header_read[6] = {false, false, false, false, false, false};
 	ubyte frame_write[4] = {0,0,0,0};
@@ -503,50 +493,76 @@ task CommLink()
 	Joystick_WaitForStart();
 
 	while (true) {
-		{
-			switch (commState) {
-				case COMM_READ_HEADER :
-					f_byte_write &= ~(1<<6); // Clear the data bit.
-					f_byte_write |= (header_write<<6); // Set the data bit to a data value.
-					processCommTick();
-					for (int i=0; i<6; i++) {
-						current_index_mask = (0|(1<<(i%8)));
-						header_read[i] = (bool)(f_byte_read&current_index_mask); // Should be `true` for everything != 0.
-					}
-					commState = COMM_READ_DATA;
-					break;
-				case COMM_READ_DATA :
-					f_byte_write &= ~(1<<6); // Clear the data bit.
-					current_index_mask = (0|(1<<(bit_index%8)));
-					f_byte_write |= (((frame_write[bit_index/8])&current_index_mask)<<6); // NOT SKETCHY AT ALL
-					processCommTick();
-					for (int i=0; i<6; i++) {
-						frame_read[i][bit_index/8] &= ~(1<<(bit_index%8));
-						current_index_mask = (0|(1<<(i%8)));
-						frame_read[i][bit_index/8] |= (((f_byte_read&current_index_mask)>>i)<<(bit_index/8)); // TOTES NOT SKETCH
-					}
-					bit_index++;
-					if (bit_index==32) {
-						bit_index = 0;
-						commState = COMM_READ_CHECK;
-					}
-					break;
-				case COMM_READ_CHECK :
-					f_byte_write &= ~(1<<6); // Clear the data bit.
-					current_index_mask = (0|(1<<bit_index));
-					f_byte_write |= (((check_write&current_index_mask)>>bit_index)<<6);
-					processCommTick();
-					for (int i=0; i<6; i++) {
-						check_read[i] &= ~(1<<bit_index);
-						current_index_mask = (0|(1<<bit_index));
-						check_read[i] |= (f_byte_read&current_index_mask);
-					}
-					bit_index++;
-					if (bit_index==4) {
-						bit_index = 0;
-						commState = COMM_READ_HEADER;
-					}
-					break;
+
+		// Write header.
+		f_byte_write &= ~(1<<6); // Clear the data bit.
+		f_byte_write |= (header_write<<6); // Set the data bit.
+		processCommTick();
+
+		// Read in all 6 data lines.
+		for (int line=0; line<6; line++) {
+			current_index_mask = 0; // Clear mask.
+			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
+
+			// No fancy shifting needed here (header_read is a bool).
+			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+		}
+
+		// Data:
+		for (int bit=0; bit<32; bit++) {
+			// Set MOSI.
+			f_byte_write &= ~(1<<6); // Clear the data bit.
+			current_index_mask = 0; // Clear mask.
+			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
+
+			// Intentional int division (returns intended byte) (see next statement).
+			// Using a temp var because `true!=1` (can be any positive int); statement
+			// also clears byte_temp because the mask was cleared (and now AND'd).
+			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+
+			// TODO: combine the two shifts below into one shift.
+			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
+			f_byte_write |= (byte_temp<<6); // Set the data bit.
+			processCommTick();
+
+			// Read in all 6 data lines (MISO).
+			for (int line=0; line<6; line++) {
+				// TODO: Optimize by (maybe?) making assigning this cyclically.
+				// Would only work for the inner-most loop, since this variable
+				// is reused outside of the loop (for every "for" statement).
+				// Also see note in check bit part about eliminating "for" loop.
+				current_index_mask = 0; // Clear mask.
+				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
+				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
+				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
+
+				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
+				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
+				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
+			}
+		}
+
+		// Header bits. `bit`="current bit". TODO: Add checking.
+		for (int bit=0; bit<4; bit++) {
+			// Write check bit.
+			f_byte_write &= ~(1<<6); // Clear the data bit.
+			current_index_mask = 0; // Clear mask.
+			current_index_mask |= (1<<bit); // Set the data bit we want to find.
+
+			// See same operation for data. This is essentially the same logic.
+			byte_temp = check_write&current_index_mask;
+
+			// TODO: combine the two shifts below into one shift.
+			byte_temp = byte_temp>>bit;
+			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
+			processCommTick();
+
+			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
+			for (int line=0; line<6; line++) {
+				current_index_mask = 0; // Clear the mask.
+				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
+				check_read[line] &= ~(1<<bit); // Clear the bit.
+				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
 			}
 		}
 	}
@@ -565,6 +581,7 @@ task Display()
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
 		//DISP_SENSORS,			// Might need to split this into two screens.
+		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
 		//DISP_TASKS,				// Which tasks are running.
 		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
@@ -572,6 +589,7 @@ task Display()
 	};
 
 	DisplayMode isMode = DISP_FCS;
+	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
 
 	Joystick_WaitForStart();
 
@@ -602,6 +620,14 @@ task Display()
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
+			case DISP_JOYSTICKS :
+				nxtDisplayCenteredTextLine(0, "--Driver I:--");
+				nxtDisplayCenteredTextLine(1, "LX:%4d RX:%4d", joystick.joy1_x1, joystick.joy1_x2);
+				nxtDisplayCenteredTextLine(2, "LY:%4d RY:%4d", joystick.joy1_y1, joystick.joy1_y2);
+				nxtDisplayCenteredTextLine(4, "--Driver II:--");
+				nxtDisplayCenteredTextLine(5, "LX:%4d RX:%4d", joystick.joy2_x1, joystick.joy2_x2);
+				nxtDisplayCenteredTextLine(6, "LY:%4d RY:%4d", joystick.joy2_y1, joystick.joy2_y2);
+				break;
 			default :
 				nxtDisplayCenteredTextLine(3, "Doesn't work...");
 				nxtDisplayCenteredTextLine(4, "Yet. >:(");
@@ -612,18 +638,18 @@ task Display()
 			Display_Clear();
 			isMode = (DisplayMode)((isMode+DISP_NUM-1)%DISP_NUM);
 			if (isMode==DISP_FCS) {
-				bDisplayDiagnostics = true;
+				Task_Spawn(displayDiagnostics);
 			} else {
-				bDisplayDiagnostics = false;
+				Task_Kill(displayDiagnostics);
 			}
 		}
 		if (Buttons_Released(NXT_BUTTON_R)==true) {
 			Display_Clear();
 			isMode = (DisplayMode)((isMode+DISP_NUM+1)%DISP_NUM);
 			if (isMode==DISP_FCS) {
-				bDisplayDiagnostics = true;
+				Task_Spawn(displayDiagnostics);
 			} else {
-				bDisplayDiagnostics = false;
+				Task_Kill(displayDiagnostics);
 			}
 		}
 		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)

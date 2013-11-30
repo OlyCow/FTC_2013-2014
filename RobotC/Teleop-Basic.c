@@ -35,6 +35,7 @@
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
 task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
+task SaveData();
 task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
@@ -163,6 +164,7 @@ task main()
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
+	Task_Spawn(SaveData);
 
 	// Not initializing these structs for now: once data starts coming in
 	// from the controllers, all the members of these will get updated.
@@ -445,6 +447,7 @@ task PID()
 	float error_rate_pod[POD_NUM] = {0,0,0,0};
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
 	const int turnLimit = 3; // On each side. To prevent the wires from getting too twisted.
+	int pod_pos_prev[POD_NUM] = {0,0,0,0};
 
 	// Variables for lift PID calculations.
 	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
@@ -455,6 +458,33 @@ task PID()
 	float error_rate_lift = 0.0;
 	float term_P_lift = 0.0;
 	float term_D_lift = 0.0;
+
+	TFileHandle IO_handle;
+	TFileIOResult IO_result;
+	const string filename_pods = "_reset_pods.txt";
+	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
+	int file_size = 0;
+
+	// If we can't find the file, we go to the backup file.
+	OpenRead(IO_handle, IO_result, filename_pods, file_size);
+	if (IO_result==ioRsltSuccess) {
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			ReadShort(IO_handle, IO_result, pod_pos_prev[i]);
+		}
+		Close(IO_handle, IO_result);
+	} else if (IO_result==ioRsltFileNotFound) {
+		OpenRead(IO_handle, IO_result, filename_pods_temp, file_size);
+		if (IO_result==ioRsltSuccess) {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				ReadShort(IO_handle, IO_result, pod_pos_prev[i]);
+			}
+			Close(IO_handle, IO_result);
+		} else if ((IO_result==ioRsltFileNotFound)||(IO_result==ioRsltNoMoreFiles)) {
+			// TODO: (more) error handling, etc.
+		}
+	} else if (IO_result==ioRsltNoMoreFiles) {
+		// TODO: (more) error handling, etc.
+	}
 
 	Joystick_WaitForStart();
 
@@ -468,9 +498,11 @@ task PID()
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			pod_raw[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			pod_raw[i] = Math_Normalize(pod_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
+			pod_raw[i] += pod_pos_prev[i];
 			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
 			pod_current[i] += 360; // Value is now >= 0 (between 0 ~ 720).
 			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between 0 ~ 360.
+
 			error_prev_pod[i] = error_pod[i];
 			error_pod[i] = g_ServoData[i].angle-pod_current[i];
 
@@ -799,6 +831,42 @@ task Display()
 			}
 		}
 		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
+	}
+}
+
+
+
+task SaveData()
+{
+	TFileHandle IO_handle;
+	TFileIOResult IO_result;
+	const string filename_pods = "_reset_pods.txt";
+	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
+	int file_size = 72; // Should be 64 (4 shorts).
+	bool isTemp = false;
+
+	Joystick_WaitForStart();
+
+	while (true) {
+		Task_HogCPU();
+		switch (isTemp) {
+			case false :
+				Delete(filename_pods, IO_result); // TODO: Add error handling.
+				OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
+				break;
+			case true :
+				Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
+				OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
+				break;
+		}
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
+		}
+		Close(IO_handle, IO_result);
+		Task_ReleaseCPU();
+
+		isTemp = (!isTemp); // TODO: XOR. You know the drill.
+		Time_Wait(100); // MAGIC_NUM: we don't need to save position that often.
 	}
 }
 

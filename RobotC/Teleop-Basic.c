@@ -37,30 +37,50 @@ task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task Autonomous(); // Ooooh.
 
-// TODO: Update readme. :P
 //---------------- README!!! ------------------------------------------------>>
-//     Set the robot up as follows: with the front (where the NXT is mounted)
-// facing towards you, the side of the wheel pods with 3D-printed gears should
-// face forwards. As defined in "enums.h", the wheel pods are "numbered": `FR`,
-// `FL`, `BL`, and `BR` (going counterclockwise starting with `FR`).
+//     As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
+// `BL`, and `BR` (going counterclockwise starting with `FR`).
 //
-//     The code is currently split into 3 loops, which will be split into their
-// own tasks once they are completed. #1 Find the target angle, velocity, etc.
-// #2 Adjust the current angle, velocity, etc. through a PID control. The PID
-// loop isn't completely implemented yet; go ahead and do that! :) #3 Display
-// data on the NXT screen for debugging purposes. Believe me, this is useful :)
+//     The code is split into a couple tasks. I.) `main` does most of the high-
+// level logic processing (mostly controller input), and sets targets for the
+// PID task (motors and continuous rotation servos). If the power assignment is
+// trivial (e.g. the sweeper motor) it is done directly in the `main` loop.
+// II.) The `PID` loop currently runs a very simple PID loop monitoring lift
+// position, and is hard-coded to never allow the lift to go below 0. It also
+// runs a more complex PID loop for the wheel pods' continuous rotation servos,
+// which limits them to a certain amount of turns in each direction so that the
+// motor wires don't get all twisted up. III.) `CommLink` is how data is trans-
+// ferred between the SuperPro prototype board and the AVR(s?) we have. This is
+// BLACK MAGIC, DO NOT TOUCH. In the future we will want to optimize it, and
+// possibly move it into its own library. IV.) `Display` is a cyclical display
+// that provides valuable debugging information. Press the arrow buttons to go
+// to a different screen. V.) This is an easter egg I'll probably never get to
+// implement. :P It would basically be an autonomous teleop period.
 //
 // CONTROLS:	Controller_1, Joystick_R:	Translational movement.
-//				Controller_1, Button_LB/RB:	Rotational movement.
-//				Controller_1, Button_LT:	Stop motors (adjust pod direction).
-//				Controller_1, Button_RT:	Fine-tune motors.
-//				Controller_1, Button_Y:		Moo.
+//				Controller_1, Joystick_L:	Rotational movement.
+//				Controller_1, Button_LT*:	Cut motor power (adjust pods).
+//				Controller_1, Button_RT*:	Fine-tune motors.
+//				Controller_1, Button_Y:		Toggles sweeper.
+//				Controller_1, Button_A:		Dump 2 cubes.
+//				Controller_1, Button_B:		Dump 4 cubes.
+//				Controller_1, Direction_F:	Raise lift.
+//				Controller_1, Direction_B:	Lower lift.
+//				Controller_1, Direction_L:	Stop lift (stops Driver 2).
+//				Controller_1, Direction_R:	Stop lift (stops Driver 2).
 //
-//     Troubleshooting: "FR/FL/BL/BR" refers to the wheel pod. "set" refers to
-// the target angle for the servo, while "chg" refers to the correction force
-// applied by the servo. "encdr" prints the reading of the encoder (normalized,
-// to compensate for gearing), and "pow" is the power applied to the motor.
-//--------------------------------------------------------------------------->>
+//				Controller_2, Joystick_R:	Lift height.
+//				Controller_2, Button_Y:		Toggles sweeper.
+//				Controller_2, Button_A:		Dump 2 cubes.
+//				Controller_2, Button_B:		Dump 4 cubes.
+//				Controller_2, Button_LB:	Toggles left funnel.
+//				Controller_2, Button_RB:	Toggles right funnel.
+//				Controller_2, Button_X:		Adds 3 flag waves.
+//				Controller_2, Direction_F:	Lift -> dumping height.
+//				Controller_2, Direction_B:	Lift -> pickup height.
+//
+// *: Button_LT overrides Button_RT.
+//-------------------------------------------------------------------------->>
 
 // For control flow:
 bool isAutonomous = false;
@@ -137,8 +157,6 @@ task main()
 
 	Joystick_WaitForStart();
 
-
-
 	while (true) {
 		Joystick_UpdateData();
 
@@ -156,7 +174,6 @@ task main()
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
 			Vector2D_UpdatePos(rotation[i]);
 			Vector2D_Add(rotation[i], translation, combined[i]);
-			//combined[i].x = -combined[i].x; // Flipping a sign can work wonders (sometimes).
 			if (combined[i].r>g_FullPower) {
 				shouldNormalize = true;
 			}

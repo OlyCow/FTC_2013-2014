@@ -31,22 +31,36 @@ task main()
 {
 	Task_Kill(displayDiagnostics);
 	Display_Clear();
-	nxtDisplayTextLine(0, "Initializing...");
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 
-	const int finish_delay = 4*1000; // MAGIC_NUM: milliseconds to delay when program ends.
+	const int finish_delay = 4*1000; // MAGIC_NUM: milliseconds to delay when program ends. // TODO: Figure out why the delay is nowhere near this.
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
-	const string file_name = "_reset_pods.txt";
+	const string filename = "_reset_pods.txt";
+	const string filename_temp = "_reset_pods_tmp.txt"; // temp makes the filename too long??
 	int file_size = 0;
 	short rotation[POD_NUM] = {0,0,0,0};
 
+
 	// Read in all the values of the pods from a text file.
-	nxtDisplayTextLine(1, "Reading...");
-	OpenRead(IO_handle, IO_result, file_name, file_size); // TODO: Add more error handling.
-	if (	(IO_result==ioRsltFileNotFound) ||
-			(IO_result==ioRsltNoSpace) ||
-			(IO_result==ioRsltNoMoreFiles) ) {
+	OpenRead(IO_handle, IO_result, filename, file_size); // TODO: Add more error handling.
+	if (IO_result==ioRsltSuccess) {
+		nxtDisplayTextLine(0, "Read from file");
+		nxtDisplayTextLine(1, "\"_reset_pods.txt\"");
+	} else if (IO_result==ioRsltFileNotFound) {
+		OpenRead(IO_handle, IO_result, filename_temp, file_size); // TODO: Add more error handling.
+		if (IO_result==ioRsltSuccess) {
+			nxtDisplayTextLine(0, "Read from file");
+			nxtDisplayTextLine(1, "\"_pods_tmp.txt\"");
+		} else if (	(IO_result==ioRsltFileNotFound)	||
+					(IO_result==ioRsltNoSpace)		||
+					(IO_result==ioRsltNoMoreFiles)	) {
+			nxtDisplayTextLine(2, "No data file.");
+			nxtDisplayTextLine(3, "Terminating.");
+			Time_Wait(finish_delay);
+			return; // The only way to break out of this function?
+		}
+	} else if ((IO_result==ioRsltNoSpace)||(IO_result==ioRsltNoMoreFiles)) {
 		nxtDisplayTextLine(2, "No data file.");
 		nxtDisplayTextLine(3, "Terminating.");
 		Time_Wait(finish_delay);
@@ -62,8 +76,8 @@ task main()
 
 	nxtDisplayCenteredTextLine(6, "Press [ENTER] to");
 	nxtDisplayCenteredTextLine(7, "end program.");
-	while (Buttons_Released(NXT_BUTTON_YES)==false) {
+	do {
 		Buttons_UpdateData();
 		Time_Wait(100); // MAGIC_NUM: Arbitrary LCD refresh delay.
-	}
+	} while (Buttons_Released(NXT_BUTTON_YES)==false);
 }

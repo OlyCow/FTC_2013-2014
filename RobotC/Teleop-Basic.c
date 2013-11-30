@@ -496,7 +496,15 @@ task CommLink()
 
 		// Write header.
 		f_byte_write &= ~(1<<6); // Clear the data bit.
-		f_byte_write |= (header_write<<6); // Set the data bit.
+
+		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
+		// TODO: use ubyte instead of bool and just use last bit.
+		// A bool can be true but not have the last bit be on.
+		if (header_write==true) {
+			f_byte_write |= (1<<6);
+		} else {
+			f_byte_write |= (0<<6);
+		}
 		processCommTick();
 
 		// Read in all 6 data lines.
@@ -542,6 +550,7 @@ task CommLink()
 			}
 		}
 
+		// TODO: Finish checking/debugging this.
 		// Header bits. `bit`="current bit". TODO: Add checking.
 		for (int bit=0; bit<4; bit++) {
 			// Write check bit.

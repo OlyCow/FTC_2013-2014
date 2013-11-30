@@ -31,13 +31,13 @@ task main()
 {
 	Task_Kill(displayDiagnostics);
 	Display_Clear();
-	nxtDisplayTextLine(0, "Initializing...");
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 
 	const int finish_delay = 4*1000; // MAGIC_NUM: milliseconds to delay when program ends.
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
-	const string file_name = "_reset_pods.txt";
+	const string filename = "_reset_pods.txt";
+	const string filename_temp = "_reset_pods_tmp.txt";
 	int file_size = 0;
 	const int resetRange = 10; // MAGIC_NUM: How close the program resets each pod (deg).
 	bool isResetting = true;
@@ -48,19 +48,24 @@ task main()
 	float rot_error[POD_NUM]	= {0,0,0,0}; // Difference between set-point and measured value.
 
 	// Read in all the values of the pods from a text file.
-	nxtDisplayTextLine(1, "Recovering...");
-	OpenRead(IO_handle, IO_result, file_name, file_size); // TODO: Add more error handling.
-	if (	(IO_result==ioRsltFileNotFound) ||
-			(IO_result==ioRsltNoSpace) ||
-			(IO_result==ioRsltNoMoreFiles) ) {
-		nxtDisplayTextLine(2, "Not found. :(");
-		nxtDisplayTextLine(3, "Terminating.");
-		Time_Wait(finish_delay);
-		return; // The only way to break out of this function?
+	OpenRead(IO_handle, IO_result, filename, file_size); // TODO: Add more error handling.
+	if (IO_result==ioRsltSuccess) {
+		nxtDisplayTextLine(0, "Reading from");
+		nxtDisplayTextLine(1, "\"_reset_pods.txt\"");
+	} else if (IO_result==ioRsltFileNotFound) {
+		OpenRead(IO_handle, IO_result, filename_temp, file_size); // TODO: Add more error handling.
+		if (IO_result==ioRsltSuccess) {
+			nxtDisplayTextLine(0, "Reading from");
+			nxtDisplayTextLine(1, "\"_pods_tmp.txt\"");
+		} else {
+			nxtDisplayTextLine(2, "Unknown error!");
+			nxtDisplayTextLine(3, "Terminating.");
+			Time_Wait(finish_delay);
+			return; // The only way to break out of this function?
+		}
 	} else if (IO_result!=ioRsltSuccess) {
-		nxtDisplayCenteredTextLine(2, "Unknown err.!");
-		nxtDisplayTextLine(3, "Debug!");
-		nxtDisplayTextLine(4, "Terminating.");
+		nxtDisplayCenteredTextLine(1, "Unknown error!");
+		nxtDisplayTextLine(2, "Terminating.");
 		Time_Wait(finish_delay);
 		return; // The only way to break out of this function?
 	}
@@ -72,26 +77,20 @@ task main()
 
 	// Press orange button to start resetting.
 	nxtDisplayCenteredTextLine(2, "Press [ENTER] to");
-	nxtDisplayCenteredTextLine(3, "continue.");
-	while (Buttons_Released(NXT_BUTTON_YES)==false) {
+	nxtDisplayCenteredTextLine(3, "start reset.");
+	do {
 		Buttons_UpdateData();
 		Time_Wait(100); // MAGIC_NUM: Arbitrary LCD refresh delay.
-	}
+	} while (Buttons_Released(NXT_BUTTON_YES)==false);
 
 	// Start pod reset (basic P-controller).
-	Display_Clear();
-	nxtDisplayTextLine(0, "Recovering...");
-	nxtDisplayCenteredTextLine(1, "Press [ENTER] to");
-	nxtDisplayCenteredTextLine(2, "continue.");
-	nxtDisplayTextLine(3, "Resetting...");
 	nxtDisplayCenteredTextLine(5, "|     |");
 	nxtDisplayCenteredTextLine(7, "DO NOT ABORT.");
 
 	while (isResetting==true) {
 
-		// If this isn't zero'd here, the loop will never break,
-		// since `isResetting` is calculated with AND statements.
-		isResetting = true;
+		// This has to be set so that the AND statements later work out and the loop breaks.
+		isResetting = false;
 
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -99,7 +98,11 @@ task main()
 			rot_raw[i] = Math_Normalize(rot_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
 			rot_error[i] = g_ServoData[i].angle-rot_raw[i];
 			term_P[i] = Math_Limit(kP[i]*rot_error[i], 128); // Because servos, not motors.
-			isResetting = isResetting&&(abs(rot_error[i])<resetRange);
+			if (abs(rot_error[i])<resetRange) {
+				isResetting = (0&&isResetting);
+			} else {
+				isResetting = true;
+			}
 		}
 
 		// Assign the power settings to the servos.
@@ -115,32 +118,24 @@ task main()
 
 	// Press orange button to confirm jig has been applied.
 	Display_Clear();
-	nxtDisplayTextLine(0, "Resetting...");
+	nxtDisplayTextLine(0, "start reset.");
 	nxtDisplayCenteredTextLine(1, "%d-%d", -rot_error[POD_FL], -rot_error[POD_FR]);
 	nxtDisplayCenteredTextLine(2, "|     |");
 	nxtDisplayCenteredTextLine(3, "%d-%d", -rot_error[POD_BL], -rot_error[POD_BR]);
 	nxtDisplayCenteredTextLine(4, "DO NOT ABORT.");
-	nxtDisplayCenteredTextLine(5, "Apply jig then");
+	nxtDisplayCenteredTextLine(5, "Apply jig, then");
 	nxtDisplayCenteredTextLine(6, "press [ENTER] to");
 	nxtDisplayCenteredTextLine(7, "continue.");
-	while (Buttons_Released(NXT_BUTTON_YES)==false) {
+	do {
 		Buttons_UpdateData();
 		Time_Wait(100); // MAGIC_NUM: Arbitrary LCD refresh delay.
-	}
+	} while (Buttons_Released(NXT_BUTTON_YES)==false);
 
 	// Delete old pod position file, create a new one, and write 0's to it.
-	Display_Clear();
-	nxtDisplayCenteredTextLine(0, "%d-%d", -rot_error[POD_FL], -rot_error[POD_FR]);
-	nxtDisplayCenteredTextLine(1, "|     |");
-	nxtDisplayCenteredTextLine(2, "%d-%d", -rot_error[POD_BL], -rot_error[POD_BR]);
-	nxtDisplayCenteredTextLine(3, "DO NOT ABORT.");
-	nxtDisplayCenteredTextLine(4, "Apply jig then");
-	nxtDisplayCenteredTextLine(5, "press [ENTER] to");
-	nxtDisplayCenteredTextLine(6, "continue.");
-	nxtDisplayTextLine(7, "Rewriting...");
-	Delete(file_name, IO_result);
+	Delete(filename, IO_result);
+	Delete(filename_temp, IO_result); // Since we don't know which we used, let's just get rid of both :P
 	file_size = 72; // 4 shorts is 64, but a buffere is here just to be safe.
-	OpenWrite(IO_handle, IO_result, file_name, file_size);
+	OpenWrite(IO_handle, IO_result, filename, file_size);
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		WriteShort(IO_handle, IO_result, 0);
 	}
@@ -151,10 +146,14 @@ task main()
 	nxtDisplayCenteredTextLine(0, "|     |");
 	nxtDisplayCenteredTextLine(1, "%d-%d", -rot_error[POD_BL], -rot_error[POD_BR]);
 	nxtDisplayCenteredTextLine(2, "DO NOT ABORT.");
-	nxtDisplayCenteredTextLine(3, "Apply jig then");
+	nxtDisplayCenteredTextLine(3, "Apply jig, then");
 	nxtDisplayCenteredTextLine(4, "press [ENTER] to");
 	nxtDisplayCenteredTextLine(5, "continue.");
-	nxtDisplayTextLine(6, "Rewriting...");
-	nxtDisplayTextLine(7, "Finished.");
+	nxtDisplayCenteredTextLine(6, "Press [ENTER] to");
+	nxtDisplayCenteredTextLine(7, "end program.");
+	do {
+		Buttons_UpdateData();
+		Time_Wait(100); // MAGIC_NUM: Arbitrary LCD refresh delay.
+	} while (Buttons_Released(NXT_BUTTON_YES)==false);
 	Time_Wait(finish_delay);
 }

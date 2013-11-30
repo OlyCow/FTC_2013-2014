@@ -59,25 +59,40 @@ task Autonomous(); // Ooooh.
 //
 // CONTROLS:	Controller_1, Joystick_R:	Translational movement.
 //				Controller_1, Joystick_L:	Rotational movement.
+//				Controller_1, Button_Joy_R:	Reset gyro.
 //				Controller_1, Button_LT*:	Cut motor power (adjust pods).
 //				Controller_1, Button_RT*:	Fine-tune motors.
-//				Controller_1, Button_Y:		Toggles sweeper.
-//				Controller_1, Button_A:		Dump 2 cubes.
-//				Controller_1, Button_B:		Dump 4 cubes.
+//				Controller_1, Button_LB:	Dump 4 cubes.
+//				Controller_1, Button_RB:	Dump 2 cubes.
+//				Controller_1, Button_A:		Toggle sweeper.
+//				Controller_1, Button_B:		Reset gyro (eventually flag).
+//				Controller_1, Button_X:		Flag (eventually climb down).
+//				Controller_1, Button_Y:		Climb (eventually climb up).
 //				Controller_1, Direction_F:	Raise lift.
 //				Controller_1, Direction_B:	Lower lift.
 //				Controller_1, Direction_L:	Stop lift (stops Driver 2).
 //				Controller_1, Direction_R:	Stop lift (stops Driver 2).
+//				Controller_1, Button_Start:	Start auton (&&).
+//				Controller_1, Button_Back:	End auton (||).
 //
-//				Controller_2, Joystick_R:	Lift height.
-//				Controller_2, Button_Y:		Toggles sweeper.
-//				Controller_2, Button_A:		Dump 2 cubes.
-//				Controller_2, Button_B:		Dump 4 cubes.
-//				Controller_2, Button_LB:	Toggles left funnel.
-//				Controller_2, Button_RB:	Toggles right funnel.
+//				Controller_2, Joystick_L:	Lift height.
+//				Controller_2, Joystick_R:	Climbing.
+//				Controller_2, Button_LB:	Dump 4 cubes.
+//				Controller_2, Button_RB:	Dump 2 cubes.
+//				Controller_2, Button_LT:	Toggles left funnel.
+//				Controller_2, Button_RT:	Toggles right funnel.
+//				Controller_2, Button_A:		[UNUSED]
+//				Controller_2, Button_B:		Reset lift (w/ Button_JL).
+//				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
+//				Controller_2, Button_Joy_R:	[UNUSED]
 //				Controller_2, Button_X:		Adds 3 flag waves.
-//				Controller_2, Direction_F:	Lift -> dumping height.
-//				Controller_2, Direction_B:	Lift -> pickup height.
+//				Controller_2, Button_Y:		Morse code signalling.
+//				Controller_2, Direction_L:	Flag CCW.
+//				Controller_2, Direction_R:	Flag CW.
+//				Controller_2, Direction_F:	Sweep outwards.
+//				Controller_2, Direction_B:	Sweep inwards.
+//				Controller_2, Button_Start:	Start auton (&&).
+//				Controller_2, Button_Back:	End auton (||).
 //
 // *: Button_LT overrides Button_RT.
 //-------------------------------------------------------------------------->>
@@ -86,10 +101,7 @@ task Autonomous(); // Ooooh.
 bool isAutonomous = false;
 
 // For main task:
-bool isSweeping = false;
-float power_sweeper = 0.0;
 float power_lift = 0.0;
-float power_flag = 0.0;
 int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
@@ -140,6 +152,12 @@ bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
 task main()
 {
+	typedef enum SweepDirection {
+		SWEEP_IN	= 0,
+		SWEEP_OUT	= 1,
+		SWEEP_OFF	= 2,
+	} SweepDirection;
+
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
@@ -154,6 +172,9 @@ task main()
 	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
+
+	SweepDirection sweepDirection = SWEEP_OFF;
+	float power_flag = 0.0;
 
 	Joystick_WaitForStart();
 
@@ -223,31 +244,54 @@ task main()
 			}
 		}
 
+		// TODO: When the robot design is finalized and comms is working and all
+		// that good stuff, take this out and only use the joystick button to reset
+		// the gyro. Also update the climbing and lift controls when we finalize
+		// those as well.
+		if (Joystick_ButtonPressed(BUTTON_B)==true) {
+			f_angle_z = 0;
+		}
+		if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
+			f_angle_z = 0;
+		}
+
 		// Second driver's lift controls are overridden by the first's. The first
 		// driver can also lock the lift position by pressing the D-pad (L or R).
+		// Proper procedure for resetting lift would be to press Button_B and then
+		// go to press the Joystick_L button. Resetting of the lift is registered
+		// when the joystick button is released.
 		if (Joystick_Direction(DIRECTION_F)==true) {
 			lift_target += 100;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
 			lift_target -= 100;
+		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
+			lift_target += 50;
+		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
+			lift_target -= 50;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
-			if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
-				lift_target = lift_pos_dump;
-			}
-			if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
-				lift_target = lift_pos_pickup;
+			lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+			//Nesting these is more efficient.
+			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
+				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
+					lift_target = lift_pos_dump;
+				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
+					lift_target = lift_pos_pickup;
+				}
+				if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
+					Motor_ResetEncoder(motor_lift);
+				}
 			}
 		}
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
-		if ((Joystick_ButtonReleased(BUTTON_A))||(Joystick_ButtonReleased(BUTTON_A, CONTROLLER_2))==true) {
+		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
 			dumpCubes(2); // MAGIC_NUM.
-		} else if ((Joystick_ButtonReleased(BUTTON_B))||(Joystick_ButtonReleased(BUTTON_B, CONTROLLER_2))==true) {
+		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		}
 
 		// Only `CONTROLLER_2` can funnel cubes in.
-		if (Joystick_ButtonPressed(BUTTON_LB, CONTROLLER_2)==true) {
+		if (Joystick_ButtonPressed(BUTTON_LT, CONTROLLER_2)==true) {
 			switch (servo_funnel_L_pos) {
 				case servo_funnel_L_closed :
 					servo_funnel_L_pos = servo_funnel_L_open;
@@ -255,12 +299,12 @@ task main()
 				case servo_funnel_L_open :
 					servo_funnel_L_pos = servo_funnel_L_closed;
 					break;
-				default:
+				default :
 					servo_funnel_L_pos = servo_funnel_L_closed;
 					break;
 			}
 		}
-		if (Joystick_ButtonPressed(BUTTON_RB, CONTROLLER_2)==true) {
+		if (Joystick_ButtonPressed(BUTTON_RT, CONTROLLER_2)==true) {
 			switch (servo_funnel_R_pos) {
 				case servo_funnel_R_closed :
 					servo_funnel_R_pos = servo_funnel_R_open;
@@ -268,24 +312,65 @@ task main()
 				case servo_funnel_L_open :
 					servo_funnel_R_pos = servo_funnel_R_closed;
 					break;
-				default:
+				default : // Exists in case position isn't enumerated.
 					servo_funnel_R_pos = servo_funnel_R_closed;
 					break;
 			}
 		}
 
-		// Toggle autonomous mode when `BUTTON_START` is pressed on both controllers.
-		if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
-			switch (isAutonomous) {
-				case true :
-					isAutonomous = false;
-					Task_Kill(Autonomous);
+		// Driver 1 overrides driver 2 because he assigns last.
+		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
+			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
+				sweepDirection = SWEEP_OUT;
+			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
+				sweepDirection = SWEEP_IN;
+			} // No "else" here so that Button_B can do other stuff.
+		}
+		if (Joystick_ButtonPressed(BUTTON_A)==true) {
+			switch (sweepDirection) {
+				case SWEEP_IN :
+					sweepDirection = SWEEP_OFF;
 					break;
-				case false :
-					isAutonomous = true;
-					Task_Spawn(Autonomous);
+				case SWEEP_OUT :
+					sweepDirection = SWEEP_OFF;
+					break;
+				case SWEEP_OFF :
+					sweepDirection = SWEEP_IN;
 					break;
 			}
+		}
+
+		// TODO: All of the flag/climbing implementation depends on how Ian makes
+		// the flag-raising and climbing work.
+		if (Joystick_Button(BUTTON_B)==true) {
+			//power_flag = g_FullPower; // TODO: When we get comms working, uncomment this.
+		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
+			power_flag = -g_FullPower;
+		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
+			power_flag = g_FullPower;
+		} else {
+			power_flag = 0;
+		}
+
+		// TODO: Make climbing work. When we get comms working, fix the controls.
+		// Maybe even make the following two "if" statements into "if... else if".
+		if (Joystick_Button(BUTTON_X)==true) {
+			power_flag = g_FullPower; // TODO: get rid of this when we get comms working.
+			// Climb "down" instead.
+		}
+		if (Joystick_Button(BUTTON_Y)==true) {
+			// Climb "up".
+		}
+		// TODO: Depending on how climbing works, control with driver 2's joystick_R.
+
+		// Start autonomous mode when `BUTTON_START` is pressed on both controllers,
+		// but only one controller's `BUTTON_BACK` needs to be pressed to end it.
+		if ((Joystick_ButtonReleased(BUTTON_BACK))&&(Joystick_ButtonReleased(BUTTON_BACK, CONTROLLER_2))==true) {
+			isAutonomous = false;
+			Task_Kill(Autonomous);
+		} else if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
+			isAutonomous = true;
+			Task_Spawn(Autonomous);
 		}
 
 		// If the flag is already waving, add 3 more waves.
@@ -299,17 +384,21 @@ task main()
 					break;
 			}
 		}
-		if ((Joystick_ButtonPressed(BUTTON_Y))||(Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2))==true) {
-			isSweeping = !isSweeping; // TODO: see if `= !isSweeping` can be replaced with `^=`.
-		}
 
 		// Set motor and servo values (lift motor is set in PID()):
-		if (isSweeping==true) {
-			power_sweeper = 100;
-		} else {
-			power_sweeper = 0;
+		switch (sweepDirection) {
+			case SWEEP_IN :
+				Motor_SetPower(g_FullPower, motor_sweeper);
+				break;
+			case SWEEP_OUT :
+				Motor_SetPower(-g_FullPower, motor_sweeper);
+				break;
+			case SWEEP_OFF :
+				Motor_SetPower(0, motor_sweeper);
+				break;
 		}
-		Motor_SetPower(power_sweeper, motor_sweeper);
+		// TODO: make the flag and climbing stuff actually work according to how
+		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag_L);
 		Motor_SetPower(power_flag, motor_flag_R);
 		Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);

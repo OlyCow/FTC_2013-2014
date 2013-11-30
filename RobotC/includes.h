@@ -3,6 +3,9 @@
 
 
 
+#define HIGH (1)
+#define LOW (0)
+
 #include "JoystickDriver.c"
 
 #include "Drivers\common.h"

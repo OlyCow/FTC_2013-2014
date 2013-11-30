@@ -478,16 +478,17 @@ task CommLink()
 {
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	const int max_error_num = 3; // If we get more corrupted packets, we should restart transmission.
+	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
 	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	bool isReset = true; // We start out with a reset.
+	bool wasCorrupted = false;
 	bool header_write = false;
 	bool header_read[6] = {false, false, false, false, false, false};
 	ubyte frame_write[4] = {0,0,0,0};
 	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-	ubyte check_write = 0;
+	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
 	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
 	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
+	bool isBadData[6] = {false, false, false, false, false, false};
 
 	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
 	Joystick_WaitForStart();
@@ -517,6 +518,9 @@ task CommLink()
 		}
 
 		// Data:
+		for (int line=0; line<6; line++) {
+			check_read_ack[line] = 0; // Clear parity bits.
+		}
 		for (int bit=0; bit<32; bit++) {
 			// Set MOSI.
 			f_byte_write &= ~(1<<6); // Clear the data bit.
@@ -544,14 +548,16 @@ task CommLink()
 				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
 				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
+				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
+				check_read_ack[line] ^= ((byte_temp>>(bit%8))<<(bit/8));
+
 				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
 				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
 				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
 			}
 		}
 
-		// TODO: Finish checking/debugging this.
-		// Header bits. `bit`="current bit". TODO: Add checking.
+		// Check bits. `bit`="current bit".
 		for (int bit=0; bit<4; bit++) {
 			// Write check bit.
 			f_byte_write &= ~(1<<6); // Clear the data bit.
@@ -567,12 +573,29 @@ task CommLink()
 			processCommTick();
 
 			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
+			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
 			for (int line=0; line<6; line++) {
 				current_index_mask = 0; // Clear the mask.
 				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
 				check_read[line] &= ~(1<<bit); // Clear the bit.
 				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
+
+				if (check_read[line]!=check_read_ack[line]) {
+					isBadData[line] = true;
+					error_num++;
+					wasCorrupted = true;
+				} else {
+					isBadData[line] = false;
+				}
 			}
+		}
+
+		if (error_num>max_error_num) {
+			// TODO: Restart transmission. Also reset `error_num` and `wasCorrupted`.
+		} else if ((error_num!=0)&&(wasCorrupted==false)) {
+			error_num = 0; // Not a consecutive error.
+		} else if (error_num==0) {
+			wasCorrupted = false;
 		}
 	}
 }

@@ -7,18 +7,25 @@
 
 bool f_isWavingFlag = false;
 int f_waveNum = 3;
+int f_cubeDumpNum = 4;
 
 void dumpCubes(int num=4);
+task dumpCubesTask();
 void waveFlag(int waveNum=4);
 task waveFlagTask();
 
 
 
 void dumpCubes(int num) {
+	f_cubeDumpNum = num;
+	Task_Spawn(dumpCubesTask);
+}
+
+task dumpCubesTask() {
 	const int short_delay = 0; // MAGIC_NUM: TODO. (milliseconds)
 	const int long_delay = 0; // MAGIC_NUM: TODO. (milliseconds)
 	Servo_SetPosition(servo_dump, servo_dump_open);
-	if (num<4) {
+	if (f_cubeDumpNum<4) {
 		Time_Wait(short_delay);
 	} else {
 		Time_Wait(long_delay);

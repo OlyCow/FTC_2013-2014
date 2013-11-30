@@ -174,6 +174,7 @@ task main()
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
 	SweepDirection sweepDirection = SWEEP_OFF;
+	const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value.
 	float power_flag = 0.0;
 
 	Joystick_WaitForStart();
@@ -190,6 +191,7 @@ task main()
 		translation.x = Joystick_GetTranslationX();
 		translation.y = Joystick_GetTranslationY();
 		Vector2D_UpdateRot(translation);
+		Vector2D_Rotate(translation, -f_angle_z);
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			rotation[i].r = Joystick_GetRotationMagnitude();
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
@@ -281,6 +283,12 @@ task main()
 					Motor_ResetEncoder(motor_lift);
 				}
 			}
+		}
+		// TODO: Reset these better?
+		if (lift_target<0) {
+			lift_target = 0;
+		} else if (lift_target>max_lift_height) {
+			lift_target = max_lift_height;
 		}
 
 		// On conflicting input, 2 cubes are dumped instead of 4.

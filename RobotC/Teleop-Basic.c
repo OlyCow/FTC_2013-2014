@@ -646,15 +646,16 @@ task CommLink()
 		while (isResync==true) {
 			// First make sure we're in sync.
 			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
+			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
 			while (sync_count<6) { // 3 high and 3 low.
 				f_byte_write |= (1<<6); // Set the data bit high.
 				processCommTick();
 				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
 				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
-					case true :
+					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
 						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
 						break;
-					case false :
+					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
 						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
 						break;
 				}
@@ -662,6 +663,7 @@ task CommLink()
 					sync_count++;
 				} else {
 					sync_count = 0;
+					fail_count++;
 				}
 			}
 			if (isClockHigh==true) {
@@ -676,14 +678,17 @@ task CommLink()
 			if (f_byte_read!=0b00000000) {
 				isResync = true;
 				continue;
+			} else {
+				isResync = false;
 			}
 			processCommTick(); // Wait another tick...
-			f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b11111111) {
+			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+			if (f_byte_read!=0b00000000) { // 0, DUH...
 				isResync = true;
 				continue;
+			} else {
+				isResync = false;
 			}
-
 			// If everything is still good at this point, go on.
 		}
 

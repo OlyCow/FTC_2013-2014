@@ -125,7 +125,7 @@ typedef enum CardinalDirection {
 	CARDINAL_DIR_E	= 3,
 	CARDINAL_DIR_NUM,
 } CardinalDirection;
-typedef enum CommLinkMode {
+typedef enum CommLinkMode { // TODO: Make more efficient by putting vars completely inside bytes, etc.
 	COMM_LINK_STD_A,
 	COMM_LINK_STD_B,
 	COMM_LINK_STD_C,
@@ -460,8 +460,10 @@ task PID()
 
 	// Variables for lift PID calculations.
 	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-	float kP_lift = 1.0; // TODO: PID tuning.
-	float kD_lift = 0.0;
+	float kP_lift_up	= 1.0; // TODO: PID tuning. MAGIC_NUM.
+	float kP_lift_down	= 0.5;
+	float kD_lift_up	= 0.0;
+	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
 	float error_prev_lift = 0.0;
 	float error_rate_lift = 0.0;
@@ -617,9 +619,13 @@ task PID()
 		}
 		error_lift = lift_target-lift_pos;
 		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		term_P_lift = kP_lift*error_lift;
-		term_D_lift = kD_lift*error_rate_lift;
-		power_lift = term_P_lift+term_D_lift;
+		if (error_lift>0) {
+			term_P_lift = kP_lift_up*error_lift;
+			term_D_lift = kD_lift_up*error_rate_lift;
+		} else if (error_lift<=0) {
+			term_P_lift = kP_lift_down*error_lift;
+			term_D_lift = kD_lift_down*error_rate_lift;
+		}
 		Motor_SetPower(power_lift, motor_lift);
 	}
 }

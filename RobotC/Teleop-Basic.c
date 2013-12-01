@@ -622,6 +622,7 @@ void processCommTick()
 }
 task CommLink()
 {
+	bool isResync = true; // We start off with a resync.
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
@@ -640,6 +641,51 @@ task CommLink()
 	Joystick_WaitForStart();
 
 	while (true) {
+
+		// Restart the communication link.
+		while (isResync==true) {
+			// First make sure we're in sync.
+			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
+			while (sync_count<6) { // 3 high and 3 low.
+				f_byte_write |= (1<<6); // Set the data bit high.
+				processCommTick();
+				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
+				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
+					case true :
+						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
+						break;
+					case false :
+						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
+						break;
+				}
+				if (f_byte_read==0b11111111) {
+					sync_count++;
+				} else {
+					sync_count = 0;
+				}
+			}
+			if (isClockHigh==true) {
+				// If so, let it go for another tick.
+				processCommTick();
+			}
+
+			// Now bring the data line low for 2 clock ticks.
+			f_byte_write &= ~(1<<6); // Clear the data bit low.
+			processCommTick();
+			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+			if (f_byte_read!=0b00000000) {
+				isResync = true;
+				continue;
+			}
+			processCommTick(); // Wait another tick...
+			f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
+			if (f_byte_read!=0b11111111) {
+				isResync = true;
+				continue;
+			}
+
+			// If everything is still good at this point, go on.
+		}
 
 		// Write header.
 		f_byte_write &= ~(1<<6); // Clear the data bit.
@@ -681,6 +727,8 @@ task CommLink()
 			// TODO: combine the two shifts below into one shift.
 			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
 			f_byte_write |= (byte_temp<<6); // Set the data bit.
+
+			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
 			processCommTick();
 
 			// Read in all 6 data lines (MISO).
@@ -735,14 +783,19 @@ task CommLink()
 				}
 			}
 		}
+		check_write = 0; // Clear this now that we've sent it already.
 
 		if (error_num>max_error_num) {
-			// TODO: Restart transmission. Also reset `error_num` and `wasCorrupted`.
+			isResync = true; // This happens at the beginning of the next iteration.
+			error_num = 0;
+			wasCorrupted = false;
 		} else if ((error_num!=0)&&(wasCorrupted==false)) {
 			error_num = 0; // Not a consecutive error.
 		} else if (error_num==0) {
 			wasCorrupted = false;
 		}
+
+		// TODO: Assign data to whatever the I/O lines are set to.
 	}
 }
 

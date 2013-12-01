@@ -87,7 +87,7 @@ task Autonomous(); // Ooooh.
 //				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
 //				Controller_2, Button_Joy_R:	[UNUSED]
 //				Controller_2, Button_X:		Adds 3 flag waves.
-//				Controller_2, Button_Y:		Morse code signalling.
+//				Controller_2, Button_Y:		Morse code signaling.
 //				Controller_2, Direction_L:	Flag CCW.
 //				Controller_2, Direction_R:	Flag CW.
 //				Controller_2, Direction_F:	Sweep outwards.
@@ -115,6 +115,7 @@ float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
+const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -124,12 +125,26 @@ typedef enum CardinalDirection {
 	CARDINAL_DIR_E	= 3,
 	CARDINAL_DIR_NUM,
 } CardinalDirection;
+typedef enum CommLinkMode {
+	COMM_LINK_STD_A,
+	COMM_LINK_STD_B,
+	COMM_LINK_STD_C,
+	COMM_LINK_STD_D,
+	COMM_LINK_STD_E,
+	COMM_LINK_STD_F,
+} CommLinkMode; // TODO: Flesh this out.
 // TODO: If there are too many variables here, start combining them, esp. the bitmaps.
 const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
 const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
 ubyte f_byte_write = 0;
 ubyte f_byte_read = 0;
 bool isClockHigh = true;
+CommLinkMode f_commLinkMode[6] = {	COMM_LINK_STD_A,
+									COMM_LINK_STD_B,
+									COMM_LINK_STD_C,
+									COMM_LINK_STD_D,
+									COMM_LINK_STD_E,
+									COMM_LINK_STD_F	};
 int f_angle_x = 0; // RobotC doesn't support unsigned ints???
 int f_angle_y = 0;
 int f_angle_z = 0;
@@ -176,7 +191,6 @@ task main()
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
 	SweepDirection sweepDirection = SWEEP_OFF;
-	const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value.
 	float power_flag = 0.0;
 
 	Joystick_WaitForStart();
@@ -286,12 +300,7 @@ task main()
 				}
 			}
 		}
-		// TODO: Reset these better?
-		if (lift_target<0) {
-			lift_target = 0;
-		} else if (lift_target>max_lift_height) {
-			lift_target = max_lift_height;
-		}
+		// Setting the lift too high or too low is handled in the PID loop.
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
@@ -601,6 +610,11 @@ task PID()
 		// Yes, it is a complete PID loop, despite being so much shorter. :)
 		lift_pos = Motor_GetEncoder(motor_lift);
 		error_prev_lift = error_lift;
+		if (lift_target<0) { // Because we're safe.
+			lift_target = 0;
+		} else if (lift_target>max_lift_height) {
+			lift_target = max_lift_height;
+		}
 		error_lift = lift_target-lift_pos;
 		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
 		term_P_lift = kP_lift*error_lift;
@@ -801,6 +815,59 @@ task CommLink()
 		}
 
 		// TODO: Assign data to whatever the I/O lines are set to.
+		for (int line=0; line<6; line++) {
+			if (isBadData[line]==true) {
+				continue;
+			}
+			if (header_read[line]==false) {
+				switch (f_commLinkMode) {
+					case COMM_LINK_STD_A :
+						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+						f_pos_x = frame_read[line][0];
+						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
+						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+						Task_ReleaseCPU();
+						Task_HogCPU();
+						f_angle_x = frame_read[line][1];
+						f_angle_x &= 0b01111111;
+						Task_ReleaseCPU();
+						break;
+					case COMM_LINK_STD_B :
+						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+						f_pos_y = frame_read[line][0];
+						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
+						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+						Task_ReleaseCPU();
+						Task_HogCPU();
+						f_angle_y = frame_read[line][1];
+						f_angle_y &= 0b01111111;
+						Task_ReleaseCPU();
+						break;
+					case COMM_LINK_STD_C :
+						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+						f_pos_z = frame_read[line][0];
+						f_pos_z = f_pos_z>>2; // We just read two extra bits.
+						f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
+						Task_ReleaseCPU();
+						Task_HogCPU();
+						f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
+						byte_temp = frame_read[line][0]&0b00000011;
+						f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
+						Task_ReleaseCPU();
+						break;
+					case COMM_LINK_STD_D :
+						break;
+					case COMM_LINK_STD_E :
+						break;
+					case COMM_LINK_STD_F :
+						break;
+					default : // TODO: Purpose is to discard data?
+						break;
+				}
+			} else {
+				// Handle special codes here.
+			}
+		}
 	}
 }
 

@@ -762,7 +762,7 @@ task CommLink()
 				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
 				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				check_read_ack[line] ^= ((byte_temp>>(bit%8))<<(bit/8));
+				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
 
 				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
 				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
@@ -815,6 +815,7 @@ task CommLink()
 		}
 
 		// TODO: Assign data to whatever the I/O lines are set to.
+		// TODO: Check this section of code for integrity.
 		for (int line=0; line<6; line++) {
 			if (isBadData[line]==true) {
 				continue;

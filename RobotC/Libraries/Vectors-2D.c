@@ -11,7 +11,7 @@ void Vector2D_UpdatePos(vector2D &inputVector) {
 	inputVector.y = inputVector.r*sinDegrees(inputVector.theta);
 }
 void Vector2D_UpdateRot(vector2D &inputVector) {
-	inputVector.theta = atan2(inputVector.y, inputVector.x);
+	inputVector.theta = radiansToDegrees(atan2(inputVector.y, inputVector.x));
 	inputVector.r = sqrt((inputVector.y)*(inputVector.y)+(inputVector.x)*(inputVector.x));
 }
 void Vector2D_Add(vector2D vectorA, vector2D vectorB, vector2D &result) {

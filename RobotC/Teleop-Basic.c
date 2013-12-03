@@ -16,7 +16,7 @@
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,     servo_funnel_L,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -111,10 +111,12 @@ float term_P_pod[POD_NUM] = {0,0,0,0};
 // For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
+float encoder_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
+float lift_pos = 0.0;
 const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
@@ -449,7 +451,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.0,	1.0,	1.0,	1.0}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {0.5,	0.5,	0.5,	0.5}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -507,7 +509,8 @@ task PID()
 
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			pod_raw[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
+			encoder_pod[i] = Motor_GetEncoder(Motor_Convert((Motor)i));
+			pod_raw[i] = encoder_pod[i]/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			pod_raw[i] = Math_Normalize(pod_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
 			pod_raw[i] += pod_pos_prev[i];
 			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
@@ -901,7 +904,7 @@ task Display()
 	DisplayMode isMode = DISP_FCS;
 	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
 
-	Joystick_WaitForStart();
+	// We don't need to wait for start. ;)
 
 	while (true) {
 		Buttons_UpdateData();
@@ -929,6 +932,13 @@ task Display()
 				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				break;
+			case DISP_ENCODERS :
+				nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
+				nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
+				nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
+				nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
+				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");

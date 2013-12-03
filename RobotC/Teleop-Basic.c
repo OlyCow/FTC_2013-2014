@@ -16,7 +16,7 @@
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,     servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_funnel_L,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -340,13 +340,13 @@ task main()
 		}
 
 		// Driver 1 overrides driver 2 because he assigns last.
-		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
-			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
-				sweepDirection = SWEEP_OUT;
-			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
-				sweepDirection = SWEEP_IN;
-			} // No "else" here so that Button_B can do other stuff.
-		}
+		//if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
+		//	if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
+		//		sweepDirection = SWEEP_OUT;
+		//	} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
+		//		sweepDirection = SWEEP_IN;
+		//	} // No "else" here so that Button_B can do other stuff.
+		//}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
 			switch (sweepDirection) {
 				case SWEEP_IN :
@@ -451,7 +451,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.5,	0.5,	0.5,	0.5}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -934,10 +934,14 @@ task Display()
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
-				nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
-				nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
-				nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
+				nxtDisplayTextLine(0, "FR:   %+6d", pod_raw[POD_FR]);
+				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
+				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
+				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
+				//nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
+				//nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
+				//nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
+				//nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				break;
 			case DISP_JOYSTICKS :

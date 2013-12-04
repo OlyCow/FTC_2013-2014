@@ -7,16 +7,16 @@
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -116,8 +116,8 @@ float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
-float lift_pos = 0.0;
-const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value.
+float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
+const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -177,6 +177,7 @@ task main()
 	} SweepDirection;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
@@ -188,7 +189,8 @@ task main()
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
-	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
+	float combined_angle_prev[POD_NUM] = {0,0,0,0};
+	//float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
@@ -196,9 +198,13 @@ task main()
 	float power_flag = 0.0;
 
 	Joystick_WaitForStart();
+	Time_ClearTimer(T1);
 
 	while (true) {
 		Joystick_UpdateData();
+
+		f_angle_z += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T1)/(float)1000.0;
+		Time_ClearTimer(T1);
 
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
@@ -306,9 +312,11 @@ task main()
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
-			dumpCubes(2); // MAGIC_NUM.
+			//dumpCubes(2); // MAGIC_NUM.
+			Servo_SetPosition(servo_dump, servo_dump_open);
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			dumpCubes(4); // MAGIC_NUM.
+			//dumpCubes(4); // MAGIC_NUM.
+			Servo_SetPosition(servo_dump, servo_dump_closed);
 		}
 
 		// Only `CONTROLLER_2` can funnel cubes in.
@@ -461,9 +469,8 @@ task PID()
 	int pod_pos_prev[POD_NUM] = {0,0,0,0};
 
 	// Variables for lift PID calculations.
-	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-	float kP_lift_up	= 1.0; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.5;
+	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
+	float kP_lift_down	= 0.08;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -554,7 +561,7 @@ task PID()
 				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
 			}
 
-			// TODO: Encoders might have a tiny deadband (depends on backlash).
+			//// TODO: Encoders might have a tiny deadband (depends on backlash).
 			//Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
 
 			// Calculate various aspects of the errors, for the I- and D- terms.
@@ -629,6 +636,7 @@ task PID()
 			term_P_lift = kP_lift_down*error_lift;
 			term_D_lift = kD_lift_down*error_rate_lift;
 		}
+		power_lift=term_P_lift+term_D_lift;
 		Motor_SetPower(power_lift, motor_lift);
 	}
 }

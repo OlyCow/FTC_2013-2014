@@ -7,16 +7,16 @@
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -87,7 +87,7 @@ task Autonomous(); // Ooooh.
 //				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
 //				Controller_2, Button_Joy_R:	[UNUSED]
 //				Controller_2, Button_X:		Adds 3 flag waves.
-//				Controller_2, Button_Y:		Morse code signalling.
+//				Controller_2, Button_Y:		Morse code signaling.
 //				Controller_2, Direction_L:	Flag CCW.
 //				Controller_2, Direction_R:	Flag CW.
 //				Controller_2, Direction_F:	Sweep outwards.
@@ -111,10 +111,13 @@ float term_P_pod[POD_NUM] = {0,0,0,0};
 // For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
+float encoder_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
+float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
+const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -124,12 +127,26 @@ typedef enum CardinalDirection {
 	CARDINAL_DIR_E	= 3,
 	CARDINAL_DIR_NUM,
 } CardinalDirection;
+typedef enum CommLinkMode { // TODO: Make more efficient by putting vars completely inside bytes, etc.
+	COMM_LINK_STD_A,
+	COMM_LINK_STD_B,
+	COMM_LINK_STD_C,
+	COMM_LINK_STD_D,
+	COMM_LINK_STD_E,
+	COMM_LINK_STD_F,
+} CommLinkMode; // TODO: Flesh this out.
 // TODO: If there are too many variables here, start combining them, esp. the bitmaps.
 const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
 const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
 ubyte f_byte_write = 0;
 ubyte f_byte_read = 0;
 bool isClockHigh = true;
+CommLinkMode f_commLinkMode[6] = {	COMM_LINK_STD_A,
+									COMM_LINK_STD_B,
+									COMM_LINK_STD_C,
+									COMM_LINK_STD_D,
+									COMM_LINK_STD_E,
+									COMM_LINK_STD_F	};
 int f_angle_x = 0; // RobotC doesn't support unsigned ints???
 int f_angle_y = 0;
 int f_angle_z = 0;
@@ -160,6 +177,7 @@ task main()
 	} SweepDirection;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
@@ -171,18 +189,22 @@ task main()
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
-	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
+	float combined_angle_prev[POD_NUM] = {0,0,0,0};
+	//float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
 	SweepDirection sweepDirection = SWEEP_OFF;
-	const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value.
 	float power_flag = 0.0;
 
 	Joystick_WaitForStart();
+	Time_ClearTimer(T1);
 
 	while (true) {
 		Joystick_UpdateData();
+
+		f_angle_z += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T1)/(float)1000.0;
+		Time_ClearTimer(T1);
 
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
@@ -286,18 +308,15 @@ task main()
 				}
 			}
 		}
-		// TODO: Reset these better?
-		if (lift_target<0) {
-			lift_target = 0;
-		} else if (lift_target>max_lift_height) {
-			lift_target = max_lift_height;
-		}
+		// Setting the lift too high or too low is handled in the PID loop.
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
-			dumpCubes(2); // MAGIC_NUM.
+			//dumpCubes(2); // MAGIC_NUM.
+			Servo_SetPosition(servo_dump, servo_dump_open);
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			dumpCubes(4); // MAGIC_NUM.
+			//dumpCubes(4); // MAGIC_NUM.
+			Servo_SetPosition(servo_dump, servo_dump_closed);
 		}
 
 		// Only `CONTROLLER_2` can funnel cubes in.
@@ -329,13 +348,13 @@ task main()
 		}
 
 		// Driver 1 overrides driver 2 because he assigns last.
-		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
-			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
-				sweepDirection = SWEEP_OUT;
-			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
-				sweepDirection = SWEEP_IN;
-			} // No "else" here so that Button_B can do other stuff.
-		}
+		//if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
+		//	if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
+		//		sweepDirection = SWEEP_OUT;
+		//	} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
+		//		sweepDirection = SWEEP_IN;
+		//	} // No "else" here so that Button_B can do other stuff.
+		//}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
 			switch (sweepDirection) {
 				case SWEEP_IN :
@@ -440,7 +459,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.0,	1.0,	1.0,	1.0}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -450,9 +469,10 @@ task PID()
 	int pod_pos_prev[POD_NUM] = {0,0,0,0};
 
 	// Variables for lift PID calculations.
-	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-	float kP_lift = 1.0; // TODO: PID tuning.
-	float kD_lift = 0.0;
+	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
+	float kP_lift_down	= 0.08;
+	float kD_lift_up	= 0.0;
+	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
 	float error_prev_lift = 0.0;
 	float error_rate_lift = 0.0;
@@ -496,7 +516,8 @@ task PID()
 
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			pod_raw[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
+			encoder_pod[i] = Motor_GetEncoder(Motor_Convert((Motor)i));
+			pod_raw[i] = encoder_pod[i]/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			pod_raw[i] = Math_Normalize(pod_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
 			pod_raw[i] += pod_pos_prev[i];
 			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
@@ -540,7 +561,7 @@ task PID()
 				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
 			}
 
-			// TODO: Encoders might have a tiny deadband (depends on backlash).
+			//// TODO: Encoders might have a tiny deadband (depends on backlash).
 			//Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
 
 			// Calculate various aspects of the errors, for the I- and D- terms.
@@ -601,11 +622,21 @@ task PID()
 		// Yes, it is a complete PID loop, despite being so much shorter. :)
 		lift_pos = Motor_GetEncoder(motor_lift);
 		error_prev_lift = error_lift;
+		if (lift_target<0) { // Because we're safe.
+			lift_target = 0;
+		} else if (lift_target>max_lift_height) {
+			lift_target = max_lift_height;
+		}
 		error_lift = lift_target-lift_pos;
 		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		term_P_lift = kP_lift*error_lift;
-		term_D_lift = kD_lift*error_rate_lift;
-		power_lift = term_P_lift+term_D_lift;
+		if (error_lift>0) {
+			term_P_lift = kP_lift_up*error_lift;
+			term_D_lift = kD_lift_up*error_rate_lift;
+		} else if (error_lift<=0) {
+			term_P_lift = kP_lift_down*error_lift;
+			term_D_lift = kD_lift_down*error_rate_lift;
+		}
+		power_lift=term_P_lift+term_D_lift;
 		Motor_SetPower(power_lift, motor_lift);
 	}
 }
@@ -748,7 +779,7 @@ task CommLink()
 				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
 				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				check_read_ack[line] ^= ((byte_temp>>(bit%8))<<(bit/8));
+				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
 
 				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
 				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
@@ -801,6 +832,60 @@ task CommLink()
 		}
 
 		// TODO: Assign data to whatever the I/O lines are set to.
+		// TODO: Check this section of code for integrity.
+		for (int line=0; line<6; line++) {
+			if (isBadData[line]==true) {
+				continue;
+			}
+			if (header_read[line]==false) {
+				switch (f_commLinkMode) {
+					case COMM_LINK_STD_A :
+						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+						f_pos_x = frame_read[line][0];
+						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
+						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+						Task_ReleaseCPU();
+						Task_HogCPU();
+						f_angle_x = frame_read[line][1];
+						f_angle_x &= 0b01111111;
+						Task_ReleaseCPU();
+						break;
+					case COMM_LINK_STD_B :
+						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+						f_pos_y = frame_read[line][0];
+						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
+						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+						Task_ReleaseCPU();
+						Task_HogCPU();
+						f_angle_y = frame_read[line][1];
+						f_angle_y &= 0b01111111;
+						Task_ReleaseCPU();
+						break;
+					case COMM_LINK_STD_C :
+						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+						f_pos_z = frame_read[line][0];
+						f_pos_z = f_pos_z>>2; // We just read two extra bits.
+						f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
+						Task_ReleaseCPU();
+						Task_HogCPU();
+						f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
+						byte_temp = frame_read[line][0]&0b00000011;
+						f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
+						Task_ReleaseCPU();
+						break;
+					case COMM_LINK_STD_D :
+						break;
+					case COMM_LINK_STD_E :
+						break;
+					case COMM_LINK_STD_F :
+						break;
+					default : // TODO: Purpose is to discard data?
+						break;
+				}
+			} else {
+				// Handle special codes here.
+			}
+		}
 	}
 }
 
@@ -827,7 +912,7 @@ task Display()
 	DisplayMode isMode = DISP_FCS;
 	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
 
-	Joystick_WaitForStart();
+	// We don't need to wait for start. ;)
 
 	while (true) {
 		Buttons_UpdateData();
@@ -855,6 +940,17 @@ task Display()
 				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				break;
+			case DISP_ENCODERS :
+				nxtDisplayTextLine(0, "FR:   %+6d", pod_raw[POD_FR]);
+				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
+				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
+				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
+				//nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
+				//nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
+				//nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
+				//nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
+				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");

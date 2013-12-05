@@ -1,7 +1,7 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
-#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorAnalogInactive)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -36,6 +36,7 @@ task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's 
 //task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task SaveData();
+task SaveDataCmd();
 task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
@@ -82,7 +83,7 @@ task Autonomous(); // Ooooh.
 //				Controller_2, Button_RB:	Dump 2 cubes.
 //				Controller_2, Button_LT:	Toggles left funnel.
 //				Controller_2, Button_RT:	Toggles right funnel.
-//				Controller_2, Button_A:		[UNUSED]
+//				Controller_2, Button_A:		Save pod reset data.
 //				Controller_2, Button_B:		Reset lift (w/ Button_JL).
 //				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
 //				Controller_2, Button_Joy_R:	[UNUSED]
@@ -100,6 +101,9 @@ task Autonomous(); // Ooooh.
 
 // For control flow:
 bool isAutonomous = false;
+
+// For saving pod reset data.
+bool isTemp = false;
 
 // For main task:
 float power_lift = 0.0;
@@ -192,6 +196,7 @@ task main()
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
+	float heading = 0.0; // Because f_angle_z is an int.
 
 	SweepDirection sweepDirection = SWEEP_OFF;
 	float power_flag = 0.0;
@@ -202,8 +207,9 @@ task main()
 	while (true) {
 		Joystick_UpdateData();
 
-		//f_angle_z += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T1)/(float)1000.0;
+		heading -= (float)HTGYROreadRot(sensor_protoboard)*((float)Time_GetTime(T1)/(float)1000.0);
 		Time_ClearTimer(T1);
+		f_angle_z = round(heading);
 
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
@@ -214,7 +220,7 @@ task main()
 		translation.x = Joystick_GetTranslationX();
 		translation.y = Joystick_GetTranslationY();
 		Vector2D_UpdateRot(translation);
-		Vector2D_Rotate(translation, -f_angle_z);
+		Vector2D_Rotate(translation, -heading);
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			rotation[i].r = Joystick_GetRotationMagnitude();
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
@@ -275,9 +281,11 @@ task main()
 		// those as well.
 		if (Joystick_ButtonPressed(BUTTON_B)==true) {
 			f_angle_z = 0;
+			heading = 0;
 		}
 		if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
 			f_angle_z = 0;
+			heading = 0;
 		}
 
 		// Second driver's lift controls are overridden by the first's. The first
@@ -411,6 +419,11 @@ task main()
 					waveFlag();
 					break;
 			}
+		}
+
+		// Save the pod reset data to one of two files.
+		if (Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2)==true) {
+			Task_Spawn(SaveDataCmd);
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
@@ -572,9 +585,9 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>36) { //36 is an arbitrary number :P
+			if (abs(error_pod[i])>15) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>12) {
+			} else if (abs(error_pod[i])>5) {
 				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
@@ -945,11 +958,8 @@ task Display()
 				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
 				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
 				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
-				//nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
-				//nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
-				//nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
-				//nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
+				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");
@@ -996,9 +1006,11 @@ task SaveData()
 	const string filename_pods = "_reset_pods.txt";
 	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
 	int file_size = 72; // Should be 64 (4 shorts).
-	bool isTemp = false;
 
 	Joystick_WaitForStart();
+	for (int i=0; i<117; i++) { // MAGIC_NUM: 117=120-3
+		Time_Wait(1000);
+	}
 
 	while (true) {
 		Task_HogCPU();
@@ -1019,8 +1031,35 @@ task SaveData()
 		Task_ReleaseCPU();
 
 		isTemp = (!isTemp); // TODO: XOR. You know the drill.
-		Time_Wait(100); // MAGIC_NUM: we don't need to save position that often.
+		Time_Wait(500); // MAGIC_NUM: half a second.
 	}
+}
+
+
+
+task SaveDataCmd()
+{
+	TFileHandle IO_handle;
+	TFileIOResult IO_result;
+	const string filename_pods = "_reset_pods.txt";
+	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
+	int file_size = 72; // Should be 64 (4 shorts).
+	Task_HogCPU();
+	switch (isTemp) {
+		case false :
+			Delete(filename_pods, IO_result); // TODO: Add error handling.
+			OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
+			break;
+		case true :
+			Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
+			OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
+			break;
+	}
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
+	}
+	Close(IO_handle, IO_result);
+	Task_ReleaseCPU();
 }
 
 

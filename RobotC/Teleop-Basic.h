@@ -94,6 +94,6 @@ float	Joystick_GetTranslationY() {
 			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
 }
 float	Joystick_GetRotationMagnitude() {
-	return Math_Limit(
+	return -Math_Limit(
 			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_L, AXIS_X)), g_FullPower);
 }

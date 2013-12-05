@@ -25,8 +25,8 @@ servoData g_ServoData[4]; //4 continuous rotation servos.
 const int lift_pos_pickup = 0;
 const int lift_pos_dump = 100;
 const int lift_pos_top = 200;
-const int servo_funnel_L_open = 100;
-const int servo_funnel_L_closed = 20;
+const int servo_funnel_L_open = 230;
+const int servo_funnel_L_closed = 10;
 const int servo_funnel_R_open = -127;
 const int servo_funnel_R_closed = 128;
 const int servo_dump_open = 0;

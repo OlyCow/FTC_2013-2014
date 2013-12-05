@@ -7,16 +7,16 @@
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -32,25 +32,37 @@
 #warn "This code will explode!"
 #endif
 
+task Drive();
+task GyroCorrect();
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-task CommLink(); // Reads/writes to the protoboard as tightly as possible.
+//task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task SaveData();
+
+// 1 = L, -1 = R; this should only affect horizontal movements.
+const int AUTON_L_R = 1;
+
+// true = wait 15 seconds before starting, false = no delay.
+const bool AUTON_WAIT = false;
 
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
-int servo_funnel_L_pos = servo_funnel_L_open;
-int servo_funnel_R_pos = servo_funnel_R_open;
 float term_P_pod[POD_NUM] = {0,0,0,0};
+float translation_x = 0.0;
+float translation_y = 0.0;
+float rotation_global = 0.0;
 
 // For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
+float encoder_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
+float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
+const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -60,12 +72,26 @@ typedef enum CardinalDirection {
 	CARDINAL_DIR_E	= 3,
 	CARDINAL_DIR_NUM,
 } CardinalDirection;
+typedef enum CommLinkMode { // TODO: Make more efficient by putting vars completely inside bytes, etc.
+	COMM_LINK_STD_A,
+	COMM_LINK_STD_B,
+	COMM_LINK_STD_C,
+	COMM_LINK_STD_D,
+	COMM_LINK_STD_E,
+	COMM_LINK_STD_F,
+} CommLinkMode; // TODO: Flesh this out.
 // TODO: If there are too many variables here, start combining them, esp. the bitmaps.
 const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
 const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
 ubyte f_byte_write = 0;
 ubyte f_byte_read = 0;
 bool isClockHigh = true;
+CommLinkMode f_commLinkMode[6] = {	COMM_LINK_STD_A,
+									COMM_LINK_STD_B,
+									COMM_LINK_STD_C,
+									COMM_LINK_STD_D,
+									COMM_LINK_STD_E,
+									COMM_LINK_STD_F	};
 int f_angle_x = 0; // RobotC doesn't support unsigned ints???
 int f_angle_y = 0;
 int f_angle_z = 0;
@@ -89,26 +115,145 @@ bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
 task main()
 {
-
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
+	Task_Spawn(Drive);
+	Task_Spawn(GyroCorrect);
 	Task_Spawn(PID);
-	Task_Spawn(CommLink);
-	Task_Spawn(Display);
+	//Task_Spawn(CommLink);
+	//Task_Spawn(Display);
 	Task_Spawn(SaveData);
+	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
+
+	typedef enum Crate {
+		CRATE_UNKNOWN	= -1,
+		CRATE_OUTER_A	= 0,
+		CRATE_INNER_A	= 1,
+		CRATE_INNER_B	= 2,
+		CRATE_OUTER_B	= 3,
+		CRATE_NUM,
+	};
+
+	const int initialize_delay = 1*1000;
+	const int wait_delay = 15*1000;
+	// TODO: Determine all the following values.
+	const int fine_tune_power = 40;
+	const int LIFT_LOW_POS = 0;
+	const int LIFT_MED_POS = 4000;
+	const int LIFT_HIGH_POS = 6000;
+	const short IR_threshold = 45;
+	const int servo_dump_closed = 255;
+	const int servo_dump_open = 0;
+	const int servo_dump_delay = 410;
+	// Some example values: {672,697,603-657}, {1212,1137,1218-1189}, {2246,2236,2254-2245}, {2772,2871,2960-2868}
+	const int drive_time_low[CRATE_NUM]		= {0,	920,	1720,	2550};
+	const int drive_time_high[CRATE_NUM]	= {920,	1720,	2550,	3500};
+	const int drive_time_mid[CRATE_NUM]		= {610,	1190,	1900,	2800};
+	const int dump_time = 380;
+	const int start_to_first_turn_time = 3840; // milliseconds?
+	const int first_turn_to_second_turn_time = 2000; // milliseconds?
+	const int second_turn_to_ramp_time = 3000; // milliseconds?
+	const int iteration_delay = 0; // For flag waving.
+	Crate crate_IR = CRATE_UNKNOWN;
+
+	Joystick_WaitForStart();
+	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
+	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
+
+	Servo_SetPosition(servo_dump, servo_dump_closed);
+	if (AUTON_WAIT==true) {
+		Time_Wait(wait_delay);
+	} else {
+		Time_Wait(initialize_delay);
+	}
+
+	// Raise the lift and move sideways until in front of the IR beacon.
+	translation_y = fine_tune_power;
+	g_lift_target = LIFT_MED_POS;
+}
+
+
+
+task Drive()
+{
 
 	// Not initializing these structs for now: once data starts coming in
 	// from the controllers, all the members of these will get updated.
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
-	float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
+	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
-	const int max_lift_height = 4*1440; // MAGIC_NUM. TODO: Find this value. And also limit the height.
-
 	Joystick_WaitForStart();
+	Time_ClearTimer(T3); // We will use this to guage the loop time for driving.
+
+	while (true) {
+		Joystick_UpdateData();
+
+		f_angle_z += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
+		Time_ClearTimer(T3);
+
+		// A rotation vector is added to translation vector, and the resultant vector
+		// is normalized. A differential analysis of the parametric equations of
+		// each wheel pod confirms that the above algorithm works perfectly, despite
+		// its apparent simplicity. Use of the Vector2D library makes some of this
+		// slightly less efficient (there are some unnecessary update calculations)
+		// but the benefit of increased readability is well worth it.
+		translation.x = translation_x;
+		translation.y = translation_y;
+		Vector2D_UpdateRot(translation);
+		Vector2D_Rotate(translation, -f_angle_z);
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			rotation[i].r = rotation_global;
+			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
+			Vector2D_UpdatePos(rotation[i]);
+			Vector2D_Add(rotation[i], translation, combined[i]);
+			if (combined[i].r>g_FullPower) {
+				shouldNormalize = true;
+			}
+			if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) { // AND encoder is within 2 turns.
+				combined[i].theta = combined_angle_prev[i];
+				// No need to update `combined_angle_prev[i]` because it stays the same.
+				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
+			} else {
+				combined_angle_prev[i] = combined[i].theta;
+			}
+			g_ServoData[i].angle = combined[i].theta;
+		}
+
+		// Normalize our motors' power values if a motor's power went above g_FullPower.
+		if (shouldNormalize==true) {
+			float originalMaxPower = g_FullPower; // If there was a false positive, this ensures nothing changes.
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				if (combined[i].r>originalMaxPower) {
+					originalMaxPower = combined[i].r;
+				}
+			}
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				combined[i].r = Math_Normalize(combined[i].r, originalMaxPower, g_FullPower);
+				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
+			}
+			shouldNormalize = false; // Reset this for the next iteration.
+		}
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			g_MotorData[i].power = combined[i].r;
+		}
+	}
+}
+
+
+
+task GyroCorrect()
+{
+	const float kP = -0.05;
+	Joystick_WaitForStart();
+	while (true) {
+		f_angle_z = (float)kP*(float)f_angle_z;
+		nxtDisplayTextLine(7, "rot*kP:%f", f_angle_z);
+	}
 }
 
 
@@ -135,7 +280,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.0,	1.0,	1.0,	1.0}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -145,9 +290,10 @@ task PID()
 	int pod_pos_prev[POD_NUM] = {0,0,0,0};
 
 	// Variables for lift PID calculations.
-	float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-	float kP_lift = 1.0; // TODO: PID tuning.
-	float kD_lift = 0.0;
+	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
+	float kP_lift_down	= 0.08;
+	float kD_lift_up	= 0.0;
+	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
 	float error_prev_lift = 0.0;
 	float error_rate_lift = 0.0;
@@ -191,7 +337,8 @@ task PID()
 
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			pod_raw[i] = Motor_GetEncoder(Motor_Convert((Motor)i))/(float)(-2); // Encoders are geared up by 2 (and "backwards").
+			encoder_pod[i] = Motor_GetEncoder(Motor_Convert((Motor)i));
+			pod_raw[i] = encoder_pod[i]/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			pod_raw[i] = Math_Normalize(pod_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
 			pod_raw[i] += pod_pos_prev[i];
 			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
@@ -235,7 +382,7 @@ task PID()
 				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
 			}
 
-			// TODO: Encoders might have a tiny deadband (depends on backlash).
+			//// TODO: Encoders might have a tiny deadband (depends on backlash).
 			//Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
 
 			// Calculate various aspects of the errors, for the I- and D- terms.
@@ -296,208 +443,272 @@ task PID()
 		// Yes, it is a complete PID loop, despite being so much shorter. :)
 		lift_pos = Motor_GetEncoder(motor_lift);
 		error_prev_lift = error_lift;
+		if (lift_target<0) { // Because we're safe.
+			lift_target = 0;
+		} else if (lift_target>max_lift_height) {
+			lift_target = max_lift_height;
+		}
 		error_lift = lift_target-lift_pos;
 		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		term_P_lift = kP_lift*error_lift;
-		term_D_lift = kD_lift*error_rate_lift;
-		power_lift = term_P_lift+term_D_lift;
+		if (error_lift>0) {
+			term_P_lift = kP_lift_up*error_lift;
+			term_D_lift = kD_lift_up*error_rate_lift;
+		} else if (error_lift<=0) {
+			term_P_lift = kP_lift_down*error_lift;
+			term_D_lift = kD_lift_down*error_rate_lift;
+		}
+		power_lift=term_P_lift+term_D_lift;
 		Motor_SetPower(power_lift, motor_lift);
 	}
 }
 
 
 
-void processCommTick()
-{
-	f_byte_write &= ~(1<<7); // Clear the clock bit.
-	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
-	HTSPBwriteIO(sensor_protoboard, f_byte_write);
-	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
-	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
-}
-task CommLink()
-{
-	bool isResync = true; // We start off with a resync.
-	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
-	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	bool wasCorrupted = false;
-	bool header_write = false;
-	bool header_read[6] = {false, false, false, false, false, false};
-	ubyte frame_write[4] = {0,0,0,0};
-	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
-	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
-	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
-	bool isBadData[6] = {false, false, false, false, false, false};
+//void processCommTick()
+//{
+//	f_byte_write &= ~(1<<7); // Clear the clock bit.
+//	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
+//	HTSPBwriteIO(sensor_protoboard, f_byte_write);
+//	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
+//	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
+//}
+//task CommLink()
+//{
+//	bool isResync = true; // We start off with a resync.
+//	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+//	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+//	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
+//	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
+//	bool wasCorrupted = false;
+//	bool header_write = false;
+//	bool header_read[6] = {false, false, false, false, false, false};
+//	ubyte frame_write[4] = {0,0,0,0};
+//	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+//	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
+//	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
+//	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
+//	bool isBadData[6] = {false, false, false, false, false, false};
 
-	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
-	Joystick_WaitForStart();
+//	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
+//	Joystick_WaitForStart();
 
-	while (true) {
+//	while (true) {
 
-		// Restart the communication link.
-		while (isResync==true) {
-			// First make sure we're in sync.
-			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
-			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
-			while (sync_count<6) { // 3 high and 3 low.
-				f_byte_write |= (1<<6); // Set the data bit high.
-				processCommTick();
-				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
-				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
-					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
-						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
-						break;
-					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
-						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
-						break;
-				}
-				if (f_byte_read==0b11111111) {
-					sync_count++;
-				} else {
-					sync_count = 0;
-					fail_count++;
-				}
-			}
-			if (isClockHigh==true) {
-				// If so, let it go for another tick.
-				processCommTick();
-			}
+//		// Restart the communication link.
+//		while (isResync==true) {
+//			// First make sure we're in sync.
+//			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
+//			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
+//			while (sync_count<6) { // 3 high and 3 low.
+//				f_byte_write |= (1<<6); // Set the data bit high.
+//				processCommTick();
+//				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
+//				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
+//					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
+//						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
+//						break;
+//					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
+//						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
+//						break;
+//				}
+//				if (f_byte_read==0b11111111) {
+//					sync_count++;
+//				} else {
+//					sync_count = 0;
+//					fail_count++;
+//				}
+//			}
+//			if (isClockHigh==true) {
+//				// If so, let it go for another tick.
+//				processCommTick();
+//			}
 
-			// Now bring the data line low for 2 clock ticks.
-			f_byte_write &= ~(1<<6); // Clear the data bit low.
-			processCommTick();
-			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b00000000) {
-				isResync = true;
-				continue;
-			} else {
-				isResync = false;
-			}
-			processCommTick(); // Wait another tick...
-			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b00000000) { // 0, DUH...
-				isResync = true;
-				continue;
-			} else {
-				isResync = false;
-			}
-			// If everything is still good at this point, go on.
-		}
+//			// Now bring the data line low for 2 clock ticks.
+//			f_byte_write &= ~(1<<6); // Clear the data bit low.
+//			processCommTick();
+//			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+//			if (f_byte_read!=0b00000000) {
+//				isResync = true;
+//				continue;
+//			} else {
+//				isResync = false;
+//			}
+//			processCommTick(); // Wait another tick...
+//			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+//			if (f_byte_read!=0b00000000) { // 0, DUH...
+//				isResync = true;
+//				continue;
+//			} else {
+//				isResync = false;
+//			}
+//			// If everything is still good at this point, go on.
+//		}
 
-		// Write header.
-		f_byte_write &= ~(1<<6); // Clear the data bit.
+//		// Write header.
+//		f_byte_write &= ~(1<<6); // Clear the data bit.
 
-		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
-		// TODO: use ubyte instead of bool and just use last bit.
-		// A bool can be true but not have the last bit be on.
-		if (header_write==true) {
-			f_byte_write |= (1<<6);
-		} else {
-			f_byte_write |= (0<<6);
-		}
-		processCommTick();
+//		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
+//		// TODO: use ubyte instead of bool and just use last bit.
+//		// A bool can be true but not have the last bit be on.
+//		if (header_write==true) {
+//			f_byte_write |= (1<<6);
+//		} else {
+//			f_byte_write |= (0<<6);
+//		}
+//		processCommTick();
 
-		// Read in all 6 data lines.
-		for (int line=0; line<6; line++) {
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
+//		// Read in all 6 data lines.
+//		for (int line=0; line<6; line++) {
+//			current_index_mask = 0; // Clear mask.
+//			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
 
-			// No fancy shifting needed here (header_read is a bool).
-			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
-		}
+//			// No fancy shifting needed here (header_read is a bool).
+//			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+//		}
 
-		// Data:
-		for (int line=0; line<6; line++) {
-			check_read_ack[line] = 0; // Clear parity bits.
-		}
-		for (int bit=0; bit<32; bit++) {
-			// Set MOSI.
-			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
+//		// Data:
+//		for (int line=0; line<6; line++) {
+//			check_read_ack[line] = 0; // Clear parity bits.
+//		}
+//		for (int bit=0; bit<32; bit++) {
+//			// Set MOSI.
+//			f_byte_write &= ~(1<<6); // Clear the data bit.
+//			current_index_mask = 0; // Clear mask.
+//			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
 
-			// Intentional int division (returns intended byte) (see next statement).
-			// Using a temp var because `true!=1` (can be any positive int); statement
-			// also clears byte_temp because the mask was cleared (and now AND'd).
-			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+//			// Intentional int division (returns intended byte) (see next statement).
+//			// Using a temp var because `true!=1` (can be any positive int); statement
+//			// also clears byte_temp because the mask was cleared (and now AND'd).
+//			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
 
-			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
-			f_byte_write |= (byte_temp<<6); // Set the data bit.
+//			// TODO: combine the two shifts below into one shift.
+//			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
+//			f_byte_write |= (byte_temp<<6); // Set the data bit.
 
-			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
-			processCommTick();
+//			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
+//			processCommTick();
 
-			// Read in all 6 data lines (MISO).
-			for (int line=0; line<6; line++) {
-				// TODO: Optimize by (maybe?) making assigning this cyclically.
-				// Would only work for the inner-most loop, since this variable
-				// is reused outside of the loop (for every "for" statement).
-				// Also see note in check bit part about eliminating "for" loop.
-				current_index_mask = 0; // Clear mask.
-				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
-				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
-				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
+//			// Read in all 6 data lines (MISO).
+//			for (int line=0; line<6; line++) {
+//				// TODO: Optimize by (maybe?) making assigning this cyclically.
+//				// Would only work for the inner-most loop, since this variable
+//				// is reused outside of the loop (for every "for" statement).
+//				// Also see note in check bit part about eliminating "for" loop.
+//				current_index_mask = 0; // Clear mask.
+//				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
+//				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
+//				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
-				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				check_read_ack[line] ^= ((byte_temp>>(bit%8))<<(bit/8));
+//				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
+//				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
 
-				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
-				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
-				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
-			}
-		}
+//				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
+//				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
+//				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
+//			}
+//		}
 
-		// Check bits. `bit`="current bit".
-		for (int bit=0; bit<4; bit++) {
-			// Write check bit.
-			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<bit); // Set the data bit we want to find.
+//		// Check bits. `bit`="current bit".
+//		for (int bit=0; bit<4; bit++) {
+//			// Write check bit.
+//			f_byte_write &= ~(1<<6); // Clear the data bit.
+//			current_index_mask = 0; // Clear mask.
+//			current_index_mask |= (1<<bit); // Set the data bit we want to find.
 
-			// See same operation for data. This is essentially the same logic.
-			byte_temp = check_write&current_index_mask;
+//			// See same operation for data. This is essentially the same logic.
+//			byte_temp = check_write&current_index_mask;
 
-			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>bit;
-			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
-			processCommTick();
+//			// TODO: combine the two shifts below into one shift.
+//			byte_temp = byte_temp>>bit;
+//			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
+//			processCommTick();
 
-			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
-			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
-			for (int line=0; line<6; line++) {
-				current_index_mask = 0; // Clear the mask.
-				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
-				check_read[line] &= ~(1<<bit); // Clear the bit.
-				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
+//			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
+//			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
+//			for (int line=0; line<6; line++) {
+//				current_index_mask = 0; // Clear the mask.
+//				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
+//				check_read[line] &= ~(1<<bit); // Clear the bit.
+//				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
 
-				if (check_read[line]!=check_read_ack[line]) {
-					isBadData[line] = true;
-					error_num++;
-					wasCorrupted = true;
-				} else {
-					isBadData[line] = false;
-				}
-			}
-		}
-		check_write = 0; // Clear this now that we've sent it already.
+//				if (check_read[line]!=check_read_ack[line]) {
+//					isBadData[line] = true;
+//					error_num++;
+//					wasCorrupted = true;
+//				} else {
+//					isBadData[line] = false;
+//				}
+//			}
+//		}
+//		check_write = 0; // Clear this now that we've sent it already.
 
-		if (error_num>max_error_num) {
-			isResync = true; // This happens at the beginning of the next iteration.
-			error_num = 0;
-			wasCorrupted = false;
-		} else if ((error_num!=0)&&(wasCorrupted==false)) {
-			error_num = 0; // Not a consecutive error.
-		} else if (error_num==0) {
-			wasCorrupted = false;
-		}
+//		if (error_num>max_error_num) {
+//			isResync = true; // This happens at the beginning of the next iteration.
+//			error_num = 0;
+//			wasCorrupted = false;
+//		} else if ((error_num!=0)&&(wasCorrupted==false)) {
+//			error_num = 0; // Not a consecutive error.
+//		} else if (error_num==0) {
+//			wasCorrupted = false;
+//		}
 
-		// TODO: Assign data to whatever the I/O lines are set to.
-	}
-}
+//		// TODO: Assign data to whatever the I/O lines are set to.
+//		// TODO: Check this section of code for integrity.
+//		for (int line=0; line<6; line++) {
+//			if (isBadData[line]==true) {
+//				continue;
+//			}
+//			if (header_read[line]==false) {
+//				switch (f_commLinkMode) {
+//					case COMM_LINK_STD_A :
+//						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+//						f_pos_x = frame_read[line][0];
+//						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
+//						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+//						Task_ReleaseCPU();
+//						Task_HogCPU();
+//						f_angle_x = frame_read[line][1];
+//						f_angle_x &= 0b01111111;
+//						Task_ReleaseCPU();
+//						break;
+//					case COMM_LINK_STD_B :
+//						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+//						f_pos_y = frame_read[line][0];
+//						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
+//						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+//						Task_ReleaseCPU();
+//						Task_HogCPU();
+//						f_angle_y = frame_read[line][1];
+//						f_angle_y &= 0b01111111;
+//						Task_ReleaseCPU();
+//						break;
+//					case COMM_LINK_STD_C :
+//						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
+//						//f_pos_z = frame_read[line][0];
+//						//f_pos_z = f_pos_z>>2; // We just read two extra bits.
+//						//f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
+//						//Task_ReleaseCPU();
+//						//Task_HogCPU();
+//						//f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
+//						//byte_temp = frame_read[line][0]&0b00000011;
+//						//f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
+//						//Task_ReleaseCPU();
+//						break;
+//					case COMM_LINK_STD_D :
+//						break;
+//					case COMM_LINK_STD_E :
+//						break;
+//					case COMM_LINK_STD_F :
+//						break;
+//					default : // TODO: Purpose is to discard data?
+//						break;
+//				}
+//			} else {
+//				// Handle special codes here.
+//			}
+//		}
+//	}
+//}
 
 
 
@@ -522,7 +733,7 @@ task Display()
 	DisplayMode isMode = DISP_FCS;
 	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
 
-	Joystick_WaitForStart();
+	// We don't need to wait for start. ;)
 
 	while (true) {
 		Buttons_UpdateData();
@@ -550,6 +761,17 @@ task Display()
 				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
 				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				break;
+			case DISP_ENCODERS :
+				nxtDisplayTextLine(0, "FR:   %+6d", pod_raw[POD_FR]);
+				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
+				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
+				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
+				//nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
+				//nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
+				//nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
+				//nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
+				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");

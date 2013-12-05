@@ -39,7 +39,7 @@ task main()
 	const string filename = "_reset_pods.txt";
 	const string filename_temp = "_reset_pods_tmp.txt";
 	int file_size = 0;
-	const int resetRange = 2; // MAGIC_NUM: How close the program resets each pod (deg).
+	const int resetRange = 5; // MAGIC_NUM: How close the program resets each pod (deg).
 	bool isResetting = true;
 	// kP is always negative because the servos are geared (and reversed).
 	float kP[POD_NUM] = {-1.0, -1.0, -1.0, -1.0}; // MAGIC_NUM: TODO: PID tuning.

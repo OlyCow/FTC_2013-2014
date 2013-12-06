@@ -14,9 +14,9 @@
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -115,6 +115,11 @@ task main()
 		nxtDisplayCenteredTextLine(4, "%d-%d", -rot_error[POD_FL], -rot_error[POD_FR]);
 		nxtDisplayCenteredTextLine(6, "%d-%d", -rot_error[POD_BL], -rot_error[POD_BR]);
 	}
+
+	Servo_SetPower(servo_FR, 0);
+	Servo_SetPower(servo_FL, 0);
+	Servo_SetPower(servo_BL, 0);
+	Servo_SetPower(servo_BR, 0);
 
 	// Press orange button to confirm jig has been applied.
 	Display_Clear();

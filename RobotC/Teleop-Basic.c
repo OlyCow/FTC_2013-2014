@@ -16,7 +16,7 @@
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -121,7 +121,7 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 6250; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -202,6 +202,7 @@ task main()
 	float power_flag = 0.0;
 
 	Joystick_WaitForStart();
+	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Time_ClearTimer(T1);
 
 	while (true) {
@@ -294,26 +295,26 @@ task main()
 		// go to press the Joystick_L button. Resetting of the lift is registered
 		// when the joystick button is released.
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 100;
+			lift_target += 200;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
 			lift_target -= 100;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 50;
+			lift_target += 80;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50;
-		//} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
+		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 		//	lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
-		//	//Nesting these is more efficient.
-		//	if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
-		//		if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
-		//			lift_target = lift_pos_dump;
-		//		} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
-		//			lift_target = lift_pos_pickup;
-		//		}
-		//		if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
-		//			Motor_ResetEncoder(motor_lift);
-		//		}
-		//	}
+			//Nesting these is more efficient.
+			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
+				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
+					lift_target = lift_pos_dump;
+				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
+					lift_target = lift_pos_pickup;
+				}
+				//if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
+				//	Motor_ResetEncoder(motor_lift);
+				//}
+			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
 

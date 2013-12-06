@@ -52,6 +52,7 @@ float term_P_pod[POD_NUM] = {0,0,0,0};
 float translation_x = 0.0;
 float translation_y = 0.0;
 float rotation_global = 0.0;
+float heading = 0.0;
 
 // For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
@@ -111,6 +112,9 @@ bool f_flagBumperTriggered = false;
 bool f_climbBumperTriggered = false;
 bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
+// For SaveData:
+bool isTemp = false;
+
 
 
 task main()
@@ -138,10 +142,10 @@ task main()
 	const int initialize_delay = 1*1000;
 	const int wait_delay = 15*1000;
 	// TODO: Determine all the following values.
-	const int fine_tune_power = 40;
+	const int fine_tune_power = 100;
 	const int LIFT_LOW_POS = 0;
 	const int LIFT_MED_POS = 4000;
-	const int LIFT_HIGH_POS = 6000;
+	const int LIFT_HIGH_POS = 5500;
 	const short IR_threshold = 45;
 	const int servo_dump_closed = 255;
 	const int servo_dump_open = 0;
@@ -157,20 +161,30 @@ task main()
 	const int iteration_delay = 0; // For flag waving.
 	Crate crate_IR = CRATE_UNKNOWN;
 
+	float time_prev = 0.0;
+
 	Joystick_WaitForStart();
 	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
 	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
+	Servo_SetPosition(servo_funnel_L, servo_funnel_L_closed);
 	if (AUTON_WAIT==true) {
 		Time_Wait(wait_delay);
 	} else {
 		Time_Wait(initialize_delay);
 	}
 
-	// Raise the lift and move sideways until in front of the IR beacon.
-	translation_y = fine_tune_power;
-	g_lift_target = LIFT_MED_POS;
+	// Raise the lift and move sideways until in front of the IR beacon._tune_power;
+	//translation_x = fine_tune_power;
+	//lift_pos = LIFT_MED_POS;
+	//Time_Wait(500);
+	translation_x = 0;
+	for (int i=0; i<20; i++) {
+		Time_Wait(1000);
+	}
+
+	Task_Spawn(SaveData);
 }
 
 
@@ -193,7 +207,7 @@ task Drive()
 	while (true) {
 		Joystick_UpdateData();
 
-		f_angle_z += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
+		heading += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
 		Time_ClearTimer(T3);
 
 		// A rotation vector is added to translation vector, and the resultant vector
@@ -205,7 +219,7 @@ task Drive()
 		translation.x = translation_x;
 		translation.y = translation_y;
 		Vector2D_UpdateRot(translation);
-		Vector2D_Rotate(translation, -f_angle_z);
+		Vector2D_Rotate(translation, -heading);
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			rotation[i].r = rotation_global;
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
@@ -248,11 +262,12 @@ task Drive()
 
 task GyroCorrect()
 {
-	const float kP = -0.05;
+	const float kP = -100;
 	Joystick_WaitForStart();
+
 	while (true) {
-		f_angle_z = (float)kP*(float)f_angle_z;
-		nxtDisplayTextLine(7, "rot*kP:%f", f_angle_z);
+		rotation_global = (float)kP*(float)heading;
+		nxtDisplayTextLine(7, "rot*kP:%f", heading);
 	}
 }
 
@@ -818,29 +833,23 @@ task SaveData()
 	const string filename_pods = "_reset_pods.txt";
 	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
 	int file_size = 72; // Should be 64 (4 shorts).
-	bool isTemp = false;
 
-	Joystick_WaitForStart();
-
-	while (true) {
-		Task_HogCPU();
-		switch (isTemp) {
-			case false :
-				Delete(filename_pods, IO_result); // TODO: Add error handling.
-				OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
-				break;
-			case true :
-				Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
-				OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
-				break;
-		}
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
-		}
-		Close(IO_handle, IO_result);
-		Task_ReleaseCPU();
-
-		isTemp = (!isTemp); // TODO: XOR. You know the drill.
-		Time_Wait(100); // MAGIC_NUM: we don't need to save position that often.
+	Task_HogCPU();
+	//switch (isTemp) {
+	//	case false :
+			Delete(filename_pods, IO_result); // TODO: Add error handling.
+			OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
+			//break;
+	//	case true :
+	//		Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
+	//		OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
+	//		break;
+	//}
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
 	}
+	Close(IO_handle, IO_result);
+	Task_ReleaseCPU();
+
+	isTemp = (!isTemp); // TODO: XOR. You know the drill.
 }

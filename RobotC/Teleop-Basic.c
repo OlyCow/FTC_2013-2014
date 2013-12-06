@@ -472,7 +472,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {0.9,	0.9,	0.9,	0.9}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.

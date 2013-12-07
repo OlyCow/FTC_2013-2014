@@ -62,6 +62,7 @@ float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
+
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
 
@@ -123,7 +124,7 @@ task main()
 	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Drive);
-	Task_Spawn(GyroCorrect);
+	//Task_Spawn(GyroCorrect);
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
 	//Task_Spawn(Display);
@@ -139,16 +140,16 @@ task main()
 		CRATE_NUM,
 	};
 
-	const int initialize_delay = 1*1000;
+	const int initialize_delay = 500;
 	const int wait_delay = 15*1000;
 	// TODO: Determine all the following values.
 	const int fine_tune_power = 100;
 	const int LIFT_LOW_POS = 0;
 	const int LIFT_MED_POS = 4000;
-	const int LIFT_HIGH_POS = 5500;
+	const int LIFT_HIGH_POS = 5000;
 	const short IR_threshold = 45;
-	const int servo_dump_closed = 255;
-	const int servo_dump_open = 0;
+	const int servo_dump_closed = 0;
+	const int servo_dump_open = 30;
 	const int servo_dump_delay = 410;
 	// Some example values: {672,697,603-657}, {1212,1137,1218-1189}, {2246,2236,2254-2245}, {2772,2871,2960-2868}
 	const int drive_time_low[CRATE_NUM]		= {0,	920,	1720,	2550};
@@ -168,7 +169,6 @@ task main()
 	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
-	Servo_SetPosition(servo_funnel_L, servo_funnel_L_closed);
 	if (AUTON_WAIT==true) {
 		Time_Wait(wait_delay);
 	} else {
@@ -176,15 +176,24 @@ task main()
 	}
 
 	// Raise the lift and move sideways until in front of the IR beacon._tune_power;
-	//translation_x = fine_tune_power;
-	//lift_pos = LIFT_MED_POS;
-	//Time_Wait(500);
+	translation_x = AUTON_L_R*(-100);
+	Time_Wait(950);
 	translation_x = 0;
-	for (int i=0; i<20; i++) {
-		Time_Wait(1000);
-	}
+	Time_Wait(200);
+
+	rotation_global = AUTON_L_R*(-1)*100;
+	lift_target = LIFT_HIGH_POS;
+	Time_Wait(2000);
+	rotation_global = 0;
+
+	//rotation_global = 100;
+	//Time_Wait(5000);
+
+	lift_target = LIFT_LOW_POS;
+	Time_Wait(1000);
 
 	Task_Spawn(SaveData);
+	Time_Wait(500);
 }
 
 
@@ -207,7 +216,7 @@ task Drive()
 	while (true) {
 		Joystick_UpdateData();
 
-		heading += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
+		heading -= (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
 		Time_ClearTimer(T3);
 
 		// A rotation vector is added to translation vector, and the resultant vector
@@ -260,16 +269,16 @@ task Drive()
 
 
 
-task GyroCorrect()
-{
-	const float kP = -100;
-	Joystick_WaitForStart();
+//task GyroCorrect()
+//{
+//	const float kP = -100;
+//	Joystick_WaitForStart();
 
-	while (true) {
-		rotation_global = (float)kP*(float)heading;
-		nxtDisplayTextLine(7, "rot*kP:%f", heading);
-	}
-}
+//	while (true) {
+//		rotation_global = (float)kP*(float)heading;
+//		nxtDisplayTextLine(7, "rot*kP:%f", heading);
+//	}
+//}
 
 
 
@@ -409,9 +418,9 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>36) { //36 is an arbitrary number :P
+			if (abs(error_pod[i])>24) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>12) {
+			} else if (abs(error_pod[i])>8) {
 				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;

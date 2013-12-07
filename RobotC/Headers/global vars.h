@@ -22,9 +22,9 @@ servoData g_ServoData[4]; //4 continuous rotation servos.
 
 // Various servo positions.
 // MAGIC_NUM: TODO (all).
-const int lift_pos_pickup = 10;
-const int lift_pos_dump = 4000;
-const int lift_pos_top = 5000;
+const int lift_pos_pickup = 0;
+const int lift_pos_dump = 6000;
+const int lift_pos_top = 6200;
 const int servo_funnel_L_open = 230;
 const int servo_funnel_L_closed = 10;
 const int servo_funnel_R_open = -127;

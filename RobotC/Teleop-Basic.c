@@ -1,7 +1,7 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
-#pragma config(Sensor, S4,     sensor_protoboard, sensorAnalogInactive)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -170,6 +170,10 @@ bool f_flagBumperTriggered = false;
 bool f_climbBumperTriggered = false;
 bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
+vector2D rotation[POD_NUM];
+vector2D translation; // Not a struct because all wheel pods share the same values.
+vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+
 
 
 task main()
@@ -188,11 +192,11 @@ task main()
 	Task_Spawn(Display);
 	Task_Spawn(SaveData);
 
-	// Not initializing these structs for now: once data starts coming in
-	// from the controllers, all the members of these will get updated.
-	vector2D rotation[POD_NUM];
-	vector2D translation; // Not a struct because all wheel pods share the same values.
-	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	//// Not initializing these structs for now: once data starts coming in
+	//// from the controllers, all the members of these will get updated.
+	//vector2D rotation[POD_NUM];
+	//vector2D translation; // Not a struct because all wheel pods share the same values.
+	//vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
@@ -212,6 +216,19 @@ task main()
 		Time_ClearTimer(T1);
 		f_angle_z = round(heading);
 
+		// TODO: When the robot design is finalized and comms is working and all
+		// that good stuff, take this out and only use the joystick button to reset
+		// the gyro. Also update the climbing and lift controls when we finalize
+		// those as well.
+		if (Joystick_ButtonPressed(BUTTON_B)==true) {
+			f_angle_z = 0;
+			heading = 0;
+		}
+		//if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
+		//	f_angle_z = 0;
+		//	heading = 0;
+		//}
+
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
 		// each wheel pod confirms that the above algorithm works perfectly, despite
@@ -222,6 +239,7 @@ task main()
 		translation.y = Joystick_GetTranslationY();
 		Vector2D_UpdateRot(translation);
 		Vector2D_Rotate(translation, -heading);
+
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			rotation[i].r = Joystick_GetRotationMagnitude();
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
@@ -242,7 +260,7 @@ task main()
 
 		// Normalize our motors' power values if a motor's power went above g_FullPower.
 		if (shouldNormalize==true) {
-			float originalMaxPower = g_FullPower; // If there was a false positive, this ensures nothing changes.
+			float originalMaxPower = (float)g_FullPower; // If there was a false positive, this ensures nothing changes.
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				if (combined[i].r>originalMaxPower) {
 					originalMaxPower = combined[i].r;
@@ -276,19 +294,6 @@ task main()
 			}
 		}
 
-		// TODO: When the robot design is finalized and comms is working and all
-		// that good stuff, take this out and only use the joystick button to reset
-		// the gyro. Also update the climbing and lift controls when we finalize
-		// those as well.
-		if (Joystick_ButtonPressed(BUTTON_B)==true) {
-			f_angle_z = 0;
-			heading = 0;
-		}
-		if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
-			f_angle_z = 0;
-			heading = 0;
-		}
-
 		// Second driver's lift controls are overridden by the first's. The first
 		// driver can also lock the lift position by pressing the D-pad (L or R).
 		// Proper procedure for resetting lift would be to press Button_B and then
@@ -311,9 +316,9 @@ task main()
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 				}
-				//if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
-				//	Motor_ResetEncoder(motor_lift);
-				//}
+				if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
+					Motor_ResetEncoder(motor_lift);
+				}
 			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
@@ -356,13 +361,13 @@ task main()
 		}
 
 		// Driver 1 overrides driver 2 because he assigns last.
-		//if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
-		//	if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
-		//		sweepDirection = SWEEP_OUT;
-		//	} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
-		//		sweepDirection = SWEEP_IN;
-		//	} // No "else" here so that Button_B can do other stuff.
-		//}
+		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
+			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
+				sweepDirection = SWEEP_OUT;
+			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
+				sweepDirection = SWEEP_IN;
+			} // No "else" here so that Button_B can do other stuff.
+		}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
 			switch (sweepDirection) {
 				case SWEEP_IN :
@@ -427,6 +432,10 @@ task main()
 			Task_Spawn(SaveDataCmd);
 		}
 
+		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
+			sweepDirection = SWEEP_OFF;
+		}
+
 		// Set motor and servo values (lift motor is set in PID()):
 		switch (sweepDirection) {
 			case SWEEP_IN :
@@ -472,7 +481,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.9,	0.9,	0.9,	0.9}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {1.4,	1.4,	1.4,	1.4}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -483,7 +492,7 @@ task PID()
 
 	// Variables for lift PID calculations.
 	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.08;
+	float kP_lift_down	= 0.065;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -588,8 +597,8 @@ task PID()
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
 			if (abs(error_pod[i])>15) { //36 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>5) {
-				isAligned = ALIGNED_MEDIUM;
+			//} else if (abs(error_pod[i])>8) {
+			//	isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
@@ -910,10 +919,11 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
+		DISP_ARGH,
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
-		DISP_COMM_STATUS,		// Each line of each frame.
+		//DISP_COMM_STATUS,		// Each line of each frame.
 		//DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
@@ -932,6 +942,12 @@ task Display()
 
 		switch (isMode) {
 			case DISP_FCS :
+				break;
+			case DISP_ARGH :
+				nxtDisplayTextLine(0, "FR %f", combined[POD_FR].r);
+				nxtDisplayTextLine(1, "FL %f", combined[POD_FL].r);
+				nxtDisplayTextLine(2, "BL %f", combined[POD_BL].r);
+				nxtDisplayTextLine(3, "BR %f", combined[POD_BR].r);
 				break;
 			case DISP_SWERVE_DEBUG :
 				// The value of `pod_current[i]` is (should be?) between 0~360.

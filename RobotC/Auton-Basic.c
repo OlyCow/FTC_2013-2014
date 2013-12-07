@@ -27,13 +27,12 @@
 #include "Teleop-Basic.h"
 #include "subroutines.h"
 
-//#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
+#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif
 
 task Drive();
-task GyroCorrect();
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
 //task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
@@ -66,55 +65,52 @@ float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
 
-// For comms link:
-typedef enum CardinalDirection {
-	CARDINAL_DIR_N	= 0,
-	CARDINAL_DIR_W	= 1,
-	CARDINAL_DIR_S	= 2,
-	CARDINAL_DIR_E	= 3,
-	CARDINAL_DIR_NUM,
-} CardinalDirection;
-typedef enum CommLinkMode { // TODO: Make more efficient by putting vars completely inside bytes, etc.
-	COMM_LINK_STD_A,
-	COMM_LINK_STD_B,
-	COMM_LINK_STD_C,
-	COMM_LINK_STD_D,
-	COMM_LINK_STD_E,
-	COMM_LINK_STD_F,
-} CommLinkMode; // TODO: Flesh this out.
-// TODO: If there are too many variables here, start combining them, esp. the bitmaps.
-const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
-const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
-ubyte f_byte_write = 0;
-ubyte f_byte_read = 0;
-bool isClockHigh = true;
-CommLinkMode f_commLinkMode[6] = {	COMM_LINK_STD_A,
-									COMM_LINK_STD_B,
-									COMM_LINK_STD_C,
-									COMM_LINK_STD_D,
-									COMM_LINK_STD_E,
-									COMM_LINK_STD_F	};
-int f_angle_x = 0; // RobotC doesn't support unsigned ints???
-int f_angle_y = 0;
-int f_angle_z = 0;
-int f_pos_x = 0;
-int f_pos_y = 0;
-int f_pos_z = 0;
-ubyte f_closeRange[CARDINAL_DIR_NUM] = {0,0,0,0};
-int f_longRange[CARDINAL_DIR_NUM] = {0,0,0,0};
-ubyte f_lineSensorCenter[CARDINAL_DIR_NUM] = {0,0,0,0};
-ubyte f_lineSensor[CARDINAL_DIR_NUM][CARDINAL_DIR_NUM] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-byte f_cubeNum = 0;
-bool f_liftReset = false;
-bool f_podReset[POD_NUM] = {false, false, false, false};
-bool f_cubeDetectedCenter = false;
-bool f_cubeDetected[CARDINAL_DIR_NUM][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-bool f_flagBumperTriggered = false;
-bool f_climbBumperTriggered = false;
-bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
-
-// For SaveData:
-bool isTemp = false;
+//// For comms link:
+//typedef enum CardinalDirection {
+//	CARDINAL_DIR_N	= 0,
+//	CARDINAL_DIR_W	= 1,
+//	CARDINAL_DIR_S	= 2,
+//	CARDINAL_DIR_E	= 3,
+//	CARDINAL_DIR_NUM,
+//} CardinalDirection;
+//typedef enum CommLinkMode { // TODO: Make more efficient by putting vars completely inside bytes, etc.
+//	COMM_LINK_STD_A,
+//	COMM_LINK_STD_B,
+//	COMM_LINK_STD_C,
+//	COMM_LINK_STD_D,
+//	COMM_LINK_STD_E,
+//	COMM_LINK_STD_F,
+//} CommLinkMode; // TODO: Flesh this out.
+//// TODO: If there are too many variables here, start combining them, esp. the bitmaps.
+//const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
+//const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
+//ubyte f_byte_write = 0;
+//ubyte f_byte_read = 0;
+//bool isClockHigh = true;
+//CommLinkMode f_commLinkMode[6] = {	COMM_LINK_STD_A,
+//									COMM_LINK_STD_B,
+//									COMM_LINK_STD_C,
+//									COMM_LINK_STD_D,
+//									COMM_LINK_STD_E,
+//									COMM_LINK_STD_F	};
+//int f_angle_x = 0; // RobotC doesn't support unsigned ints???
+//int f_angle_y = 0;
+//int f_angle_z = 0;
+//int f_pos_x = 0;
+//int f_pos_y = 0;
+//int f_pos_z = 0;
+//ubyte f_closeRange[CARDINAL_DIR_NUM] = {0,0,0,0};
+//int f_longRange[CARDINAL_DIR_NUM] = {0,0,0,0};
+//ubyte f_lineSensorCenter[CARDINAL_DIR_NUM] = {0,0,0,0};
+//ubyte f_lineSensor[CARDINAL_DIR_NUM][CARDINAL_DIR_NUM] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+//byte f_cubeNum = 0;
+//bool f_liftReset = false;
+//bool f_podReset[POD_NUM] = {false, false, false, false};
+//bool f_cubeDetectedCenter = false;
+//bool f_cubeDetected[CARDINAL_DIR_NUM][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+//bool f_flagBumperTriggered = false;
+//bool f_climbBumperTriggered = false;
+//bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
 
 
@@ -125,9 +121,9 @@ task main()
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Drive);
 	//Task_Spawn(GyroCorrect);
-	Task_Spawn(PID);
+	//Task_Spawn(PID);
 	//Task_Spawn(CommLink);
-	//Task_Spawn(Display);
+	Task_Spawn(Display);
 	Task_Spawn(SaveData);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 
@@ -150,7 +146,6 @@ task main()
 	const short IR_threshold = 45;
 	const int servo_dump_closed = 0;
 	const int servo_dump_open = 30;
-	const int servo_dump_delay = 410;
 	// Some example values: {672,697,603-657}, {1212,1137,1218-1189}, {2246,2236,2254-2245}, {2772,2871,2960-2868}
 	const int drive_time_low[CRATE_NUM]		= {0,	920,	1720,	2550};
 	const int drive_time_high[CRATE_NUM]	= {920,	1720,	2550,	3500};
@@ -175,25 +170,27 @@ task main()
 		Time_Wait(initialize_delay);
 	}
 
-	// Raise the lift and move sideways until in front of the IR beacon._tune_power;
-	translation_x = AUTON_L_R*(-100);
-	Time_Wait(950);
-	translation_x = 0;
-	Time_Wait(200);
+	// Raise the lift and move sideways until in front of the IR beacon.
+	//translation_x = AUTON_L_R*(-100);
+	//Time_Wait(950);
+	//translation_x = 0;
+	//Time_Wait(200);
 
-	rotation_global = AUTON_L_R*(-1)*100;
-	lift_target = LIFT_HIGH_POS;
-	Time_Wait(2000);
-	rotation_global = 0;
+	//rotation_global = AUTON_L_R*(-1)*100;
+	//lift_target = LIFT_HIGH_POS;
+	//Time_Wait(2000);
+	//rotation_global = 0;
 
-	//rotation_global = 100;
-	//Time_Wait(5000);
+	rotation_global = 100;
+	EndTimeSlice();
+	Time_Wait(10000);
 
-	lift_target = LIFT_LOW_POS;
-	Time_Wait(1000);
+	//lift_target = LIFT_LOW_POS;
+	//Time_Wait(1000);
 
 	Task_Spawn(SaveData);
-	Time_Wait(500);
+	dumpCubes(4);
+	Time_Wait(3000);
 }
 
 
@@ -266,19 +263,6 @@ task Drive()
 		}
 	}
 }
-
-
-
-//task GyroCorrect()
-//{
-//	const float kP = -100;
-//	Joystick_WaitForStart();
-
-//	while (true) {
-//		rotation_global = (float)kP*(float)heading;
-//		nxtDisplayTextLine(7, "rot*kP:%f", heading);
-//	}
-//}
 
 
 
@@ -418,9 +402,9 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>24) { //36 is an arbitrary number :P
+			if (abs(error_pod[i])>10) { //10 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>8) {
+			} else if (abs(error_pod[i])>5) {
 				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
@@ -488,254 +472,6 @@ task PID()
 
 
 
-//void processCommTick()
-//{
-//	f_byte_write &= ~(1<<7); // Clear the clock bit.
-//	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
-//	HTSPBwriteIO(sensor_protoboard, f_byte_write);
-//	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
-//	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
-//}
-//task CommLink()
-//{
-//	bool isResync = true; // We start off with a resync.
-//	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-//	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-//	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
-//	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-//	bool wasCorrupted = false;
-//	bool header_write = false;
-//	bool header_read[6] = {false, false, false, false, false, false};
-//	ubyte frame_write[4] = {0,0,0,0};
-//	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-//	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
-//	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
-//	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
-//	bool isBadData[6] = {false, false, false, false, false, false};
-
-//	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
-//	Joystick_WaitForStart();
-
-//	while (true) {
-
-//		// Restart the communication link.
-//		while (isResync==true) {
-//			// First make sure we're in sync.
-//			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
-//			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
-//			while (sync_count<6) { // 3 high and 3 low.
-//				f_byte_write |= (1<<6); // Set the data bit high.
-//				processCommTick();
-//				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
-//				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
-//					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
-//						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
-//						break;
-//					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
-//						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
-//						break;
-//				}
-//				if (f_byte_read==0b11111111) {
-//					sync_count++;
-//				} else {
-//					sync_count = 0;
-//					fail_count++;
-//				}
-//			}
-//			if (isClockHigh==true) {
-//				// If so, let it go for another tick.
-//				processCommTick();
-//			}
-
-//			// Now bring the data line low for 2 clock ticks.
-//			f_byte_write &= ~(1<<6); // Clear the data bit low.
-//			processCommTick();
-//			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-//			if (f_byte_read!=0b00000000) {
-//				isResync = true;
-//				continue;
-//			} else {
-//				isResync = false;
-//			}
-//			processCommTick(); // Wait another tick...
-//			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-//			if (f_byte_read!=0b00000000) { // 0, DUH...
-//				isResync = true;
-//				continue;
-//			} else {
-//				isResync = false;
-//			}
-//			// If everything is still good at this point, go on.
-//		}
-
-//		// Write header.
-//		f_byte_write &= ~(1<<6); // Clear the data bit.
-
-//		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
-//		// TODO: use ubyte instead of bool and just use last bit.
-//		// A bool can be true but not have the last bit be on.
-//		if (header_write==true) {
-//			f_byte_write |= (1<<6);
-//		} else {
-//			f_byte_write |= (0<<6);
-//		}
-//		processCommTick();
-
-//		// Read in all 6 data lines.
-//		for (int line=0; line<6; line++) {
-//			current_index_mask = 0; // Clear mask.
-//			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
-
-//			// No fancy shifting needed here (header_read is a bool).
-//			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
-//		}
-
-//		// Data:
-//		for (int line=0; line<6; line++) {
-//			check_read_ack[line] = 0; // Clear parity bits.
-//		}
-//		for (int bit=0; bit<32; bit++) {
-//			// Set MOSI.
-//			f_byte_write &= ~(1<<6); // Clear the data bit.
-//			current_index_mask = 0; // Clear mask.
-//			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
-
-//			// Intentional int division (returns intended byte) (see next statement).
-//			// Using a temp var because `true!=1` (can be any positive int); statement
-//			// also clears byte_temp because the mask was cleared (and now AND'd).
-//			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
-
-//			// TODO: combine the two shifts below into one shift.
-//			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
-//			f_byte_write |= (byte_temp<<6); // Set the data bit.
-
-//			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
-//			processCommTick();
-
-//			// Read in all 6 data lines (MISO).
-//			for (int line=0; line<6; line++) {
-//				// TODO: Optimize by (maybe?) making assigning this cyclically.
-//				// Would only work for the inner-most loop, since this variable
-//				// is reused outside of the loop (for every "for" statement).
-//				// Also see note in check bit part about eliminating "for" loop.
-//				current_index_mask = 0; // Clear mask.
-//				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
-//				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
-//				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
-
-//				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-//				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
-
-//				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
-//				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
-//				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
-//			}
-//		}
-
-//		// Check bits. `bit`="current bit".
-//		for (int bit=0; bit<4; bit++) {
-//			// Write check bit.
-//			f_byte_write &= ~(1<<6); // Clear the data bit.
-//			current_index_mask = 0; // Clear mask.
-//			current_index_mask |= (1<<bit); // Set the data bit we want to find.
-
-//			// See same operation for data. This is essentially the same logic.
-//			byte_temp = check_write&current_index_mask;
-
-//			// TODO: combine the two shifts below into one shift.
-//			byte_temp = byte_temp>>bit;
-//			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
-//			processCommTick();
-
-//			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
-//			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
-//			for (int line=0; line<6; line++) {
-//				current_index_mask = 0; // Clear the mask.
-//				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
-//				check_read[line] &= ~(1<<bit); // Clear the bit.
-//				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
-
-//				if (check_read[line]!=check_read_ack[line]) {
-//					isBadData[line] = true;
-//					error_num++;
-//					wasCorrupted = true;
-//				} else {
-//					isBadData[line] = false;
-//				}
-//			}
-//		}
-//		check_write = 0; // Clear this now that we've sent it already.
-
-//		if (error_num>max_error_num) {
-//			isResync = true; // This happens at the beginning of the next iteration.
-//			error_num = 0;
-//			wasCorrupted = false;
-//		} else if ((error_num!=0)&&(wasCorrupted==false)) {
-//			error_num = 0; // Not a consecutive error.
-//		} else if (error_num==0) {
-//			wasCorrupted = false;
-//		}
-
-//		// TODO: Assign data to whatever the I/O lines are set to.
-//		// TODO: Check this section of code for integrity.
-//		for (int line=0; line<6; line++) {
-//			if (isBadData[line]==true) {
-//				continue;
-//			}
-//			if (header_read[line]==false) {
-//				switch (f_commLinkMode) {
-//					case COMM_LINK_STD_A :
-//						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-//						f_pos_x = frame_read[line][0];
-//						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
-//						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
-//						Task_ReleaseCPU();
-//						Task_HogCPU();
-//						f_angle_x = frame_read[line][1];
-//						f_angle_x &= 0b01111111;
-//						Task_ReleaseCPU();
-//						break;
-//					case COMM_LINK_STD_B :
-//						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-//						f_pos_y = frame_read[line][0];
-//						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
-//						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
-//						Task_ReleaseCPU();
-//						Task_HogCPU();
-//						f_angle_y = frame_read[line][1];
-//						f_angle_y &= 0b01111111;
-//						Task_ReleaseCPU();
-//						break;
-//					case COMM_LINK_STD_C :
-//						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-//						//f_pos_z = frame_read[line][0];
-//						//f_pos_z = f_pos_z>>2; // We just read two extra bits.
-//						//f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
-//						//Task_ReleaseCPU();
-//						//Task_HogCPU();
-//						//f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
-//						//byte_temp = frame_read[line][0]&0b00000011;
-//						//f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
-//						//Task_ReleaseCPU();
-//						break;
-//					case COMM_LINK_STD_D :
-//						break;
-//					case COMM_LINK_STD_E :
-//						break;
-//					case COMM_LINK_STD_F :
-//						break;
-//					default : // TODO: Purpose is to discard data?
-//						break;
-//				}
-//			} else {
-//				// Handle special codes here.
-//			}
-//		}
-//	}
-//}
-
-
-
 // Task for displaying data on the NXT's LCD screen.
 // TODO: Put a lot of the display stuff into loops. Do we want to?
 task Display()
@@ -745,12 +481,7 @@ task Display()
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
-		DISP_COMM_STATUS,		// Each line of each frame.
-		//DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
-		//DISP_SERVOS,			// Show each servo's position.
-		//DISP_TASKS,				// Which tasks are running.
-		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM,
 	};
 
@@ -791,10 +522,6 @@ task Display()
 				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
 				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
 				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
-				//nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
-				//nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
-				//nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
-				//nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				break;
 			case DISP_JOYSTICKS :
@@ -840,25 +567,13 @@ task SaveData()
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
 	const string filename_pods = "_reset_pods.txt";
-	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
 	int file_size = 72; // Should be 64 (4 shorts).
-
 	Task_HogCPU();
-	//switch (isTemp) {
-	//	case false :
-			Delete(filename_pods, IO_result); // TODO: Add error handling.
-			OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
-			//break;
-	//	case true :
-	//		Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
-	//		OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
-	//		break;
-	//}
+	Delete(filename_pods, IO_result); // TODO: Add error handling.
+	OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
 	}
 	Close(IO_handle, IO_result);
 	Task_ReleaseCPU();
-
-	isTemp = (!isTemp); // TODO: XOR. You know the drill.
 }

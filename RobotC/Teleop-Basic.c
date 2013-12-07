@@ -170,10 +170,6 @@ bool f_flagBumperTriggered = false;
 bool f_climbBumperTriggered = false;
 bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
-vector2D rotation[POD_NUM];
-vector2D translation; // Not a struct because all wheel pods share the same values.
-vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
-
 
 
 task main()
@@ -192,11 +188,11 @@ task main()
 	Task_Spawn(Display);
 	Task_Spawn(SaveData);
 
-	//// Not initializing these structs for now: once data starts coming in
-	//// from the controllers, all the members of these will get updated.
-	//vector2D rotation[POD_NUM];
-	//vector2D translation; // Not a struct because all wheel pods share the same values.
-	//vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	// Not initializing these structs for now: once data starts coming in
+	// from the controllers, all the members of these will get updated.
+	vector2D rotation[POD_NUM];
+	vector2D translation; // Not a struct because all wheel pods share the same values.
+	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
@@ -325,11 +321,9 @@ task main()
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
-			//dumpCubes(2); // MAGIC_NUM.
-			Servo_SetPosition(servo_dump, servo_dump_open);
+			dumpCubes(2); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			//dumpCubes(4); // MAGIC_NUM.
-			Servo_SetPosition(servo_dump, servo_dump_closed);
+			dumpCubes(4); // MAGIC_NUM.
 		}
 
 		// Only `CONTROLLER_2` can funnel cubes in.
@@ -595,10 +589,10 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>15) { //36 is an arbitrary number :P
+			if (abs(error_pod[i])>12) { //12 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			//} else if (abs(error_pod[i])>8) {
-			//	isAligned = ALIGNED_MEDIUM;
+			} else if (abs(error_pod[i])>6) {
+				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
@@ -919,7 +913,6 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
-		DISP_ARGH,
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
@@ -942,12 +935,6 @@ task Display()
 
 		switch (isMode) {
 			case DISP_FCS :
-				break;
-			case DISP_ARGH :
-				nxtDisplayTextLine(0, "FR %f", combined[POD_FR].r);
-				nxtDisplayTextLine(1, "FL %f", combined[POD_FL].r);
-				nxtDisplayTextLine(2, "BL %f", combined[POD_BL].r);
-				nxtDisplayTextLine(3, "BR %f", combined[POD_BR].r);
 				break;
 			case DISP_SWERVE_DEBUG :
 				// The value of `pod_current[i]` is (should be?) between 0~360.

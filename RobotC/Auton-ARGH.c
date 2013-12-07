@@ -72,48 +72,24 @@ task main()
 	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Drive);
-	//Task_Spawn(GyroCorrect);
-	//Task_Spawn(PID);
-	//Task_Spawn(CommLink);
+	Task_Spawn(PID);
 	Task_Spawn(Display);
 	Task_Spawn(SaveData);
-	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 
-	typedef enum Crate {
-		CRATE_UNKNOWN	= -1,
-		CRATE_OUTER_A	= 0,
-		CRATE_INNER_A	= 1,
-		CRATE_INNER_B	= 2,
-		CRATE_OUTER_B	= 3,
-		CRATE_NUM,
-	};
-
-	const int initialize_delay = 500;
-	const int wait_delay = 15*1000;
-	// TODO: Determine all the following values.
-	const int fine_tune_power = 100;
-	const int LIFT_LOW_POS = 0;
-	const int LIFT_MED_POS = 4000;
-	const int LIFT_HIGH_POS = 5000;
-	const short IR_threshold = 45;
-	const int servo_dump_closed = 0;
-	const int servo_dump_open = 30;
-	// Some example values: {672,697,603-657}, {1212,1137,1218-1189}, {2246,2236,2254-2245}, {2772,2871,2960-2868}
-	const int drive_time_low[CRATE_NUM]		= {0,	920,	1720,	2550};
-	const int drive_time_high[CRATE_NUM]	= {920,	1720,	2550,	3500};
-	const int drive_time_mid[CRATE_NUM]		= {610,	1190,	1900,	2800};
-	const int dump_time = 380;
-	const int start_to_first_turn_time = 3840; // milliseconds?
-	const int first_turn_to_second_turn_time = 2000; // milliseconds?
-	const int second_turn_to_ramp_time = 3000; // milliseconds?
-	const int iteration_delay = 0; // For flag waving.
-	Crate crate_IR = CRATE_UNKNOWN;
-
-	float time_prev = 0.0;
+	const int initialize_delay	= 500;
+	const int wait_delay		= 15*1000;
+	const int pause_delay		= 200;
+	const int LIFT_LOW_POS		= 0;
+	const int LIFT_MED_POS		= 4000;
+	const int LIFT_HIGH_POS		= 5000;
+	const int servo_dump_closed	= 0;
+	const int servo_dump_open	= 30;
+	const int backward_time		= 950;
+	const int onto_ramp_time	= 500;
+	const int ramp_forward_time	= 300;
+	const int ramp_lift_delay	= 3000;
 
 	Joystick_WaitForStart();
-	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
-	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	if (AUTON_WAIT==true) {
@@ -123,26 +99,30 @@ task main()
 	}
 
 	// Raise the lift and move sideways until in front of the IR beacon.
-	//translation_x = AUTON_L_R*(-100);
-	//Time_Wait(950);
-	//translation_x = 0;
-	//Time_Wait(200);
+	translation_y = -g_FullPower;
+	Time_Wait(backward_time);
+	translation_y = 0;
+	Time_Wait(pause_delay);
 
-	//rotation_global = AUTON_L_R*(-1)*100;
-	//lift_target = LIFT_HIGH_POS;
-	//Time_Wait(2000);
-	//rotation_global = 0;
+	translation_x = AUTON_L_R*(g_FullPower);
+	Time_Wait(onto_ramp_time);
+	translation_x = 0;
+	lift_target = LIFT_HIGH_POS;
+	Time_Wait(pause_delay);
 
-	rotation_global = 100;
-	EndTimeSlice();
-	Time_Wait(10000);
-
-	//lift_target = LIFT_LOW_POS;
-	//Time_Wait(1000);
+	translation_y = g_FullPower;
+	Time_Wait(ramp_forward_time);
+	translation_y = 0;
+	Time_Wait(ramp_lift_delay);
 
 	Task_Spawn(SaveData);
 	dumpCubes(4);
 	Time_Wait(3000);
+
+	lift_target = LIFT_LOW_POS;
+	while (true) {
+		Time_Wait(initialize_delay); // We don't want the lift to be unable to be raised.
+	}
 }
 
 
@@ -433,12 +413,7 @@ task Display()
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
-		DISP_COMM_STATUS,		// Each line of each frame.
-		//DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
-		//DISP_SERVOS,			// Show each servo's position.
-		//DISP_TASKS,				// Which tasks are running.
-		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM,
 	};
 

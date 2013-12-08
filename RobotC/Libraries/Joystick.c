@@ -146,13 +146,12 @@ int  Joystick_Joystick(	JoystickLR Joystick,
 // avoid conflict with name of built-in struct `joystick`.
 float	Joystick_GenericInput(	JoystickLR Joystick,
 								JoystickAxis axis,
-								Controller controller=CONTROLLER_1)
+								Controller controller)
 {
 	float return_value;
 	return_value = Joystick_Joystick(Joystick, axis, controller);
 	return_value = Math_TrimDeadband(return_value);
-	return_value = Math_Normalize(return_value, g_JoystickMax, g_FullPower);
-	return_value = Math_ResponseCurve(return_value);
+	return_value = Math_ResponseCurve(return_value, g_FullPower);
 	return return_value;
 }
 

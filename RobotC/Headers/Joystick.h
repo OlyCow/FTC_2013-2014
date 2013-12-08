@@ -1,6 +1,8 @@
 #ifndef JOYSTICK_H
 #define JOYSTICK_H
 #pragma systemFile
+#include "Math.h"
+#include "Motor.h"
 
 
 
@@ -57,9 +59,6 @@ typedef struct joystickData {
 } joystickData;
 
 
-
-// Highest "noise" we've ever recorded is +/-8.
-const int g_JoystickDeadband = 10;
 
 // The highest value one axis of a joystick can go to.
 const int g_JoystickMax = 128;

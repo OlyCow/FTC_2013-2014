@@ -9,8 +9,8 @@ typedef enum WheelPod {
 	POD_FL = 1,
 	POD_BL = 2,
 	POD_BR = 3,
-	POD_NUM, // Should this be hard-coded to be 4?
-};
+	POD_NUM,
+} WheelPod;
 
 typedef enum Servo {
 	SERVO_FR = 0,
@@ -18,13 +18,13 @@ typedef enum Servo {
 	SERVO_BL = 2,
 	SERVO_BR = 3,
 	SERVO_NUM,
-};
+} Servo;
 
 typedef struct motorData {
-	bool isReversed;
-	int angleOffset;
-	float fineTuneFactor;
-	int power;
+	bool	isReversed;
+	int		angleOffset;
+	float	fineTuneFactor;
+	int		power;
 } motorData;
 
 typedef struct servoData {
@@ -37,16 +37,18 @@ typedef struct servoData {
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 
 // The threshold for IR values to count as detected.
-const int g_IRthreshold = 10; //units?
+const int g_IRthreshold = 10; // arbitrary units from 0~1024.
 
-// This number is just a working guess. Not verified at all.
+// TODO: This number is just a guess. Not verified at all.
 const float g_EncoderDeadband = 1.0;
 
-// Various structs, initialized in `initializeGlobalVariables()`.
-motorData g_MotorData[4]; //4 drive base motors.
-servoData g_ServoData[4]; //4 continuous rotation servos.
+// Transfers data between tasks. These have physical significance,
+// such as the positioning of each pod (relative to the center of
+// the robot. Both are initialized in `initializeRobotVariables()`.
+motorData g_MotorData[POD_NUM];
+servoData g_ServoData[POD_NUM];
 
-// Various servo positions.
+// Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup = 0;
 const int lift_pos_dump = 6000;
@@ -61,9 +63,14 @@ const int servo_flag_L = -127;
 const int servo_flag_R = 128;
 const int servo_flag_M = 0;
 
+// `waveFlagTask` uses this to decide whether to start a new instance.
 bool f_isWavingFlag = false;
-int f_waveNum = 3;
-int f_cubeDumpNum = 4;
+
+// Transfers the number of waves to `waveFlagTask` (can't pass to tasks).
+int f_waveNum = 3; // MAGIC_NUM: Seems suitable.
+
+// Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
+int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.
 
 tMotor	Motor_Convert(Motor motorName);
 Motor	Motor_Convert(tMotor motorName);
@@ -72,9 +79,9 @@ Servo	Servo_Convert(TServoIndex servoName); // TODO: Doesn't work.
 
 void initializeRobotVariables();
 
-void dumpCubes(int num=4);
+void dumpCubes(int num=4); // MAGIC_NUM.
 task dumpCubesTask();
-void waveFlag(int waveNum=4);
+void waveFlag(int waveNum=3); // MAGIC_NUM.
 task waveFlagTask();
 
 
@@ -151,47 +158,35 @@ Servo	Servo_Convert(TServoIndex servoName) {
 	}
 	return conversion;
 }
-float	Joystick_GetTranslationX() {
-	return Math_Limit(
-			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
-}
-float	Joystick_GetTranslationY() {
-	return Math_Limit(
-			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
-}
-float	Joystick_GetRotationMagnitude() {
-	return -Math_Limit(
-			Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_L, AXIS_X)), g_FullPower);
-}
 
-void initializeRobotVariables() {
-	nMotorEncoder[motor_FR] = 0;
-	nMotorEncoder[motor_FL] = 0;
-	nMotorEncoder[motor_BL] = 0;
-	nMotorEncoder[motor_BR] = 0;
+void initializeRobotVariables()
+{
+	Motor_ResetEncoder(motor_lift);
 
+	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[MOTOR_FR].angleOffset = 45;
 	g_MotorData[MOTOR_FL].angleOffset = 135;
 	g_MotorData[MOTOR_BL].angleOffset = -135;
 	g_MotorData[MOTOR_BR].angleOffset = -45;
 
-	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		Motor_ResetEncoder(Motor_Convert((Motor)i));
+
 		g_MotorData[i].isReversed = false;
 		g_MotorData[i].fineTuneFactor = 1;
-	}
-
-	for (int i=MOTOR_FR; i<=(int)MOTOR_BR; i++) {
-		g_ServoData[i].angle = 90;	// These should start out facing forward.
+		g_MotorData[i].power = 0;
+		g_ServoData[i].angle = 0;
 		g_ServoData[i].power = 0;
 	}
 }
 
-void dumpCubes(int num) {
+void dumpCubes(int num)
+{
 	f_cubeDumpNum = num;
 	Task_Spawn(dumpCubesTask);
 }
-
-task dumpCubesTask() {
+task dumpCubesTask()
+{
 	const int short_delay = 160; // MAGIC_NUM: TODO. (milliseconds)
 	const int long_delay = 1600; // MAGIC_NUM: TODO. (milliseconds)
 	Servo_SetPosition(servo_dump, servo_dump_open);
@@ -202,13 +197,13 @@ task dumpCubesTask() {
 	}
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 }
-
-void waveFlag(int waveNum) {
+void waveFlag(int waveNum)
+{
 	f_waveNum = waveNum;
 	Task_Spawn(waveFlagTask);
 }
-
-task waveFlagTask() {
+task waveFlagTask()
+{
 	f_isWavingFlag = true;
 
 	// MAGIC_NUM: TODO.

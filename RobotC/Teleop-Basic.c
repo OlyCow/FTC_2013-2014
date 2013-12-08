@@ -29,7 +29,7 @@
 #include "includes.h"
 #include "swerve-drive.h"
 
-#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
+//#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif
@@ -196,6 +196,7 @@ task main()
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	float rotation_temp = 0.0; // So we only fetch data from joysticks once.
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
@@ -235,13 +236,14 @@ task main()
 		// its apparent simplicity. Use of the Vector2D library makes some of this
 		// slightly less efficient (there are some unnecessary update calculations)
 		// but the benefit of increased readability is well worth it.
-		translation.x = Joystick_GetTranslationX();
-		translation.y = Joystick_GetTranslationY();
+		translation.x = Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
+		translation.y = Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
 		Vector2D_UpdateRot(translation);
 		Vector2D_Rotate(translation, -heading);
+		rotation_temp = -Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_L, AXIS_X)), g_FullPower);
 
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			rotation[i].r = Joystick_GetRotationMagnitude();
+			rotation[i].r = rotation_temp;
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
 			Vector2D_UpdatePos(rotation[i]);
 			Vector2D_Add(rotation[i], translation, combined[i]);

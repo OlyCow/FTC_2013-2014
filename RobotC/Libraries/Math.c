@@ -110,6 +110,9 @@ float Math_Normalize(float input, float originalMax, float newMax) {
 	return input*newMax/originalMax;
 }
 float Math_ResponseCurve(float input, float max) {
+	float return_value = input*input;
+	return_value /= max; // Because math.
+	return return_value;
 }
 float Math_Sin(float input, AngleUnit inputUnit, AngleUnit outputUnit) {
 	float return_value = 0.0;

@@ -23,8 +23,8 @@
 #pragma config(Servo,  srvo_S2_C2_2,    servo_feeder_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo_climb_L,        tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_4,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_5,    servo_IR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_6,    servo_gimbal,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_line_follow,    tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_ultrasonic,     tServoStandard)
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -112,9 +112,9 @@ float power_lift = 0.0;
 int lift_target = 0;
 int servo_funnel_L_pos = servo_funnel_L_open;
 int servo_funnel_R_pos = servo_funnel_R_open;
-float term_P_pod[POD_NUM] = {0,0,0,0};
 
 // For PID:
+float term_P_pod[POD_NUM] = {0,0,0,0};
 float term_I_pod[POD_NUM] = {0,0,0,0};
 float term_D_pod[POD_NUM] = {0,0,0,0};
 float encoder_pod[POD_NUM] = {0,0,0,0};
@@ -975,10 +975,10 @@ task Display()
 				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(0, "FR:   %+6d", pod_raw[POD_FR]);
-				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
-				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
-				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
+				nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
+				nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
+				nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
+				nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;

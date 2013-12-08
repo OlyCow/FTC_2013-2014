@@ -22,8 +22,8 @@ void dumpCubes(int num) {
 }
 
 task dumpCubesTask() {
-	const int short_delay = 0; // MAGIC_NUM: TODO. (milliseconds)
-	const int long_delay = 0; // MAGIC_NUM: TODO. (milliseconds)
+	const int short_delay = 160; // MAGIC_NUM: TODO. (milliseconds)
+	const int long_delay = 1600; // MAGIC_NUM: TODO. (milliseconds)
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	if (f_cubeDumpNum<4) {
 		Time_Wait(short_delay);

@@ -1,22 +1,24 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_climb,   tmotorTetrix, openLoop, reversed)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -33,9 +35,10 @@
 #endif
 
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-task CommLink(); // Reads/writes to the protoboard as tightly as possible.
+//task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task SaveData();
+task SaveDataCmd();
 task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
@@ -82,7 +85,7 @@ task Autonomous(); // Ooooh.
 //				Controller_2, Button_RB:	Dump 2 cubes.
 //				Controller_2, Button_LT:	Toggles left funnel.
 //				Controller_2, Button_RT:	Toggles right funnel.
-//				Controller_2, Button_A:		[UNUSED]
+//				Controller_2, Button_A:		Save pod reset data.
 //				Controller_2, Button_B:		Reset lift (w/ Button_JL).
 //				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
 //				Controller_2, Button_Joy_R:	[UNUSED]
@@ -101,6 +104,9 @@ task Autonomous(); // Ooooh.
 // For control flow:
 bool isAutonomous = false;
 
+// For saving pod reset data.
+bool isTemp = false;
+
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
@@ -117,7 +123,7 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 5800; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -180,7 +186,7 @@ task main()
 	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	Task_Spawn(CommLink);
+	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(SaveData);
 
@@ -189,22 +195,38 @@ task main()
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
-	float combined_angle_prev[POD_NUM] = {0,0,0,0};
-	//float combined_angle_prev[POD_NUM] = {90.0,90.0,90.0,90.0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0. `90` starts facing forward.
+	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
+	float heading = 0.0; // Because f_angle_z is an int.
 
 	SweepDirection sweepDirection = SWEEP_OFF;
 	float power_flag = 0.0;
+	float power_climb = 0.0;
 
 	Joystick_WaitForStart();
+	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Time_ClearTimer(T1);
 
 	while (true) {
 		Joystick_UpdateData();
 
-		f_angle_z += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T1)/(float)1000.0;
+		heading -= (float)HTGYROreadRot(sensor_protoboard)*((float)Time_GetTime(T1)/(float)1000.0);
 		Time_ClearTimer(T1);
+		f_angle_z = round(heading);
+
+		// TODO: When the robot design is finalized and comms is working and all
+		// that good stuff, take this out and only use the joystick button to reset
+		// the gyro. Also update the climbing and lift controls when we finalize
+		// those as well.
+		if (Joystick_ButtonPressed(BUTTON_B)==true) {
+			f_angle_z = 0;
+			heading = 0;
+		}
+		//if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
+		//	f_angle_z = 0;
+		//	heading = 0;
+		//}
 
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
@@ -215,7 +237,8 @@ task main()
 		translation.x = Joystick_GetTranslationX();
 		translation.y = Joystick_GetTranslationY();
 		Vector2D_UpdateRot(translation);
-		Vector2D_Rotate(translation, -f_angle_z);
+		Vector2D_Rotate(translation, -heading);
+
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			rotation[i].r = Joystick_GetRotationMagnitude();
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
@@ -236,7 +259,7 @@ task main()
 
 		// Normalize our motors' power values if a motor's power went above g_FullPower.
 		if (shouldNormalize==true) {
-			float originalMaxPower = g_FullPower; // If there was a false positive, this ensures nothing changes.
+			float originalMaxPower = (float)g_FullPower; // If there was a false positive, this ensures nothing changes.
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				if (combined[i].r>originalMaxPower) {
 					originalMaxPower = combined[i].r;
@@ -262,23 +285,12 @@ task main()
 			}
 		} else if (Joystick_Button(BUTTON_RT)==true) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0.2; // MAGIC_NUM.
+				g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
 			}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
 			}
-		}
-
-		// TODO: When the robot design is finalized and comms is working and all
-		// that good stuff, take this out and only use the joystick button to reset
-		// the gyro. Also update the climbing and lift controls when we finalize
-		// those as well.
-		if (Joystick_ButtonPressed(BUTTON_B)==true) {
-			f_angle_z = 0;
-		}
-		if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
-			f_angle_z = 0;
 		}
 
 		// Second driver's lift controls are overridden by the first's. The first
@@ -287,15 +299,15 @@ task main()
 		// go to press the Joystick_L button. Resetting of the lift is registered
 		// when the joystick button is released.
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 100;
+			lift_target += 160;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
 			lift_target -= 100;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 50;
+			lift_target += 80;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+		//	lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 			//Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
@@ -303,8 +315,9 @@ task main()
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 				}
-				if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
-					Motor_ResetEncoder(motor_lift);
+				if (Joystick_ButtonReleased(BUTTON_JOYR, CONTROLLER_2)==true) {
+					//Motor_ResetEncoder(motor_lift);
+					Motor_SetPower(motor_lift, 0);
 				}
 			}
 		}
@@ -313,10 +326,9 @@ task main()
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
 			//dumpCubes(2); // MAGIC_NUM.
-			Servo_SetPosition(servo_dump, servo_dump_open);
+			dumpCubes(4);
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			//dumpCubes(4); // MAGIC_NUM.
-			Servo_SetPosition(servo_dump, servo_dump_closed);
+			dumpCubes(4); // MAGIC_NUM.
 		}
 
 		// Only `CONTROLLER_2` can funnel cubes in.
@@ -348,13 +360,13 @@ task main()
 		}
 
 		// Driver 1 overrides driver 2 because he assigns last.
-		//if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
-		//	if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
-		//		sweepDirection = SWEEP_OUT;
-		//	} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
-		//		sweepDirection = SWEEP_IN;
-		//	} // No "else" here so that Button_B can do other stuff.
-		//}
+		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
+			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
+				sweepDirection = SWEEP_OUT;
+			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
+				sweepDirection = SWEEP_IN;
+			} // No "else" here so that Button_B can do other stuff.
+		}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
 			switch (sweepDirection) {
 				case SWEEP_IN :
@@ -386,9 +398,18 @@ task main()
 		if (Joystick_Button(BUTTON_X)==true) {
 			power_flag = g_FullPower; // TODO: get rid of this when we get comms working.
 			// Climb "down" instead.
+		} else {
+			power_flag = 0;
 		}
 		if (Joystick_Button(BUTTON_Y)==true) {
+			power_climb = g_FullPower;
 			// Climb "up".
+		} else if (Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2)<=-50) {
+			power_climb = -g_FullPower;
+		} else if (Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2)>=50) {
+			power_climb = g_FullPower;
+		} else {
+			power_climb = 0;
 		}
 		// TODO: Depending on how climbing works, control with driver 2's joystick_R.
 
@@ -414,6 +435,15 @@ task main()
 			}
 		}
 
+		// Save the pod reset data to one of two files.
+		if (Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2)==true) {
+			Task_Spawn(SaveDataCmd);
+		}
+
+		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
+			sweepDirection = SWEEP_OFF;
+		}
+
 		// Set motor and servo values (lift motor is set in PID()):
 		switch (sweepDirection) {
 			case SWEEP_IN :
@@ -428,8 +458,8 @@ task main()
 		}
 		// TODO: make the flag and climbing stuff actually work according to how
 		// our robot functions. This may take a while. :P
-		Motor_SetPower(power_flag, motor_flag_L);
-		Motor_SetPower(power_flag, motor_flag_R);
+		Motor_SetPower(power_flag, motor_flag);
+		Motor_SetPower(power_climb, motor_climb);
 		Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
 		Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
 	}
@@ -459,7 +489,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {1.4,	1.4,	1.4,	1.4}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -470,7 +500,7 @@ task PID()
 
 	// Variables for lift PID calculations.
 	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.08;
+	float kP_lift_down	= 0.065;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -573,9 +603,9 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>36) { //36 is an arbitrary number :P
+			if (abs(error_pod[i])>12) { //12 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>12) {
+			} else if (abs(error_pod[i])>6) {
 				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
@@ -643,251 +673,251 @@ task PID()
 
 
 
-void processCommTick()
-{
-	f_byte_write &= ~(1<<7); // Clear the clock bit.
-	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
-	HTSPBwriteIO(sensor_protoboard, f_byte_write);
-	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
-	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
-}
-task CommLink()
-{
-	bool isResync = true; // We start off with a resync.
-	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
-	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	bool wasCorrupted = false;
-	bool header_write = false;
-	bool header_read[6] = {false, false, false, false, false, false};
-	ubyte frame_write[4] = {0,0,0,0};
-	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
-	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
-	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
-	bool isBadData[6] = {false, false, false, false, false, false};
+//void processCommTick()
+//{
+//	f_byte_write &= ~(1<<7); // Clear the clock bit.
+//	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
+//	HTSPBwriteIO(sensor_protoboard, f_byte_write);
+//	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
+//	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
+//}
+//task CommLink()
+//{
+//	bool isResync = true; // We start off with a resync.
+//	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+//	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+//	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
+//	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
+//	bool wasCorrupted = false;
+//	bool header_write = false;
+//	bool header_read[6] = {false, false, false, false, false, false};
+//	ubyte frame_write[4] = {0,0,0,0};
+//	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+//	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
+//	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
+//	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
+//	bool isBadData[6] = {false, false, false, false, false, false};
 
-	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
-	Joystick_WaitForStart();
+//	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
+//	Joystick_WaitForStart();
 
-	while (true) {
+//	while (true) {
 
-		// Restart the communication link.
-		while (isResync==true) {
-			// First make sure we're in sync.
-			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
-			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
-			while (sync_count<6) { // 3 high and 3 low.
-				f_byte_write |= (1<<6); // Set the data bit high.
-				processCommTick();
-				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
-				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
-					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
-						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
-						break;
-					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
-						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
-						break;
-				}
-				if (f_byte_read==0b11111111) {
-					sync_count++;
-				} else {
-					sync_count = 0;
-					fail_count++;
-				}
-			}
-			if (isClockHigh==true) {
-				// If so, let it go for another tick.
-				processCommTick();
-			}
+//		// Restart the communication link.
+//		while (isResync==true) {
+//			// First make sure we're in sync.
+//			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
+//			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
+//			while (sync_count<6) { // 3 high and 3 low.
+//				f_byte_write |= (1<<6); // Set the data bit high.
+//				processCommTick();
+//				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
+//				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
+//					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
+//						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
+//						break;
+//					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
+//						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
+//						break;
+//				}
+//				if (f_byte_read==0b11111111) {
+//					sync_count++;
+//				} else {
+//					sync_count = 0;
+//					fail_count++;
+//				}
+//			}
+//			if (isClockHigh==true) {
+//				// If so, let it go for another tick.
+//				processCommTick();
+//			}
 
-			// Now bring the data line low for 2 clock ticks.
-			f_byte_write &= ~(1<<6); // Clear the data bit low.
-			processCommTick();
-			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b00000000) {
-				isResync = true;
-				continue;
-			} else {
-				isResync = false;
-			}
-			processCommTick(); // Wait another tick...
-			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b00000000) { // 0, DUH...
-				isResync = true;
-				continue;
-			} else {
-				isResync = false;
-			}
-			// If everything is still good at this point, go on.
-		}
+//			// Now bring the data line low for 2 clock ticks.
+//			f_byte_write &= ~(1<<6); // Clear the data bit low.
+//			processCommTick();
+//			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+//			if (f_byte_read!=0b00000000) {
+//				isResync = true;
+//				continue;
+//			} else {
+//				isResync = false;
+//			}
+//			processCommTick(); // Wait another tick...
+//			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+//			if (f_byte_read!=0b00000000) { // 0, DUH...
+//				isResync = true;
+//				continue;
+//			} else {
+//				isResync = false;
+//			}
+//			// If everything is still good at this point, go on.
+//		}
 
-		// Write header.
-		f_byte_write &= ~(1<<6); // Clear the data bit.
+//		// Write header.
+//		f_byte_write &= ~(1<<6); // Clear the data bit.
 
-		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
-		// TODO: use ubyte instead of bool and just use last bit.
-		// A bool can be true but not have the last bit be on.
-		if (header_write==true) {
-			f_byte_write |= (1<<6);
-		} else {
-			f_byte_write |= (0<<6);
-		}
-		processCommTick();
+//		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
+//		// TODO: use ubyte instead of bool and just use last bit.
+//		// A bool can be true but not have the last bit be on.
+//		if (header_write==true) {
+//			f_byte_write |= (1<<6);
+//		} else {
+//			f_byte_write |= (0<<6);
+//		}
+//		processCommTick();
 
-		// Read in all 6 data lines.
-		for (int line=0; line<6; line++) {
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
+//		// Read in all 6 data lines.
+//		for (int line=0; line<6; line++) {
+//			current_index_mask = 0; // Clear mask.
+//			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
 
-			// No fancy shifting needed here (header_read is a bool).
-			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
-		}
+//			// No fancy shifting needed here (header_read is a bool).
+//			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+//		}
 
-		// Data:
-		for (int line=0; line<6; line++) {
-			check_read_ack[line] = 0; // Clear parity bits.
-		}
-		for (int bit=0; bit<32; bit++) {
-			// Set MOSI.
-			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
+//		// Data:
+//		for (int line=0; line<6; line++) {
+//			check_read_ack[line] = 0; // Clear parity bits.
+//		}
+//		for (int bit=0; bit<32; bit++) {
+//			// Set MOSI.
+//			f_byte_write &= ~(1<<6); // Clear the data bit.
+//			current_index_mask = 0; // Clear mask.
+//			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
 
-			// Intentional int division (returns intended byte) (see next statement).
-			// Using a temp var because `true!=1` (can be any positive int); statement
-			// also clears byte_temp because the mask was cleared (and now AND'd).
-			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+//			// Intentional int division (returns intended byte) (see next statement).
+//			// Using a temp var because `true!=1` (can be any positive int); statement
+//			// also clears byte_temp because the mask was cleared (and now AND'd).
+//			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
 
-			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
-			f_byte_write |= (byte_temp<<6); // Set the data bit.
+//			// TODO: combine the two shifts below into one shift.
+//			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
+//			f_byte_write |= (byte_temp<<6); // Set the data bit.
 
-			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
-			processCommTick();
+//			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
+//			processCommTick();
 
-			// Read in all 6 data lines (MISO).
-			for (int line=0; line<6; line++) {
-				// TODO: Optimize by (maybe?) making assigning this cyclically.
-				// Would only work for the inner-most loop, since this variable
-				// is reused outside of the loop (for every "for" statement).
-				// Also see note in check bit part about eliminating "for" loop.
-				current_index_mask = 0; // Clear mask.
-				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
-				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
-				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
+//			// Read in all 6 data lines (MISO).
+//			for (int line=0; line<6; line++) {
+//				// TODO: Optimize by (maybe?) making assigning this cyclically.
+//				// Would only work for the inner-most loop, since this variable
+//				// is reused outside of the loop (for every "for" statement).
+//				// Also see note in check bit part about eliminating "for" loop.
+//				current_index_mask = 0; // Clear mask.
+//				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
+//				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
+//				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
-				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
+//				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
+//				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
 
-				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
-				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
-				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
-			}
-		}
+//				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
+//				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
+//				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
+//			}
+//		}
 
-		// Check bits. `bit`="current bit".
-		for (int bit=0; bit<4; bit++) {
-			// Write check bit.
-			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<bit); // Set the data bit we want to find.
+//		// Check bits. `bit`="current bit".
+//		for (int bit=0; bit<4; bit++) {
+//			// Write check bit.
+//			f_byte_write &= ~(1<<6); // Clear the data bit.
+//			current_index_mask = 0; // Clear mask.
+//			current_index_mask |= (1<<bit); // Set the data bit we want to find.
 
-			// See same operation for data. This is essentially the same logic.
-			byte_temp = check_write&current_index_mask;
+//			// See same operation for data. This is essentially the same logic.
+//			byte_temp = check_write&current_index_mask;
 
-			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>bit;
-			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
-			processCommTick();
+//			// TODO: combine the two shifts below into one shift.
+//			byte_temp = byte_temp>>bit;
+//			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
+//			processCommTick();
 
-			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
-			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
-			for (int line=0; line<6; line++) {
-				current_index_mask = 0; // Clear the mask.
-				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
-				check_read[line] &= ~(1<<bit); // Clear the bit.
-				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
+//			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
+//			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
+//			for (int line=0; line<6; line++) {
+//				current_index_mask = 0; // Clear the mask.
+//				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
+//				check_read[line] &= ~(1<<bit); // Clear the bit.
+//				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
 
-				if (check_read[line]!=check_read_ack[line]) {
-					isBadData[line] = true;
-					error_num++;
-					wasCorrupted = true;
-				} else {
-					isBadData[line] = false;
-				}
-			}
-		}
-		check_write = 0; // Clear this now that we've sent it already.
+//				if (check_read[line]!=check_read_ack[line]) {
+//					isBadData[line] = true;
+//					error_num++;
+//					wasCorrupted = true;
+//				} else {
+//					isBadData[line] = false;
+//				}
+//			}
+//		}
+//		check_write = 0; // Clear this now that we've sent it already.
 
-		if (error_num>max_error_num) {
-			isResync = true; // This happens at the beginning of the next iteration.
-			error_num = 0;
-			wasCorrupted = false;
-		} else if ((error_num!=0)&&(wasCorrupted==false)) {
-			error_num = 0; // Not a consecutive error.
-		} else if (error_num==0) {
-			wasCorrupted = false;
-		}
+//		if (error_num>max_error_num) {
+//			isResync = true; // This happens at the beginning of the next iteration.
+//			error_num = 0;
+//			wasCorrupted = false;
+//		} else if ((error_num!=0)&&(wasCorrupted==false)) {
+//			error_num = 0; // Not a consecutive error.
+//		} else if (error_num==0) {
+//			wasCorrupted = false;
+//		}
 
-		// TODO: Assign data to whatever the I/O lines are set to.
-		// TODO: Check this section of code for integrity.
-		for (int line=0; line<6; line++) {
-			if (isBadData[line]==true) {
-				continue;
-			}
-			if (header_read[line]==false) {
-				switch (f_commLinkMode) {
-					case COMM_LINK_STD_A :
-						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_pos_x = frame_read[line][0];
-						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
-						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
-						Task_ReleaseCPU();
-						Task_HogCPU();
-						f_angle_x = frame_read[line][1];
-						f_angle_x &= 0b01111111;
-						Task_ReleaseCPU();
-						break;
-					case COMM_LINK_STD_B :
-						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_pos_y = frame_read[line][0];
-						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
-						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
-						Task_ReleaseCPU();
-						Task_HogCPU();
-						f_angle_y = frame_read[line][1];
-						f_angle_y &= 0b01111111;
-						Task_ReleaseCPU();
-						break;
-					case COMM_LINK_STD_C :
-						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_pos_z = frame_read[line][0];
-						f_pos_z = f_pos_z>>2; // We just read two extra bits.
-						f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
-						Task_ReleaseCPU();
-						Task_HogCPU();
-						f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
-						byte_temp = frame_read[line][0]&0b00000011;
-						f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
-						Task_ReleaseCPU();
-						break;
-					case COMM_LINK_STD_D :
-						break;
-					case COMM_LINK_STD_E :
-						break;
-					case COMM_LINK_STD_F :
-						break;
-					default : // TODO: Purpose is to discard data?
-						break;
-				}
-			} else {
-				// Handle special codes here.
-			}
-		}
-	}
-}
+//		// TODO: Assign data to whatever the I/O lines are set to.
+//		// TODO: Check this section of code for integrity.
+//		for (int line=0; line<6; line++) {
+//			if (isBadData[line]==true) {
+//				continue;
+//			}
+//			if (header_read[line]==false) {
+//				switch (f_commLinkMode) {
+//					case COMM_LINK_STD_A :
+//						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+//						f_pos_x = frame_read[line][0];
+//						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
+//						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+//						Task_ReleaseCPU();
+//						Task_HogCPU();
+//						f_angle_x = frame_read[line][1];
+//						f_angle_x &= 0b01111111;
+//						Task_ReleaseCPU();
+//						break;
+//					case COMM_LINK_STD_B :
+//						Task_HogCPU(); // So that the main program doesn't try to access these vars.
+//						f_pos_y = frame_read[line][0];
+//						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
+//						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+//						Task_ReleaseCPU();
+//						Task_HogCPU();
+//						f_angle_y = frame_read[line][1];
+//						f_angle_y &= 0b01111111;
+//						Task_ReleaseCPU();
+//						break;
+//					case COMM_LINK_STD_C :
+//						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
+//						//f_pos_z = frame_read[line][0];
+//						//f_pos_z = f_pos_z>>2; // We just read two extra bits.
+//						//f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
+//						//Task_ReleaseCPU();
+//						//Task_HogCPU();
+//						//f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
+//						//byte_temp = frame_read[line][0]&0b00000011;
+//						//f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
+//						//Task_ReleaseCPU();
+//						break;
+//					case COMM_LINK_STD_D :
+//						break;
+//					case COMM_LINK_STD_E :
+//						break;
+//					case COMM_LINK_STD_F :
+//						break;
+//					default : // TODO: Purpose is to discard data?
+//						break;
+//				}
+//			} else {
+//				// Handle special codes here.
+//			}
+//		}
+//	}
+//}
 
 
 
@@ -900,7 +930,7 @@ task Display()
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
-		DISP_COMM_STATUS,		// Each line of each frame.
+		//DISP_COMM_STATUS,		// Each line of each frame.
 		//DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
@@ -946,11 +976,8 @@ task Display()
 				nxtDisplayTextLine(1, "FL:   %+6d", pod_raw[POD_FL]);
 				nxtDisplayTextLine(2, "BL:   %+6d", pod_raw[POD_BL]);
 				nxtDisplayTextLine(3, "BR:   %+6d", pod_raw[POD_BR]);
-				//nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
-				//nxtDisplayTextLine(1, "FL:   %+6d", encoder_pod[POD_FL]);
-				//nxtDisplayTextLine(2, "BL:   %+6d", encoder_pod[POD_BL]);
-				//nxtDisplayTextLine(3, "BR:   %+6d", encoder_pod[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
+				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");
@@ -997,9 +1024,11 @@ task SaveData()
 	const string filename_pods = "_reset_pods.txt";
 	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
 	int file_size = 72; // Should be 64 (4 shorts).
-	bool isTemp = false;
 
 	Joystick_WaitForStart();
+	for (int i=0; i<117; i++) { // MAGIC_NUM: 117=120-3
+		Time_Wait(1000);
+	}
 
 	while (true) {
 		Task_HogCPU();
@@ -1020,8 +1049,35 @@ task SaveData()
 		Task_ReleaseCPU();
 
 		isTemp = (!isTemp); // TODO: XOR. You know the drill.
-		Time_Wait(100); // MAGIC_NUM: we don't need to save position that often.
+		Time_Wait(500); // MAGIC_NUM: half a second.
 	}
+}
+
+
+
+task SaveDataCmd()
+{
+	TFileHandle IO_handle;
+	TFileIOResult IO_result;
+	const string filename_pods = "_reset_pods.txt";
+	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
+	int file_size = 72; // Should be 64 (4 shorts).
+	Task_HogCPU();
+	switch (isTemp) {
+		case false :
+			Delete(filename_pods, IO_result); // TODO: Add error handling.
+			OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
+			break;
+		case true :
+			Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
+			OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
+			break;
+	}
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
+	}
+	Close(IO_handle, IO_result);
+	Task_ReleaseCPU();
 }
 
 

@@ -1,7 +1,5 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_gyro,    sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop)
@@ -34,7 +32,7 @@ task setLift();
 task waveFlag();
 
 // 1 = L, -1 = R; this should only affect horizontal movements.
-const int AUTON_L_R = -1;
+const int AUTON_L_R = 1;
 
 // true = wait 15 seconds before starting, false = no delay.
 const bool AUTON_WAIT = false;
@@ -154,12 +152,9 @@ task main() {
 	g_translation_x = -AUTON_L_R*(-fine_tune_power);
 	Time_Wait(first_turn_to_second_turn_time);
 	g_translation_x = 0;
-	//Task_Spawn(rotateCorrect);
 	g_translation_y = -fine_tune_power;
 	Time_Wait(second_turn_to_ramp_time);
 	g_translation_y = 0;
-	//Time_Wait(1000);
-	//Task_Kill(rotateCorrect);
 
 	// Celebrate!
 	while (true) {

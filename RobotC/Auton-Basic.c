@@ -1,22 +1,24 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_climb,   tmotorTetrix, openLoop, reversed)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -63,7 +65,7 @@ float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measur
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 5800; // MAGIC_NUM. TODO: Find this value.
 
 //// For comms link:
 //typedef enum CardinalDirection {
@@ -120,7 +122,6 @@ task main()
 	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Drive);
-	//Task_Spawn(GyroCorrect);
 	//Task_Spawn(PID);
 	//Task_Spawn(CommLink);
 	Task_Spawn(Display);

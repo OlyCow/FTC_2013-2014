@@ -1,22 +1,24 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_climb,   tmotorTetrix, openLoop, reversed)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
@@ -62,7 +64,7 @@ float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measur
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6245; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 5800; // MAGIC_NUM. TODO: Find this value.
 
 
 
@@ -74,7 +76,6 @@ task main()
 	Task_Spawn(Drive);
 	Task_Spawn(PID);
 	Task_Spawn(Display);
-	Task_Spawn(SaveData);
 
 	const int initialize_delay	= 500;
 	const int wait_delay		= 15*1000;
@@ -84,42 +85,35 @@ task main()
 	const int LIFT_HIGH_POS		= 5000;
 	const int servo_dump_closed	= 0;
 	const int servo_dump_open	= 30;
-	const int backward_time		= 950;
-	const int onto_ramp_time	= 500;
-	const int ramp_forward_time	= 300;
-	const int ramp_lift_delay	= 3000;
+	const int forward_time		= 1850;
 
 	Joystick_WaitForStart();
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
+	Servo_SetPosition(servo_funnel_L, servo_funnel_L_open);
 	if (AUTON_WAIT==true) {
 		Time_Wait(wait_delay);
 	} else {
+
 		Time_Wait(initialize_delay);
 	}
 
 	// Raise the lift and move sideways until in front of the IR beacon.
-	translation_y = -g_FullPower;
-	Time_Wait(backward_time);
+	translation_y = -100;
+	Time_Wait(forward_time);
 	translation_y = 0;
 	Time_Wait(pause_delay);
 
-	translation_x = AUTON_L_R*(g_FullPower);
-	Time_Wait(onto_ramp_time);
-	translation_x = 0;
 	lift_target = LIFT_HIGH_POS;
 	Time_Wait(pause_delay);
 
-	translation_y = g_FullPower;
-	Time_Wait(ramp_forward_time);
-	translation_y = 0;
-	Time_Wait(ramp_lift_delay);
-
 	Task_Spawn(SaveData);
+	Time_Wait(3000);
 	dumpCubes(4);
 	Time_Wait(3000);
 
 	lift_target = LIFT_LOW_POS;
+	Task_Spawn(SaveData);
 	while (true) {
 		Time_Wait(initialize_delay); // We don't want the lift to be unable to be raised.
 	}
@@ -220,7 +214,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.1}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -231,7 +225,7 @@ task PID()
 
 	// Variables for lift PID calculations.
 	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.08;
+	float kP_lift_down	= 0.07;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -334,9 +328,9 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>10) { //10 is an arbitrary number :P
+			if (abs(error_pod[i])>12) { //12 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>5) {
+			} else if (abs(error_pod[i])>6) {
 				isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
@@ -346,6 +340,7 @@ task PID()
 			term_D_pod[i] = kD[i]*error_rate_pod[i];
 			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
 		}
+		nxtDisplayTextLine(7, "%d", isAligned);
 
 		// "Damp" motors depending on how far the wheel pods are from their targets.
 		for (int i=MOTOR_FR; i<(int)MOTOR_NUM; i++) {
@@ -354,9 +349,12 @@ task PID()
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
 				case ALIGNED_MEDIUM:
-					g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
+					g_MotorData[i].fineTuneFactor = 1;
+					//g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%
 					break;
-				// Skipping the "ALIGNED_CLOSE" condition could increase performance.
+				//case ALIGNED_CLOSE:
+					g_MotorData[i].fineTuneFactor = 1;
+					break;
 			}
 		}
 
@@ -434,10 +432,15 @@ task Display()
 				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
 				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
 				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				//nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
+				//nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
+				//nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
+				//nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+
+				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].fineTuneFactor);
+				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].fineTuneFactor);
+				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].fineTuneFactor);
+				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].fineTuneFactor);
 				break;
 			case DISP_SWERVE_PID :
 				nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);

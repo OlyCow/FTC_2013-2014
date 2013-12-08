@@ -1,15 +1,17 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_flag_L,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_flag_R,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_climb,   tmotorTetrix, openLoop, reversed)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
@@ -121,7 +123,7 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6250; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 5800; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {
@@ -200,6 +202,7 @@ task main()
 
 	SweepDirection sweepDirection = SWEEP_OFF;
 	float power_flag = 0.0;
+	float power_climb = 0.0;
 
 	Joystick_WaitForStart();
 	Servo_SetPosition(servo_dump, servo_dump_closed);
@@ -282,7 +285,7 @@ task main()
 			}
 		} else if (Joystick_Button(BUTTON_RT)==true) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0.2; // MAGIC_NUM.
+				g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
 			}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -296,7 +299,7 @@ task main()
 		// go to press the Joystick_L button. Resetting of the lift is registered
 		// when the joystick button is released.
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 200;
+			lift_target += 160;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
 			lift_target -= 100;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
@@ -312,8 +315,9 @@ task main()
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 				}
-				if (Joystick_ButtonReleased(BUTTON_JOYL, CONTROLLER_2)==true) {
-					Motor_ResetEncoder(motor_lift);
+				if (Joystick_ButtonReleased(BUTTON_JOYR, CONTROLLER_2)==true) {
+					//Motor_ResetEncoder(motor_lift);
+					Motor_SetPower(motor_lift, 0);
 				}
 			}
 		}
@@ -394,9 +398,18 @@ task main()
 		if (Joystick_Button(BUTTON_X)==true) {
 			power_flag = g_FullPower; // TODO: get rid of this when we get comms working.
 			// Climb "down" instead.
+		} else {
+			power_flag = 0;
 		}
 		if (Joystick_Button(BUTTON_Y)==true) {
+			power_climb = g_FullPower;
 			// Climb "up".
+		} else if (Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2)<=-50) {
+			power_climb = -g_FullPower;
+		} else if (Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2)>=50) {
+			power_climb = g_FullPower;
+		} else {
+			power_climb = 0;
 		}
 		// TODO: Depending on how climbing works, control with driver 2's joystick_R.
 
@@ -445,8 +458,8 @@ task main()
 		}
 		// TODO: make the flag and climbing stuff actually work according to how
 		// our robot functions. This may take a while. :P
-		Motor_SetPower(power_flag, motor_flag_L);
-		Motor_SetPower(power_flag, motor_flag_R);
+		Motor_SetPower(power_flag, motor_flag);
+		Motor_SetPower(power_climb, motor_climb);
 		Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
 		Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
 	}

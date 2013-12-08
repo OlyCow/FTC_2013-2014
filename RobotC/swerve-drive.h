@@ -12,6 +12,14 @@ typedef enum WheelPod {
 	POD_NUM,
 } WheelPod;
 
+typedef enum Motor {
+	MOTOR_FR = 0,
+	MOTOR_FL = 1,
+	MOTOR_BL = 2,
+	MOTOR_BR = 3,
+	MOTOR_NUM,
+} Motor;
+
 typedef enum Servo {
 	SERVO_FR = 0,
 	SERVO_FL = 1,

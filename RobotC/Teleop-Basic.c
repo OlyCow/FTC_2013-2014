@@ -4,6 +4,7 @@
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
+#pragma config(Motor,  motorA,          motor_feeder,  tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -16,18 +17,17 @@
 #pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_funnel_L,       tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_funnel_R,       tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
-#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_feeder_L,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_feeder_R,       tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_IR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_gimbal,         tServoStandard)
 
 #include "includes.h"
-#include "Teleop-Basic.h"
-#include "subroutines.h"
+#include "swerve-drive.h"
 
 //#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
@@ -183,6 +183,7 @@ task main()
 	} SweepDirection;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
+	initializeRobotVariables();
 	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
@@ -195,6 +196,7 @@ task main()
 	vector2D rotation[POD_NUM];
 	vector2D translation; // Not a struct because all wheel pods share the same values.
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
+	float rotation_temp = 0.0; // So we only fetch data from joysticks once.
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
@@ -234,13 +236,14 @@ task main()
 		// its apparent simplicity. Use of the Vector2D library makes some of this
 		// slightly less efficient (there are some unnecessary update calculations)
 		// but the benefit of increased readability is well worth it.
-		translation.x = Joystick_GetTranslationX();
-		translation.y = Joystick_GetTranslationY();
+		translation.x = Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
+		translation.y = Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
 		Vector2D_UpdateRot(translation);
 		Vector2D_Rotate(translation, -heading);
+		rotation_temp = -Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_L, AXIS_X)), g_FullPower);
 
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			rotation[i].r = Joystick_GetRotationMagnitude();
+			rotation[i].r = rotation_temp;
 			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
 			Vector2D_UpdatePos(rotation[i]);
 			Vector2D_Add(rotation[i], translation, combined[i]);
@@ -460,8 +463,8 @@ task main()
 		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag);
 		Motor_SetPower(power_climb, motor_climb);
-		Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
-		Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
+		//Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
+		//Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
 	}
 }
 

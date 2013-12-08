@@ -13,9 +13,6 @@
 #include "Drivers\IR seeker v2.h"
 #include "Drivers\prototype board.h"
 
-#include "Headers\enums.h"
-#include "Headers\structs.h"
-#include "Headers\global vars.h"
 #include "Headers\Motor.h" // TODO! (high-level stuff)
 #include "Headers\Servo.h" // TODO! (high-level stuff)
 #include "Headers\Sensor.h" // TODO!

@@ -29,7 +29,7 @@
 #include "includes.h"
 #include "swerve-drive.h"
 
-//#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
+#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif
@@ -492,9 +492,9 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.4,	1.4,	1.4,	1.4}; // MAGIC_NUM: TODO: PID tuning.
-	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
+	float kP[POD_NUM] = {1.3,	1.2,	1.5,	1.7}; // MAGIC_NUM: TODO: PID tuning.
+	float kI[POD_NUM] = {0.001,	0.001,	0.001,	0.001};
+	float kD[POD_NUM] = {0.3,	0.3,	0.3,	0.3};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
 	float error_rate_pod[POD_NUM] = {0,0,0,0};
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
@@ -511,6 +511,10 @@ task PID()
 	float error_rate_lift = 0.0;
 	float term_P_lift = 0.0;
 	float term_D_lift = 0.0;
+
+	// Variables for damping wheel pods.
+	float max_pos = 0.0;
+	float min_pos = 0.0;
 
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
@@ -619,14 +623,53 @@ task PID()
 			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
 		}
 
+		if (Joystick_Joystick(JOYSTICK_L, AXIS_X)<g_JoystickDeadband) {
+			//min_pos = error_pod[POD_FL];
+			//max_pos = error_pod[POD_FR];
+			//if (	((((error_pod[POD_FL]-error_pod[POD_FR])<12) &&
+			//		((error_pod[POD_FL]-error_pod[POD_BL])<12)) &&
+			//		(((error_pod[POD_FL]-error_pod[POD_BR])<12) &&
+			//		((error_pod[POD_FR]-error_pod[POD_BL])<12))) &&
+			//		((((error_pod[POD_FR]-error_pod[POD_BR])<12) &&
+			//		((error_pod[POD_BL]-error_pod[POD_BR])<12)))	) {
+			//	isAligned = ALIGNED_CLOSE;
+			//} else {
+			//	isAligned = ALIGNED_FAR;
+			//}
+			//if (pod_raw[POD_FR]<error_pod[POD_FL]) {
+			//	min_pos = error_pod[POD_FR];
+			//	max_pos = error_pod[POD_FL];
+			//}
+			//if (min_pos>error_pod[POD_BL]) {
+			//	min_pos = error_pod[POD_BL];
+			//}
+			//if (max_pos<error_pod[POD_BL]) {
+			//	max_pos = error_pod[POD_BL];
+			//}
+			//if (min_pos>error_pod[POD_BR]) {
+			//	min_pos = error_pod[POD_BR];
+			//}
+			//if (max_pos<error_pod[POD_BR]) {
+			//	max_pos = error_pod[POD_BR];
+			//}
+			//if ((max_pos-min_pos)<12) {
+			//	isAligned = ALIGNED_CLOSE;
+			//} else {
+			//	isAligned = ALIGNED_FAR;
+			//}
+		}
+
 		// "Damp" motors depending on how far the wheel pods are from their targets.
 		for (int i=MOTOR_FR; i<(int)MOTOR_NUM; i++) {
 			switch (isAligned) {
 				case ALIGNED_FAR:
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
-				case ALIGNED_MEDIUM:
-					g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
+				//case ALIGNED_MEDIUM:
+				//	g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
+				//	break;
+				case ALIGNED_CLOSE :
+					g_MotorData[i].fineTuneFactor = 1;
 					break;
 				// Skipping the "ALIGNED_CLOSE" condition could increase performance.
 			}

@@ -172,6 +172,8 @@ bool f_flagBumperTriggered = false;
 bool f_climbBumperTriggered = false;
 bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
 
+bool isTank = false;
+
 
 
 task main()
@@ -199,8 +201,12 @@ task main()
 	float rotation_temp = 0.0; // So we only fetch data from joysticks once.
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
-	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
+	const int maxTurns = 1; // On each side. To prevent the wires from getting too twisted.
 	float heading = 0.0; // Because f_angle_z is an int.
+
+	// FOR TANK
+	float power_L = 0.0;
+	float power_R = 0.0;
 
 	SweepDirection sweepDirection = SWEEP_OFF;
 	float power_flag = 0.0;
@@ -212,6 +218,27 @@ task main()
 
 	while (true) {
 		Joystick_UpdateData();
+
+		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
+			isTank = !isTank;
+		}
+		switch (isTank) {
+			case true :
+				//for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				//	g_ServoData[i].angle = 90;
+				//}
+				g_ServoData[POD_FR].angle = 102;
+				g_ServoData[POD_FL].angle = 78;
+				g_ServoData[POD_BL].angle = 78;
+				g_ServoData[POD_BR].angle = 102;
+				power_L = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y));
+				power_R = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y));
+				g_MotorData[POD_FR].power = power_R;
+				g_MotorData[POD_FL].power = power_L;
+				g_MotorData[POD_BL].power = power_L;
+				g_MotorData[POD_BR].power = power_R;
+				break;
+			case false :
 
 		heading -= (float)HTGYROreadRot(sensor_protoboard)*((float)Time_GetTime(T1)/(float)1000.0);
 		Time_ClearTimer(T1);
@@ -277,6 +304,11 @@ task main()
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			g_MotorData[i].power = combined[i].r;
 		}
+
+
+
+		break;
+	}
 
 		// Set our "fine-tune" factor (amount motor power is divided by).
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
@@ -492,9 +524,9 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.3,	1.2,	1.5,	1.7}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {1.2,	1.1,	1.4,	1.6}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.001,	0.001,	0.001,	0.001};
-	float kD[POD_NUM] = {0.3,	0.3,	0.3,	0.3};
+	float kD[POD_NUM] = {0.12,	0.12,	0.12,	0.12};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
 	float error_rate_pod[POD_NUM] = {0,0,0,0};
 	Aligned isAligned = ALIGNED_CLOSE; // If false, cut motor power so that wheel pod can get aligned.
@@ -624,8 +656,8 @@ task PID()
 		}
 
 		if (Joystick_Joystick(JOYSTICK_L, AXIS_X)<g_JoystickDeadband) {
-			//min_pos = error_pod[POD_FL];
-			//max_pos = error_pod[POD_FR];
+			////min_pos = error_pod[POD_FL];
+			////max_pos = error_pod[POD_FR];
 			//if (	((((error_pod[POD_FL]-error_pod[POD_FR])<12) &&
 			//		((error_pod[POD_FL]-error_pod[POD_BL])<12)) &&
 			//		(((error_pod[POD_FL]-error_pod[POD_BR])<12) &&
@@ -636,27 +668,27 @@ task PID()
 			//} else {
 			//	isAligned = ALIGNED_FAR;
 			//}
-			//if (pod_raw[POD_FR]<error_pod[POD_FL]) {
-			//	min_pos = error_pod[POD_FR];
-			//	max_pos = error_pod[POD_FL];
-			//}
-			//if (min_pos>error_pod[POD_BL]) {
-			//	min_pos = error_pod[POD_BL];
-			//}
-			//if (max_pos<error_pod[POD_BL]) {
-			//	max_pos = error_pod[POD_BL];
-			//}
-			//if (min_pos>error_pod[POD_BR]) {
-			//	min_pos = error_pod[POD_BR];
-			//}
-			//if (max_pos<error_pod[POD_BR]) {
-			//	max_pos = error_pod[POD_BR];
-			//}
-			//if ((max_pos-min_pos)<12) {
-			//	isAligned = ALIGNED_CLOSE;
-			//} else {
-			//	isAligned = ALIGNED_FAR;
-			//}
+			////if (pod_raw[POD_FR]<error_pod[POD_FL]) {
+			////	min_pos = error_pod[POD_FR];
+			////	max_pos = error_pod[POD_FL];
+			////}
+			////if (min_pos>error_pod[POD_BL]) {
+			////	min_pos = error_pod[POD_BL];
+			////}
+			////if (max_pos<error_pod[POD_BL]) {
+			////	max_pos = error_pod[POD_BL];
+			////}
+			////if (min_pos>error_pod[POD_BR]) {
+			////	min_pos = error_pod[POD_BR];
+			////}
+			////if (max_pos<error_pod[POD_BR]) {
+			////	max_pos = error_pod[POD_BR];
+			////}
+			////if ((max_pos-min_pos)<12) {
+			////	isAligned = ALIGNED_CLOSE;
+			////} else {
+			////	isAligned = ALIGNED_FAR;
+			////}
 		}
 
 		// "Damp" motors depending on how far the wheel pods are from their targets.
@@ -669,7 +701,7 @@ task PID()
 				//	g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
 				//	break;
 				case ALIGNED_CLOSE :
-					g_MotorData[i].fineTuneFactor = 1;
+					g_MotorData[i].fineTuneFactor *= 1;
 					break;
 				// Skipping the "ALIGNED_CLOSE" condition could increase performance.
 			}

@@ -4,12 +4,14 @@
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
-#pragma config(Motor,  motorA,          motor_climb_latch, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_climb,   tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
+#pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
+#pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_D,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_F,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C1_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C1_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
@@ -18,13 +20,13 @@
 #pragma config(Servo,  srvo_S1_C1_3,    servo_dump,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_4,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S1_C1_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -491,12 +493,9 @@ task main()
 				Motor_SetPower(0, motor_sweeper);
 				break;
 		}
-		// TODO: make the flag and climbing stuff actually work according to how
-		// our robot functions. This may take a while. :P
-		Motor_SetPower(power_flag, motor_flag);
-		Motor_SetPower(power_climb, motor_climb);
-		//Servo_SetPosition(servo_funnel_L, servo_funnel_L_pos);
-		//Servo_SetPosition(servo_funnel_R, servo_funnel_R_pos);
+		//// TODO: make the flag and climbing stuff actually work according to how
+		//// our robot functions. This may take a while. :P
+		//Motor_SetPower(power_flag, motor_flag);
 	}
 }
 
@@ -586,9 +585,6 @@ task PID()
 		// Calculate the targets and error for each wheel pod.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			encoder_pod[i] = Motor_GetEncoder(Motor_Convert((Motor)i));
-			if (i=POD_BL) {
-				encoder_pod[i] = -encoder_pod[i];
-			}
 			pod_raw[i] = encoder_pod[i]/(float)(-2); // Encoders are geared up by 2 (and "backwards").
 			pod_raw[i] = Math_Normalize(pod_raw[i], (float)1440, 360); // Encoders are 1440 CPR.
 			pod_raw[i] += pod_pos_prev[i];

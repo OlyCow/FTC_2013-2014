@@ -39,7 +39,7 @@
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
 //task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
-task SaveData();
+task TimedOperations();
 task SaveDataCmd();
 task Autonomous(); // Ooooh.
 
@@ -85,8 +85,8 @@ task Autonomous(); // Ooooh.
 //				Controller_2, Joystick_R:	Climbing.
 //				Controller_2, Button_LB:	Dump 4 cubes.
 //				Controller_2, Button_RB:	Dump 2 cubes.
-//				Controller_2, Button_LT:	Toggles left funnel.
-//				Controller_2, Button_RT:	Toggles right funnel.
+//				Controller_2, Button_LT:	[UNUSED]
+//				Controller_2, Button_RT:	[UNUSED]
 //				Controller_2, Button_A:		Save pod reset data.
 //				Controller_2, Button_B:		Reset lift (w/ Button_JL).
 //				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
@@ -112,8 +112,6 @@ bool isTemp = false;
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
-int servo_funnel_L_pos = servo_funnel_L_open;
-int servo_funnel_R_pos = servo_funnel_R_open;
 
 // For PID:
 float term_P_pod[POD_NUM] = {0,0,0,0};
@@ -193,7 +191,7 @@ task main()
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
-	Task_Spawn(SaveData);
+	Task_Spawn(TimedOperations);
 
 	// Not initializing these structs for now: once data starts coming in
 	// from the controllers, all the members of these will get updated.
@@ -216,6 +214,8 @@ task main()
 
 	Joystick_WaitForStart();
 	Servo_SetPosition(servo_dump, servo_dump_closed);
+	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 	Time_ClearTimer(T1);
 
 	while (true) {
@@ -242,7 +242,7 @@ task main()
 				break;
 			case false :
 
-		heading -= (float)HTGYROreadRot(sensor_protoboard)*((float)Time_GetTime(T1)/(float)1000.0);
+		heading += (float)HTGYROreadRot(sensor_protoboard)*((float)Time_GetTime(T1)/(float)1000.0);
 		Time_ClearTimer(T1);
 		f_angle_z = round(heading);
 
@@ -366,34 +366,6 @@ task main()
 			dumpCubes(4);
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
-		}
-
-		// Only `CONTROLLER_2` can funnel cubes in.
-		if (Joystick_ButtonPressed(BUTTON_LT, CONTROLLER_2)==true) {
-			switch (servo_funnel_L_pos) {
-				case servo_funnel_L_closed :
-					servo_funnel_L_pos = servo_funnel_L_open;
-					break;
-				case servo_funnel_L_open :
-					servo_funnel_L_pos = servo_funnel_L_closed;
-					break;
-				default :
-					servo_funnel_L_pos = servo_funnel_L_closed;
-					break;
-			}
-		}
-		if (Joystick_ButtonPressed(BUTTON_RT, CONTROLLER_2)==true) {
-			switch (servo_funnel_R_pos) {
-				case servo_funnel_R_closed :
-					servo_funnel_R_pos = servo_funnel_R_open;
-					break;
-				case servo_funnel_L_open :
-					servo_funnel_R_pos = servo_funnel_R_closed;
-					break;
-				default : // Exists in case position isn't enumerated.
-					servo_funnel_R_pos = servo_funnel_R_closed;
-					break;
-			}
 		}
 
 		// Driver 1 overrides driver 2 because he assigns last.
@@ -696,9 +668,9 @@ task PID()
 				case ALIGNED_FAR:
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
-				//case ALIGNED_MEDIUM:
-				//	g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
-				//	break;
+				case ALIGNED_MEDIUM:
+					g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
+					break;
 				case ALIGNED_CLOSE :
 					g_MotorData[i].fineTuneFactor *= 1;
 					break;
@@ -1094,7 +1066,7 @@ task Display()
 
 
 
-task SaveData()
+task TimedOperations()
 {
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
@@ -1103,10 +1075,15 @@ task SaveData()
 	int file_size = 72; // Should be 64 (4 shorts).
 
 	Joystick_WaitForStart();
-	for (int i=0; i<117; i++) { // MAGIC_NUM: 117=120-3
+	for (int i=0; i<100; i++) { // MAGIC_NUM: 100=120-20
 		Time_Wait(1000);
 	}
+	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
 
+	for (int i=0; i<7; i++) { // MAGIC_NUM
+		Time_Wait(1000);
+	}
 	while (true) {
 		Task_HogCPU();
 		switch (isTemp) {

@@ -1,12 +1,7 @@
 #pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
-#pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
-#pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
-#pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_D,       tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_F,       tmotorTetrix, openLoop)
@@ -186,7 +181,6 @@ task main()
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
-	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
@@ -213,9 +207,6 @@ task main()
 	float power_climb = 0.0;
 
 	Joystick_WaitForStart();
-	Servo_SetPosition(servo_dump, servo_dump_closed);
-	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
-	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 	Time_ClearTimer(T1);
 
 	while (true) {

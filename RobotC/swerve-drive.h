@@ -186,6 +186,11 @@ void initializeRobotVariables()
 		g_ServoData[i].angle = 0;
 		g_ServoData[i].power = 0;
 	}
+
+	HTGYROstartCal(sensor_protoboard);
+	Servo_SetPosition(servo_dump, servo_dump_closed);
+	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 }
 
 void dumpCubes(int num)

@@ -70,24 +70,28 @@ task main()
 {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
-	HTGYROstartCal(sensor_protoboard);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Drive);
 	Task_Spawn(PID);
 	Task_Spawn(Display);
 
+	// Small little things for gyro correction.
+	bool isRotating = true;
+	float error = 0.0;
+
 	const int initialize_delay	= 500;
 	const int wait_delay		= 15*1000;
-	const int pause_delay		= 100;
-	const int align_delay		= 400;
+	const int pause_delay		= 500;
+	const int align_delay		= 600;
 
 	const int LIFT_LOW_POS		= 0;
 	const int LIFT_MED_POS		= 1500;
 	const int LIFT_HIGH_POS		= 2000;
-	const int servo_dump_closed	= 0;
-	const int servo_dump_open	= 30;
 
-	const int forward_time		= 500;
+	const int move_to_basket_time	= 700; // Wild guess. As are the following.
+	const int approach_basket_time	= 600;
+	const int forward_to_ramp_time	= 900;
+	const int move_onto_ramp_time	= 1800;
 
 	Joystick_WaitForStart();
 	if (AUTON_WAIT==true) {
@@ -96,43 +100,95 @@ task main()
 		Time_Wait(initialize_delay);
 	}
 
-	// Raise the lift and move sideways until in front of the IR beacon.
-	translation_y = 85; // MAGIC_NUM
+	// Raise the lift and move forward as far as the baskets.
 	fine_tune_factor = 0.0;
+	translation_y = 40; // MAGIC_NUM
 	Time_Wait(align_delay);
 	fine_tune_factor = 1.0;
-	Time_Wait(forward_time);
+	Time_Wait(move_to_basket_time);
 	translation_y = 0;
 	Time_Wait(pause_delay);
 
+	// Turn so robot is "0" degrees and raise the lift.
 	fine_tune_factor = 0.0;
-	rotation_global = 10;
+	rotation_global = 40;
 	Time_Wait(align_delay);
-	bool isRotating = true;
-	float error = 0.0;
+	lift_target = LIFT_HIGH_POS;
 	fine_tune_factor = 1.0;
 	while (isRotating) {
-		error = (-45)-heading; // MAGIC_NUM
+		error = (-90)-heading; // MAGIC_NUM
 		rotation_global = error*1.2; // MAGIC_NUM
-		if (abs(error)<10) { // MAGIC_NUM
+		if (abs(error)<2.5) { // MAGIC_NUM
 			isRotating = false;
 		}
 		Time_Wait(5); // MAGIC_NUM
 	}
 	rotation_global = 0;
-	lift_target = LIFT_HIGH_POS;
+	isRotating = true;
 	Time_Wait(pause_delay);
 
-	Task_Spawn(SaveData);
-	Time_Wait(3000);
+	// Move forward a bit and dump the cubes, then lower the lift.
+	fine_tune_factor = 0.0;
+	translation_x = -40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(approach_basket_time);
+	translation_x = 0;
+	Time_Wait(pause_delay);
 	dumpCubes(4);
-	Time_Wait(3000);
-
 	lift_target = LIFT_LOW_POS;
-	Task_Spawn(SaveData);
-	while (true) {
-		Time_Wait(initialize_delay); // We don't want the lift to be unable to be raised.
+
+	// Back up a bit.
+	fine_tune_factor = 0.0;
+	translation_x = 40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(approach_basket_time);
+	translation_x = 0;
+	Time_Wait(pause_delay);
+
+	// Get lined up with the ramp.
+	fine_tune_factor = 0.0;
+	translation_y = 40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(forward_to_ramp_time);
+	translation_y = 0;
+	Time_Wait(pause_delay);
+
+	// Make sure the robot is "0" degrees again.
+	fine_tune_factor = 0.0;
+	rotation_global = 40;
+	Time_Wait(align_delay);
+	lift_target = LIFT_HIGH_POS;
+	fine_tune_factor = 1.0;
+	while (isRotating) {
+		error = (-90)-heading; // MAGIC_NUM
+		rotation_global = error*1.2; // MAGIC_NUM
+		if (abs(error)<2.5) { // MAGIC_NUM
+			isRotating = false;
+		}
+		Time_Wait(5); // MAGIC_NUM
 	}
+	isRotating = true;
+	rotation_global = 0;
+	Time_Wait(pause_delay);
+
+	// Move onto the ramp.
+	fine_tune_factor = 0.0;
+	translation_x = -60; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(move_onto_ramp_time);
+	translation_x = 0;
+	Time_Wait(pause_delay);
+
+	// Done! Save pod data.
+	Task_Spawn(SaveData);
+	Task_Spawn(SaveData);
+	Time_Wait(pause_delay);
+	Task_Spawn(SaveData);
+	Task_Spawn(SaveData);
 }
 
 
@@ -151,6 +207,7 @@ task Drive()
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(T3); // We will use this to guage the loop time for driving.
+	heading = -45.0; // MAGIC_NUM
 
 	while (true) {
 		Joystick_UpdateData();
@@ -244,7 +301,7 @@ task PID()
 
 	// Variables for lift PID calculations.
 	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.07;
+	float kP_lift_down	= 0.085;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -415,7 +472,7 @@ task PID()
 			term_D_lift = kD_lift_down*error_rate_lift;
 		}
 		power_lift=term_P_lift+term_D_lift;
-		Motor_SetPower(power_lift, motor_lift);
+		//Motor_SetPower(power_lift, motor_lift);
 	}
 }
 

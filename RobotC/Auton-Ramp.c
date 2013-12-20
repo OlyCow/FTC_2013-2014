@@ -83,10 +83,11 @@ task main()
 	const int wait_delay		= 15*1000;
 	const int pause_delay		= 500;
 	const int align_delay		= 600;
+	const int dump_delay		= 1000;
 
 	const int LIFT_LOW_POS		= 0;
-	const int LIFT_MED_POS		= 1500;
-	const int LIFT_HIGH_POS		= 2000;
+	const int LIFT_MED_POS		= 3000;
+	const int LIFT_HIGH_POS		= 5400;
 
 	const int move_to_basket_time	= 700; // Wild guess. As are the following.
 	const int approach_basket_time	= 600;
@@ -117,8 +118,8 @@ task main()
 	fine_tune_factor = 1.0;
 	while (isRotating) {
 		error = (-90)-heading; // MAGIC_NUM
-		rotation_global = error*1.2; // MAGIC_NUM
-		if (abs(error)<2.5) { // MAGIC_NUM
+		rotation_global = error*1.15; // MAGIC_NUM
+		if (abs(error)<2.2) { // MAGIC_NUM
 			isRotating = false;
 		}
 		Time_Wait(5); // MAGIC_NUM
@@ -136,6 +137,7 @@ task main()
 	translation_x = 0;
 	Time_Wait(pause_delay);
 	dumpCubes(4);
+	Time_Wait(dump_delay);
 	lift_target = LIFT_LOW_POS;
 
 	// Back up a bit.
@@ -156,16 +158,16 @@ task main()
 	translation_y = 0;
 	Time_Wait(pause_delay);
 
-	// Make sure the robot is "0" degrees again.
+	// Make sure the robot is "0" degrees again, and lower lift.
 	fine_tune_factor = 0.0;
 	rotation_global = 40;
 	Time_Wait(align_delay);
-	lift_target = LIFT_HIGH_POS;
+	lift_target = LIFT_LOW_POS;
 	fine_tune_factor = 1.0;
 	while (isRotating) {
 		error = (-90)-heading; // MAGIC_NUM
-		rotation_global = error*1.2; // MAGIC_NUM
-		if (abs(error)<2.5) { // MAGIC_NUM
+		rotation_global = error*1.15; // MAGIC_NUM
+		if (abs(error)<2.2) { // MAGIC_NUM
 			isRotating = false;
 		}
 		Time_Wait(5); // MAGIC_NUM
@@ -205,6 +207,9 @@ task Drive()
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
+	float gyro_prev = 0.0;
+	float gyro_current = 0.0;
+
 	Joystick_WaitForStart();
 	Time_ClearTimer(T3); // We will use this to guage the loop time for driving.
 	heading = -45.0; // MAGIC_NUM
@@ -212,8 +217,10 @@ task Drive()
 	while (true) {
 		Joystick_UpdateData();
 
-		heading += (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
+		gyro_current = (float)HTGYROreadRot(sensor_protoboard);
+		heading += (gyro_current+gyro_prev)*(float)Time_GetTime(T3)/(float)2000.0; // Trapezoid.
 		Time_ClearTimer(T3);
+		gyro_prev = gyro_current;
 
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
@@ -300,8 +307,8 @@ task PID()
 	int pod_pos_prev[POD_NUM] = {0,0,0,0};
 
 	// Variables for lift PID calculations.
-	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.085;
+	float kP_lift_up	= 0.28; // TODO: PID tuning. MAGIC_NUM.
+	float kP_lift_down	= 0.07;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -472,7 +479,7 @@ task PID()
 			term_D_lift = kD_lift_down*error_rate_lift;
 		}
 		power_lift=term_P_lift+term_D_lift;
-		//Motor_SetPower(power_lift, motor_lift);
+		Motor_SetPower(power_lift, motor_lift);
 	}
 }
 

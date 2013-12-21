@@ -1,8 +1,10 @@
 #pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_D,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_F,       tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
@@ -413,6 +415,14 @@ task main()
 		}
 		// TODO: Depending on how climbing works, control with driver 2's joystick_R.
 
+		if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
+			Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+			Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+		} else if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
+			Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+		}
+
 		// Start autonomous mode when `BUTTON_START` is pressed on both controllers,
 		// but only one controller's `BUTTON_BACK` needs to be pressed to end it.
 		if ((Joystick_ButtonReleased(BUTTON_BACK))&&(Joystick_ButtonReleased(BUTTON_BACK, CONTROLLER_2))==true) {
@@ -456,9 +466,9 @@ task main()
 				Motor_SetPower(0, motor_sweeper);
 				break;
 		}
-		//// TODO: make the flag and climbing stuff actually work according to how
-		//// our robot functions. This may take a while. :P
-		//Motor_SetPower(power_flag, motor_flag);
+		// TODO: make the flag and climbing stuff actually work according to how
+		// our robot functions. This may take a while. :P
+		Motor_SetPower(power_flag, motor_flag);
 	}
 }
 

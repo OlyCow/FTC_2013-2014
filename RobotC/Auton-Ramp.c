@@ -93,11 +93,11 @@ task main()
 	const int LIFT_MED_POS		= 3000;
 	const int LIFT_HIGH_POS		= 5400;
 
-	const int move_to_basket_time	= 400; // Wild guess. As are the following.
-	const int approach_basket_time	= 900;
-	const int retreat_basket_time	= 500;
-	const int forward_to_ramp_time	= 1700;
-	const int move_onto_ramp_time	= 2300;
+	const int move_to_basket_time	= 780; // Wild guess. As are the following.
+	const int approach_basket_time	= 884;
+	const int retreat_basket_time	= 400;
+	const int forward_to_ramp_time	= 1550;
+	const int move_onto_ramp_time	= 2100;
 
 	Joystick_WaitForStart();
 	if (AUTON_WAIT==true) {
@@ -461,8 +461,8 @@ task PID()
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
 			if (abs(error_pod[i])>12) { //12 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>6) {
-				isAligned = ALIGNED_MEDIUM;
+			//} else if (abs(error_pod[i])>6) {
+			//	isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}

@@ -61,7 +61,7 @@ servoData g_ServoData[POD_NUM];
 const int lift_pos_pickup = 0;
 const int lift_pos_dump = 6000;
 const int lift_pos_top = 6200;
-const int servo_climb_L_open = 0;
+const int servo_climb_L_open = 115;
 const int servo_climb_L_closed = 240;
 const int servo_climb_R_open = 255;
 const int servo_climb_R_closed = 140;
@@ -186,6 +186,11 @@ void initializeRobotVariables()
 		g_ServoData[i].angle = 0;
 		g_ServoData[i].power = 0;
 	}
+
+	Servo_SetPower(servo_FR, 0);
+	Servo_SetPower(servo_FL, 0);
+	Servo_SetPower(servo_BL, 0);
+	Servo_SetPower(servo_BR, 0);
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);

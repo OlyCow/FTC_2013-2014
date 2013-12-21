@@ -1,8 +1,10 @@
 #pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_D,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_F,       tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
@@ -78,12 +80,14 @@ task main()
 	// Small little things for gyro correction.
 	int isRotating = 0;
 	float error = 0.0;
+	short alignTime = 0;
 
 	const int initialize_delay	= 500;
 	const int wait_delay		= 15*1000;
 	const int pause_delay		= 500;
 	const int align_delay		= 600;
 	const int dump_delay		= 1000;
+	const int end_delay			= 1*1000;
 
 	const int LIFT_LOW_POS		= 0;
 	const int LIFT_MED_POS		= 3000;
@@ -102,7 +106,7 @@ task main()
 		Time_Wait(initialize_delay);
 	}
 
-	// Raise the lift and move forward as far as the baskets.
+	// Move forward as far as the baskets.
 	fine_tune_factor = 0.0;
 	translation_y = 40; // MAGIC_NUM
 	Time_Wait(align_delay);
@@ -111,34 +115,64 @@ task main()
 	translation_y = 0;
 	Time_Wait(pause_delay);
 
-	// Turn so robot is "0" degrees and raise the lift.
+	// Raise the lift.
+	lift_target = LIFT_HIGH_POS;
+
+	// Rotate to 0 degrees.
 	fine_tune_factor = 0.0;
 	rotation_global = 40;
 	Time_Wait(align_delay);
-	lift_target = LIFT_HIGH_POS;
 	fine_tune_factor = 1.0;
-	while (isRotating<10) {
+	Time_ClearTimer(alignTime);
+	while (isRotating<50) {
 		error = (-90)-heading; // MAGIC_NUM
-		rotation_global = error*4; // MAGIC_NUM
-		if (abs(error)<1.5) { // MAGIC_NUM
+		rotation_global = error*1.45; // MAGIC_NUM
+		if (abs(error)<5) { // MAGIC_NUM
 			isRotating++;
 		} else {
 			isRotating = 0;
 		}
-		Time_Wait(5); // MAGIC_NUM
+		if (Time_GetTime(alignTime)>10*1000) {
+			break;
+		}
+		Time_Wait(2); // MAGIC_NUM
 	}
 	rotation_global = 0;
 	isRotating = 0;
 	Time_Wait(pause_delay);
 
-	// Move forward a bit and dump the cubes, then lower the lift.
+	// Approach the baskets.
 	fine_tune_factor = 0.0;
 	translation_x = -40; // MAGIC_NUM
 	Time_Wait(align_delay);
 	fine_tune_factor = 1.0;
 	Time_Wait(approach_basket_time);
 	translation_x = 0;
+
+	// Rotate to 0 degrees.
+	fine_tune_factor = 0.0;
+	rotation_global = 40;
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_ClearTimer(alignTime);
+	while (isRotating<50) {
+		error = (-90)-heading; // MAGIC_NUM
+		rotation_global = error*1.54; // MAGIC_NUM
+		if (abs(error)<2.4) { // MAGIC_NUM
+			isRotating++;
+		} else {
+			isRotating = 0;
+		}
+		if (Time_GetTime(alignTime)>5*1000) {
+			break;
+		}
+		Time_Wait(2); // MAGIC_NUM
+	}
+	rotation_global = 0;
+	isRotating = 0;
 	Time_Wait(pause_delay);
+
+	// Dump the cubes, then lower the lift.
 	dumpCubes(4);
 	Time_Wait(dump_delay);
 	lift_target = LIFT_LOW_POS;
@@ -167,17 +201,20 @@ task main()
 	Time_Wait(align_delay);
 	lift_target = LIFT_LOW_POS;
 	fine_tune_factor = 1.0;
-	while (isRotating<10) {
+	Time_ClearTimer(alignTime);
+	while (isRotating<50) {
 		error = (-90)-heading; // MAGIC_NUM
-		rotation_global = error*4; // MAGIC_NUM
-		if (abs(error)<1.5) { // MAGIC_NUM
+		rotation_global = error*1.54; // MAGIC_NUM
+		if (abs(error)<2.4) { // MAGIC_NUM
 			isRotating++;
 		} else {
 			isRotating = 0;
 		}
-		Time_Wait(5); // MAGIC_NUM
+		if (Time_GetTime(alignTime)>5*1000) {
+			break;
+		}
+		Time_Wait(2); // MAGIC_NUM
 	}
-
 	rotation_global = 0;
 	isRotating = 0;
 	Time_Wait(pause_delay);
@@ -198,7 +235,10 @@ task main()
 	Task_Spawn(SaveData);
 	Task_Spawn(SaveData);
 
-	Time_Wait(10000);
+	// Signal that we're done.
+	Motor_SetPower(100, motor_flag);
+	Time_Wait(end_delay);
+	Motor_SetPower(0, motor_flag);
 }
 
 

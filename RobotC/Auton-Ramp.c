@@ -76,7 +76,7 @@ task main()
 	Task_Spawn(Display);
 
 	// Small little things for gyro correction.
-	bool isRotating = true;
+	int isRotating = 0;
 	float error = 0.0;
 
 	const int initialize_delay	= 500;
@@ -89,10 +89,11 @@ task main()
 	const int LIFT_MED_POS		= 3000;
 	const int LIFT_HIGH_POS		= 5400;
 
-	const int move_to_basket_time	= 700; // Wild guess. As are the following.
-	const int approach_basket_time	= 600;
-	const int forward_to_ramp_time	= 900;
-	const int move_onto_ramp_time	= 1800;
+	const int move_to_basket_time	= 400; // Wild guess. As are the following.
+	const int approach_basket_time	= 900;
+	const int retreat_basket_time	= 500;
+	const int forward_to_ramp_time	= 1700;
+	const int move_onto_ramp_time	= 2300;
 
 	Joystick_WaitForStart();
 	if (AUTON_WAIT==true) {
@@ -116,16 +117,18 @@ task main()
 	Time_Wait(align_delay);
 	lift_target = LIFT_HIGH_POS;
 	fine_tune_factor = 1.0;
-	while (isRotating) {
+	while (isRotating<10) {
 		error = (-90)-heading; // MAGIC_NUM
-		rotation_global = error*1.15; // MAGIC_NUM
-		if (abs(error)<2.2) { // MAGIC_NUM
-			isRotating = false;
+		rotation_global = error*4; // MAGIC_NUM
+		if (abs(error)<1.5) { // MAGIC_NUM
+			isRotating++;
+		} else {
+			isRotating = 0;
 		}
 		Time_Wait(5); // MAGIC_NUM
 	}
 	rotation_global = 0;
-	isRotating = true;
+	isRotating = 0;
 	Time_Wait(pause_delay);
 
 	// Move forward a bit and dump the cubes, then lower the lift.
@@ -145,7 +148,7 @@ task main()
 	translation_x = 40; // MAGIC_NUM
 	Time_Wait(align_delay);
 	fine_tune_factor = 1.0;
-	Time_Wait(approach_basket_time);
+	Time_Wait(retreat_basket_time);
 	translation_x = 0;
 	Time_Wait(pause_delay);
 
@@ -164,16 +167,19 @@ task main()
 	Time_Wait(align_delay);
 	lift_target = LIFT_LOW_POS;
 	fine_tune_factor = 1.0;
-	while (isRotating) {
+	while (isRotating<10) {
 		error = (-90)-heading; // MAGIC_NUM
-		rotation_global = error*1.15; // MAGIC_NUM
-		if (abs(error)<2.2) { // MAGIC_NUM
-			isRotating = false;
+		rotation_global = error*4; // MAGIC_NUM
+		if (abs(error)<1.5) { // MAGIC_NUM
+			isRotating++;
+		} else {
+			isRotating = 0;
 		}
 		Time_Wait(5); // MAGIC_NUM
 	}
-	isRotating = true;
+
 	rotation_global = 0;
+	isRotating = 0;
 	Time_Wait(pause_delay);
 
 	// Move onto the ramp.
@@ -191,6 +197,8 @@ task main()
 	Time_Wait(pause_delay);
 	Task_Spawn(SaveData);
 	Task_Spawn(SaveData);
+
+	Time_Wait(10000);
 }
 
 

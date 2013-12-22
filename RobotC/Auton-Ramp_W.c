@@ -42,7 +42,7 @@ task SaveData();
 const int AUTON_L_R = 1;
 
 // true = wait 15 seconds before starting, false = no delay.
-const bool AUTON_WAIT = false;
+const bool AUTON_WAIT = true;
 
 // For main task:
 float power_lift = 0.0;
@@ -96,7 +96,7 @@ task main()
 	const int move_to_basket_time	= 780; // Wild guess. As are the following.
 	const int approach_basket_time	= 884;
 	const int retreat_basket_time	= 400;
-	const int forward_to_ramp_time	= 1700;
+	const int forward_to_ramp_time	= 1550;
 	const int move_onto_ramp_time	= 2100;
 
 	Joystick_WaitForStart();
@@ -125,7 +125,7 @@ task main()
 	fine_tune_factor = 1.0;
 	Time_ClearTimer(alignTime);
 	while (isRotating<50) {
-		error = (90)-heading; // MAGIC_NUM
+		error = (-90)-heading; // MAGIC_NUM
 		rotation_global = error*1.45; // MAGIC_NUM
 		if (abs(error)<5) { // MAGIC_NUM
 			isRotating++;
@@ -143,7 +143,7 @@ task main()
 
 	// Approach the baskets.
 	fine_tune_factor = 0.0;
-	translation_x = 40; // MAGIC_NUM
+	translation_x = -40; // MAGIC_NUM
 	Time_Wait(align_delay);
 	fine_tune_factor = 1.0;
 	Time_Wait(approach_basket_time);
@@ -156,7 +156,7 @@ task main()
 	fine_tune_factor = 1.0;
 	Time_ClearTimer(alignTime);
 	while (isRotating<50) {
-		error = (90)-heading; // MAGIC_NUM
+		error = (-90)-heading; // MAGIC_NUM
 		rotation_global = error*1.54; // MAGIC_NUM
 		if (abs(error)<2.4) { // MAGIC_NUM
 			isRotating++;
@@ -179,7 +179,7 @@ task main()
 
 	// Back up a bit.
 	fine_tune_factor = 0.0;
-	translation_x = -40; // MAGIC_NUM
+	translation_x = 40; // MAGIC_NUM
 	Time_Wait(align_delay);
 	fine_tune_factor = 1.0;
 	Time_Wait(retreat_basket_time);
@@ -203,7 +203,7 @@ task main()
 	fine_tune_factor = 1.0;
 	Time_ClearTimer(alignTime);
 	while (isRotating<50) {
-		error = (90)-heading; // MAGIC_NUM
+		error = (-90)-heading; // MAGIC_NUM
 		rotation_global = error*1.54; // MAGIC_NUM
 		if (abs(error)<2.4) { // MAGIC_NUM
 			isRotating++;
@@ -221,7 +221,7 @@ task main()
 
 	// Move onto the ramp.
 	fine_tune_factor = 0.0;
-	translation_x = 60; // MAGIC_NUM
+	translation_x = -60; // MAGIC_NUM
 	Time_Wait(align_delay);
 	fine_tune_factor = 1.0;
 	Time_Wait(move_onto_ramp_time);
@@ -260,7 +260,7 @@ task Drive()
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(T3); // We will use this to guage the loop time for driving.
-	heading = 45.0; // MAGIC_NUM
+	heading = -45.0; // MAGIC_NUM
 
 	while (true) {
 		Joystick_UpdateData();

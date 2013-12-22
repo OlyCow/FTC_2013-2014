@@ -120,7 +120,7 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 5800; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 5200; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 typedef enum CardinalDirection {

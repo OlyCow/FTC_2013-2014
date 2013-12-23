@@ -227,17 +227,20 @@ task main()
 	while (true) {
 		Joystick_UpdateData();
 
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		gyro_current = (float)HTGYROreadRot(sensor_protoboard);
 		heading += (gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
 		Time_ClearTimer(timer_gyro);
 		gyro_prev = gyro_current;
 		f_angle_z = round(heading);
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
 
 		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
 			isTank = !isTank;
 		}
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		switch (isTank) {
 			case true :
@@ -318,6 +321,7 @@ task main()
 				}
 				break; // case `isTank==false`
 		}
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
 
 		// Set our "fine-tune" factor (amount motor power is divided by).
@@ -343,6 +347,7 @@ task main()
 		// Proper procedure for resetting lift would be to press Button_B and then
 		// go to press the Joystick_L button. Resetting of the lift is registered
 		// when the joystick button is released.
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
 			lift_target += 160; // MAGIC_NUM
@@ -367,6 +372,7 @@ task main()
 				}
 			}
 		}
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
 		// Setting the lift too high or too low is handled in the PID loop.
 
@@ -378,6 +384,7 @@ task main()
 		}
 
 		// TODO: Make sure driver 1 does indeed override driver 2.
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
 			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
@@ -406,6 +413,7 @@ task main()
 					break;
 			}
 		}
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
 
 		// TODO: All of the flag/climbing implementation depends on how Ian makes
@@ -511,16 +519,18 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.0,	1.0,	1.0,	1.0}; // MAGIC_NUM: TODO: PID tuning.
-	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
+	float kP[POD_NUM] = {1.6,	1.6,	1.6,	1.6}; // MAGIC_NUM: TODO: PID tuning.
+	float kI[POD_NUM] = {0.002,	0.002,	0.002,	0.002};
+	float kD[POD_NUM] = {130.0,	130.0,	130.0,	130.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
 	float error_rate_pod[POD_NUM] = {0,0,0,0};
 
 	// Variables to adjust alignment & damping of wheel pods.
 	Aligned netAlignment = ALIGNED_FAR;
-	const int align_far_limit = 24; // degrees.
-	const int align_medium_limit = 6; // degrees.
+	const int align_far_limit = 40; // degrees.
+	const int align_medium_limit = 5; // degrees.
+	const int align_medium_range = align_far_limit-align_medium_limit; // degrees.
+	float align_adjust = 0.0; // temporary variable.
 
 	// Misc. variables for pod PID.
 	const int turnLimit = 3; // On each side. To prevent the wires from getting too twisted.
@@ -558,6 +568,9 @@ task PID()
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
+		//// TODO: Make this actually work.
+		//Task_HogCPU();
+
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
@@ -613,13 +626,15 @@ task PID()
 			Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
 
 			// Calculate various aspects of the errors, for the I- and D- terms.
-			error_sum_total_pod[i] -= error_sum_pod[i][kI_delay-1]; // -1: Array indices.
-			error_sum_total_pod[i] += error_sum_pod[i][0];
-			// TODO: Figure out whether this really needs to count down instead of up :P
-			for (int j=kI_delay-1; j>0; j--) { //`j=kI_delay-1` because we are dealing with array indices.
-				error_sum_pod[i][j] = error_sum_pod[i][j-1];
+			// TODO: Optimize I-term calculation.
+			for (int j=0; j<kI_delay-1; j++) { // We can't assign kI_delay-1 yet as an index (doesn't exist).
+				error_sum_pod[i][j] = error_sum_pod[i][j+1];
 			}
-			error_sum_pod[i][0] = error_pod[i]*t_delta;
+			error_sum_pod[i][kI_delay-1] = error_pod[i]*t_delta; // `-1` because array indices.
+			error_sum_total_pod[i] = 0;
+			for (int j=0; j<kI_delay; j++) {
+				error_sum_total_pod[i] += error_sum_pod[i][j];
+			}
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
 
 			// Calculate total PID correction values.
@@ -629,10 +644,10 @@ task PID()
 			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
 
 			// Classify alignment of each wheel pod.
-			if (abs(error_pod[i])>align_far_limit) { //12 is an arbitrary number :P
+			if (abs(error_pod[i])>align_far_limit) {
 				isAligned[i] = ALIGNED_FAR;
-			//} else if (abs(error_pod[i])>align_medium_limit) {
-			//	isAligned[i] = ALIGNED_MEDIUM;
+			} else if (abs(error_pod[i])>align_medium_limit) {
+				isAligned[i] = ALIGNED_MEDIUM;
 			} else {
 				isAligned[i] = ALIGNED_CLOSE;
 			}
@@ -648,8 +663,10 @@ task PID()
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
 				case ALIGNED_MEDIUM:
-					g_MotorData[i].fineTuneFactor *= 0; // FOR NOW.
-					//g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
+					align_adjust = align_far_limit-abs(error_pod[i]);
+					align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+					align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+					g_MotorData[i].fineTuneFactor *= align_adjust;
 					break;
 				case ALIGNED_CLOSE :
 					g_MotorData[i].fineTuneFactor *= 1;
@@ -657,6 +674,8 @@ task PID()
 				// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
 			}
 		}
+		// Now we can reset this (and we need to).
+		netAlignment = ALIGNED_CLOSE;
 
 		// Assign the power settings to the motors and servos.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -690,6 +709,10 @@ task PID()
 		}
 		power_lift=term_P_lift+term_D_lift;
 		Motor_SetPower(power_lift, motor_lift);
+
+		//// TODO: Make this actually work.
+		//// We want to release here because the lift loop uses the same timer.
+		//Task_ReleaseCPU();
 	}
 }
 

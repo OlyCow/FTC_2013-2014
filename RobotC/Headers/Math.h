@@ -33,6 +33,7 @@ const int g_JoystickDeadband = 10;
 
 
 
+#define Math_Sign(input)  (sgn(input))
 int	  Math_Min(int a, int b);
 float Math_Min(float a, float b);
 int	  Math_Max(int a, int b);
@@ -46,7 +47,7 @@ float Math_TrimDeadband(float input, float deadband=g_JoystickDeadband);
 int   Math_Limit(int input, int max);
 float Math_Limit(float input, float max);
 float Math_Normalize(float input, float originalMax, float newMax);
-float Math_ResponseCurve(float input, float max);
+float Math_ResponseCurve(float input, float newMax);
 float Math_Sin(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);
 float Math_Cos(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);
 float Math_Tan(float input, AngleUnit inputUnit=UNIT_DEG, AngleUnit outputUnit=UNIT_DEG);

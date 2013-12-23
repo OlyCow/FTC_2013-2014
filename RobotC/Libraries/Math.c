@@ -109,9 +109,10 @@ float Math_Limit(float input, float max) {
 float Math_Normalize(float input, float originalMax, float newMax) {
 	return input*newMax/originalMax;
 }
-float Math_ResponseCurve(float input, float max) {
+float Math_ResponseCurve(float input, float newMax) {
 	float return_value = input*input;
-	return_value /= max; // Because math.
+	return_value /= newMax; // Because math.
+	return_value *= Math_Sign(input);
 	return return_value;
 }
 float Math_Sin(float input, AngleUnit inputUnit, AngleUnit outputUnit) {

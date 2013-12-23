@@ -103,9 +103,6 @@ task Autonomous(); // Ooooh.
 // For control flow:
 bool isAutonomous = false;
 
-// For saving pod reset data.
-bool isTemp = false;
-
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
@@ -187,7 +184,7 @@ task main()
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
-	Task_Spawn(TimedOperations);
+	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
 	// Not initializing these structs for now: once data starts coming in
 	// from the controllers, all the members of these will get updated.
@@ -198,36 +195,47 @@ task main()
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 1; // On each side. To prevent the wires from getting too twisted.
-	float heading = 0.0; // Because f_angle_z is an int.
 
-	// FOR TANK
+	float heading = 0.0; // Because f_angle_z is an int.
+	float gyro_current = 0.0; // For trapezoidal approximation.
+	float gyro_prev = 0.0; // For trapezoidal approximation.
+
+	// Timers.
+	int timer_gyro = 0.0;
+
+	// Tank-mode power levels.
 	float power_L = 0.0;
 	float power_R = 0.0;
 
+	// Misc. variables.
 	SweepDirection sweepDirection = SWEEP_OFF;
 	float power_flag = 0.0;
 	float power_climb = 0.0;
 
 	Joystick_WaitForStart();
-	Time_ClearTimer(T1);
+	Time_ClearTimer(timer_gyro);
 
 	while (true) {
 		Joystick_UpdateData();
+
+		gyro_current = (float)HTGYROreadRot(sensor_protoboard);
+		heading += (gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/(float)2000.0; // Trapezoid.
+		Time_ClearTimer(timer_gyro);
+		gyro_prev = gyro_current;
+		f_angle_z = round(heading);
 
 		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
 			isTank = !isTank;
 		}
 		switch (isTank) {
 			case true :
-				//for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				//	g_ServoData[i].angle = 90;
-				//}
+				// MAGIC_NUM: Ian says these angles make the pods skid less.
 				g_ServoData[POD_FR].angle = 102;
 				g_ServoData[POD_FL].angle = 78;
 				g_ServoData[POD_BL].angle = 78;
 				g_ServoData[POD_BR].angle = 102;
-				power_L = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y));
-				power_R = Math_TrimDeadband(Joystick_Joystick(JOYSTICK_R, AXIS_Y));
+				power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
+				power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 				g_MotorData[POD_FR].power = power_R;
 				g_MotorData[POD_FL].power = power_L;
 				g_MotorData[POD_BL].power = power_L;
@@ -235,75 +243,70 @@ task main()
 				break;
 			case false :
 
-		heading += (float)HTGYROreadRot(sensor_protoboard)*((float)Time_GetTime(T1)/(float)1000.0);
-		Time_ClearTimer(T1);
-		f_angle_z = round(heading);
-
-		// TODO: When the robot design is finalized and comms is working and all
-		// that good stuff, take this out and only use the joystick button to reset
-		// the gyro. Also update the climbing and lift controls when we finalize
-		// those as well.
-		if (Joystick_ButtonPressed(BUTTON_B)==true) {
-			f_angle_z = 0;
-			heading = 0;
-		}
-		//if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
-		//	f_angle_z = 0;
-		//	heading = 0;
-		//}
-
-		// A rotation vector is added to translation vector, and the resultant vector
-		// is normalized. A differential analysis of the parametric equations of
-		// each wheel pod confirms that the above algorithm works perfectly, despite
-		// its apparent simplicity. Use of the Vector2D library makes some of this
-		// slightly less efficient (there are some unnecessary update calculations)
-		// but the benefit of increased readability is well worth it.
-		translation.x = Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_X)), g_FullPower);
-		translation.y = Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_R, AXIS_Y)), g_FullPower);
-		Vector2D_UpdateRot(translation);
-		Vector2D_Rotate(translation, -heading);
-		rotation_temp = -Math_Limit(Math_TrimDeadband((float)Joystick_Joystick(JOYSTICK_L, AXIS_X)), g_FullPower);
-
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			rotation[i].r = rotation_temp;
-			rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
-			Vector2D_UpdatePos(rotation[i]);
-			Vector2D_Add(rotation[i], translation, combined[i]);
-			if (combined[i].r>g_FullPower) {
-				shouldNormalize = true;
-			}
-			if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) { // AND encoder is within 2 turns.
-				combined[i].theta = combined_angle_prev[i];
-				// No need to update `combined_angle_prev[i]` because it stays the same.
-				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
-			} else {
-				combined_angle_prev[i] = combined[i].theta;
-			}
-			g_ServoData[i].angle = combined[i].theta;
-		}
-
-		// Normalize our motors' power values if a motor's power went above g_FullPower.
-		if (shouldNormalize==true) {
-			float originalMaxPower = (float)g_FullPower; // If there was a false positive, this ensures nothing changes.
-			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				if (combined[i].r>originalMaxPower) {
-					originalMaxPower = combined[i].r;
+				// TODO: When the robot design is finalized and comms is working and all
+				// that good stuff, take this out and only use the joystick button to reset
+				// the gyro. Also update the climbing and lift controls when we finalize
+				// those as well.
+				if (Joystick_ButtonPressed(BUTTON_B)==true) {
+					f_angle_z = 0;
+					heading = 0;
 				}
-			}
-			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				combined[i].r = Math_Normalize(combined[i].r, originalMaxPower, g_FullPower);
-				Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
-			}
-			shouldNormalize = false; // Reset this for the next iteration.
+				if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
+					f_angle_z = 0;
+					heading = 0;
+				}
+
+				// A rotation vector is added to translation vector, and the resultant vector
+				// is normalized. A differential analysis of the parametric equations of
+				// each wheel pod confirms that the above algorithm works perfectly, despite
+				// its apparent simplicity. Use of the Vector2D library makes some of this
+				// slightly less efficient (there are some unnecessary update calculations)
+				// but the benefit of increased readability is well worth it.
+				// The following code is essentially wizardry (practically speaking).
+				translation.x = Joystick_GenericInput(JOYSTICK_R, AXIS_X);
+				translation.y = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
+				Vector2D_UpdateRot(translation);
+				Vector2D_Rotate(translation, -heading);
+				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
+
+				for (int i=POD_FR; i<(int)POD_NUM; i++) {
+					rotation[i].r = rotation_temp;
+					rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
+					Vector2D_UpdatePos(rotation[i]);
+					Vector2D_Add(rotation[i], translation, combined[i]);
+					if (combined[i].r>g_FullPower) {
+						shouldNormalize = true;
+					}
+					if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) { // AND encoder is within 2 turns.
+						combined[i].theta = combined_angle_prev[i];
+						// No need to update `combined_angle_prev[i]` because it stays the same.
+						Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
+					} else {
+						combined_angle_prev[i] = combined[i].theta;
+					}
+					g_ServoData[i].angle = combined[i].theta;
+				}
+
+				// Normalize our motors' power values if a motor's power went above g_FullPower.
+				if (shouldNormalize==true) {
+					float originalMaxPower = (float)g_FullPower; // If there was a false positive, this ensures nothing changes.
+					for (int i=POD_FR; i<(int)POD_NUM; i++) {
+						if (combined[i].r>originalMaxPower) {
+							originalMaxPower = combined[i].r;
+						}
+					}
+					for (int i=POD_FR; i<(int)POD_NUM; i++) {
+						combined[i].r = Math_Normalize(combined[i].r, originalMaxPower, g_FullPower);
+						Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
+					}
+					shouldNormalize = false; // Reset this for the next iteration.
+				}
+				for (int i=POD_FR; i<(int)POD_NUM; i++) {
+					g_MotorData[i].power = combined[i].r;
+				}
+
+				break;
 		}
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			g_MotorData[i].power = combined[i].r;
-		}
-
-
-
-		break;
-	}
 
 		// Set our "fine-tune" factor (amount motor power is divided by).
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
@@ -329,13 +332,13 @@ task main()
 		// go to press the Joystick_L button. Resetting of the lift is registered
 		// when the joystick button is released.
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 160;
+			lift_target += 160; // MAGIC_NUM
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_target -= 100;
+			lift_target -= 100; // MAGIC_NUM
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 80;
+			lift_target += 80; // MAGIC_NUM
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
-			lift_target -= 50;
+			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 		//	lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
 			//Nesting these is more efficient.
@@ -1016,10 +1019,10 @@ task Display()
 				nxtDisplayTextLine(1, "FL err%d P:%d", error_pod[POD_FL], term_P_pod[POD_FL]);
 				nxtDisplayTextLine(2, "BL err%d P:%d", error_pod[POD_BL], term_P_pod[POD_BL]);
 				nxtDisplayTextLine(3, "BR err%d P:%d", error_pod[POD_BR], term_P_pod[POD_BR]);
-				nxtDisplayTextLine(4, "FR I:%d D:%d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
-				nxtDisplayTextLine(5, "FL I:%d D:%d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
-				nxtDisplayTextLine(6, "BL I:%d D:%d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
-				nxtDisplayTextLine(7, "BR I:%d D:%d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				nxtDisplayTextLine(4, " I:%+4d D:%+4d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
+				nxtDisplayTextLine(5, " I:%+4d D:%+4d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
+				nxtDisplayTextLine(6, " I:%+4d D:%+4d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
+				nxtDisplayTextLine(7, " I:%+4d D:%+4d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "FR:   %+6d", encoder_pod[POD_FR]);
@@ -1069,43 +1072,12 @@ task Display()
 
 task TimedOperations()
 {
-	TFileHandle IO_handle;
-	TFileIOResult IO_result;
-	const string filename_pods = "_reset_pods.txt";
-	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
-	int file_size = 72; // Should be 64 (4 shorts).
-
 	Joystick_WaitForStart();
 	for (int i=0; i<100; i++) { // MAGIC_NUM: 100=120-20
 		Time_Wait(1000);
 	}
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
-
-	for (int i=0; i<7; i++) { // MAGIC_NUM
-		Time_Wait(1000);
-	}
-	while (true) {
-		Task_HogCPU();
-		switch (isTemp) {
-			case false :
-				Delete(filename_pods, IO_result); // TODO: Add error handling.
-				OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
-				break;
-			case true :
-				Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
-				OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
-				break;
-		}
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
-		}
-		Close(IO_handle, IO_result);
-		Task_ReleaseCPU();
-
-		isTemp = (!isTemp); // TODO: XOR. You know the drill.
-		Time_Wait(500); // MAGIC_NUM: half a second.
-	}
 }
 
 
@@ -1115,19 +1087,10 @@ task SaveDataCmd()
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;
 	const string filename_pods = "_reset_pods.txt";
-	const string filename_pods_temp = "_reset_pods_tmp.txt"; // _temp seems to be too long of a file name??
 	int file_size = 72; // Should be 64 (4 shorts).
 	Task_HogCPU();
-	switch (isTemp) {
-		case false :
-			Delete(filename_pods, IO_result); // TODO: Add error handling.
-			OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
-			break;
-		case true :
-			Delete(filename_pods_temp, IO_result); // TODO: Add error handling.
-			OpenWrite(IO_handle, IO_result, filename_pods_temp, file_size); // Size set (correctly?) earlier.
-			break;
-	}
+	Delete(filename_pods, IO_result); // TODO: Add error handling.
+	OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
 	}

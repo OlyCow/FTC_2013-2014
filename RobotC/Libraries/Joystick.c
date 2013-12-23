@@ -151,6 +151,7 @@ float	Joystick_GenericInput(	JoystickLR Joystick,
 	float return_value;
 	return_value = Joystick_Joystick(Joystick, axis, controller);
 	return_value = Math_TrimDeadband(return_value);
+	return_value = Math_Normalize(return_value, g_JoystickMax, g_FullPower);
 	return_value = Math_ResponseCurve(return_value, g_FullPower);
 	return return_value;
 }

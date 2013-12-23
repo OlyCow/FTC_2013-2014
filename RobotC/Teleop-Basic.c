@@ -37,7 +37,7 @@ task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's 
 //task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task TimedOperations();
-task SaveDataCmd();
+task SaveData();
 task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
@@ -212,6 +212,9 @@ task main()
 	float power_flag = 0.0;
 	float power_climb = 0.0;
 
+	// TODO: Fix the eject and delete the corresponding code & vars.
+	const int eject_delay = 250;
+
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_gyro);
 
@@ -241,8 +244,8 @@ task main()
 				g_MotorData[POD_BL].power = power_L;
 				g_MotorData[POD_BR].power = power_R;
 				break;
-			case false :
 
+			case false :
 				// TODO: When the robot design is finalized and comms is working and all
 				// that good stuff, take this out and only use the joystick button to reset
 				// the gyro. Also update the climbing and lift controls when we finalize
@@ -266,7 +269,7 @@ task main()
 				translation.x = Joystick_GenericInput(JOYSTICK_R, AXIS_X);
 				translation.y = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 				Vector2D_UpdateRot(translation);
-				Vector2D_Rotate(translation, -heading);
+				Vector2D_Rotate(translation, -heading); // We want to correct it, not compound.
 				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
 
 				for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -304,8 +307,7 @@ task main()
 				for (int i=POD_FR; i<(int)POD_NUM; i++) {
 					g_MotorData[i].power = combined[i].r;
 				}
-
-				break;
+				break; // case `isTank==false`
 		}
 
 		// Set our "fine-tune" factor (amount motor power is divided by).
@@ -340,7 +342,7 @@ task main()
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-		//	lift_target += Math_Normalize(Math_TrimDeadband(Joystick_Joystick(JOYSTICK_L, AXIS_Y, CONTROLLER_2), g_JoystickDeadband), g_JoystickMax, g_FullPower);
+			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y)*0.2; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
 			//Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
@@ -349,8 +351,8 @@ task main()
 					lift_target = lift_pos_pickup;
 				}
 				if (Joystick_ButtonReleased(BUTTON_JOYR, CONTROLLER_2)==true) {
-					//Motor_ResetEncoder(motor_lift);
-					Motor_SetPower(motor_lift, 0);
+					Motor_ResetEncoder(motor_lift);
+					Motor_SetPower(motor_lift, 0); // TODO: This safety might be able to be improved.
 				}
 			}
 		}
@@ -358,8 +360,7 @@ task main()
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
-			//dumpCubes(2); // MAGIC_NUM.
-			dumpCubes(4);
+			dumpCubes(2); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		}
@@ -372,10 +373,17 @@ task main()
 				sweepDirection = SWEEP_IN;
 			} // No "else" here so that Button_B can do other stuff.
 		}
+		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
+			sweepDirection = SWEEP_OFF;
+		}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
 			switch (sweepDirection) {
 				case SWEEP_IN :
+					// TODO: Make this a task?
 					sweepDirection = SWEEP_OFF;
+					Motor_SetPower(-g_FullPower, motor_sweeper); // <- TODO: kludge, make better!
+					Time_Wait(eject_delay);
+					Motor_SetPower(0, motor_sweeper);
 					break;
 				case SWEEP_OUT :
 					sweepDirection = SWEEP_OFF;
@@ -448,13 +456,9 @@ task main()
 			}
 		}
 
-		// Save the pod reset data to one of two files.
+		// Save the pod reset data.
 		if (Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2)==true) {
-			Task_Spawn(SaveDataCmd);
-		}
-
-		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
-			sweepDirection = SWEEP_OFF;
+			Task_Spawn(SaveData);
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
@@ -628,42 +632,6 @@ task PID()
 			term_I_pod[i] = kI[i]*error_sum_total_pod[i];
 			term_D_pod[i] = kD[i]*error_rate_pod[i];
 			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
-		}
-
-		if (Joystick_Joystick(JOYSTICK_L, AXIS_X)<g_JoystickDeadband) {
-			////min_pos = error_pod[POD_FL];
-			////max_pos = error_pod[POD_FR];
-			//if (	((((error_pod[POD_FL]-error_pod[POD_FR])<12) &&
-			//		((error_pod[POD_FL]-error_pod[POD_BL])<12)) &&
-			//		(((error_pod[POD_FL]-error_pod[POD_BR])<12) &&
-			//		((error_pod[POD_FR]-error_pod[POD_BL])<12))) &&
-			//		((((error_pod[POD_FR]-error_pod[POD_BR])<12) &&
-			//		((error_pod[POD_BL]-error_pod[POD_BR])<12)))	) {
-			//	isAligned = ALIGNED_CLOSE;
-			//} else {
-			//	isAligned = ALIGNED_FAR;
-			//}
-			////if (pod_raw[POD_FR]<error_pod[POD_FL]) {
-			////	min_pos = error_pod[POD_FR];
-			////	max_pos = error_pod[POD_FL];
-			////}
-			////if (min_pos>error_pod[POD_BL]) {
-			////	min_pos = error_pod[POD_BL];
-			////}
-			////if (max_pos<error_pod[POD_BL]) {
-			////	max_pos = error_pod[POD_BL];
-			////}
-			////if (min_pos>error_pod[POD_BR]) {
-			////	min_pos = error_pod[POD_BR];
-			////}
-			////if (max_pos<error_pod[POD_BR]) {
-			////	max_pos = error_pod[POD_BR];
-			////}
-			////if ((max_pos-min_pos)<12) {
-			////	isAligned = ALIGNED_CLOSE;
-			////} else {
-			////	isAligned = ALIGNED_FAR;
-			////}
 		}
 
 		// "Damp" motors depending on how far the wheel pods are from their targets.
@@ -1082,7 +1050,7 @@ task TimedOperations()
 
 
 
-task SaveDataCmd()
+task SaveData()
 {
 	TFileHandle IO_handle;
 	TFileIOResult IO_result;

@@ -23,9 +23,9 @@
 #include "Headers\Bluetooth.h" // TODO!
 #include "Headers\Buttons.h" // TODO! (some)
 #include "Headers\Display.h" // TODO! (some)
-#include "Headers\Sound.h"
-#include "Headers\Math.h" // TODO! (some + high-level stuff)
-#include "Headers\Vectors-2D.h" // TODO! (some)
+#include "Headers\Sound.h" // TODO!
+#include "Headers\Math.h" // TODO! (some)
+#include "Headers\Vectors-2D.h"
 #include "Headers\Vectors-3D.h" // TODO! (unnecessary?)
 
 #include "Headers\initialize.h"

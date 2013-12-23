@@ -1,34 +1,32 @@
-#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTMotor)
-#pragma config(Hubs,  S2, HTServo,  HTServo,  none,     none)
+#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
+#pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
-#pragma config(Motor,  motorA,          motor_feeder,  tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_F,       tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_climb,   tmotorTetrix, openLoop, reversed)
-#pragma config(Servo,  srvo_S2_C1_1,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_3,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_4,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_feeder_L,       tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_feeder_R,       tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_4,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_5,    servo_line_follow,    tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_6,    servo_ultrasonic,     tServoStandard)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C1_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C1_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C1_1,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_2,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_3,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_4,    servo_flag,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
 
 #include "includes.h"
-#include "Teleop-Basic.h"
-#include "subroutines.h"
+#include "swerve-drive.h"
 
 #define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
 #ifdef WILL_EXPLODE
@@ -37,7 +35,6 @@
 
 task Drive();
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-//task CommLink(); // Reads/writes to the protoboard as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task SaveData();
 
@@ -55,6 +52,7 @@ float translation_x = 0.0;
 float translation_y = 0.0;
 float rotation_global = 0.0;
 float heading = 0.0;
+float fine_tune_factor = 1.0;
 
 // For PID:
 float term_I_pod[POD_NUM] = {0,0,0,0};
@@ -68,131 +66,179 @@ float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 const int max_lift_height = 5800; // MAGIC_NUM. TODO: Find this value.
 
-//// For comms link:
-//typedef enum CardinalDirection {
-//	CARDINAL_DIR_N	= 0,
-//	CARDINAL_DIR_W	= 1,
-//	CARDINAL_DIR_S	= 2,
-//	CARDINAL_DIR_E	= 3,
-//	CARDINAL_DIR_NUM,
-//} CardinalDirection;
-//typedef enum CommLinkMode { // TODO: Make more efficient by putting vars completely inside bytes, etc.
-//	COMM_LINK_STD_A,
-//	COMM_LINK_STD_B,
-//	COMM_LINK_STD_C,
-//	COMM_LINK_STD_D,
-//	COMM_LINK_STD_E,
-//	COMM_LINK_STD_F,
-//} CommLinkMode; // TODO: Flesh this out.
-//// TODO: If there are too many variables here, start combining them, esp. the bitmaps.
-//const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
-//const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
-//ubyte f_byte_write = 0;
-//ubyte f_byte_read = 0;
-//bool isClockHigh = true;
-//CommLinkMode f_commLinkMode[6] = {	COMM_LINK_STD_A,
-//									COMM_LINK_STD_B,
-//									COMM_LINK_STD_C,
-//									COMM_LINK_STD_D,
-//									COMM_LINK_STD_E,
-//									COMM_LINK_STD_F	};
-//int f_angle_x = 0; // RobotC doesn't support unsigned ints???
-//int f_angle_y = 0;
-//int f_angle_z = 0;
-//int f_pos_x = 0;
-//int f_pos_y = 0;
-//int f_pos_z = 0;
-//ubyte f_closeRange[CARDINAL_DIR_NUM] = {0,0,0,0};
-//int f_longRange[CARDINAL_DIR_NUM] = {0,0,0,0};
-//ubyte f_lineSensorCenter[CARDINAL_DIR_NUM] = {0,0,0,0};
-//ubyte f_lineSensor[CARDINAL_DIR_NUM][CARDINAL_DIR_NUM] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-//byte f_cubeNum = 0;
-//bool f_liftReset = false;
-//bool f_podReset[POD_NUM] = {false, false, false, false};
-//bool f_cubeDetectedCenter = false;
-//bool f_cubeDetected[CARDINAL_DIR_NUM][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-//bool f_flagBumperTriggered = false;
-//bool f_climbBumperTriggered = false;
-//bool f_bumperTriggered[CARDINAL_DIR_NUM] = {false, false, false, false};
-
 
 
 task main()
 {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
-	HTGYROstartCal(sensor_protoboard);
+	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Drive);
-	//Task_Spawn(PID);
-	//Task_Spawn(CommLink);
+	Task_Spawn(PID);
 	Task_Spawn(Display);
-	Task_Spawn(SaveData);
-	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 
-	typedef enum Crate {
-		CRATE_UNKNOWN	= -1,
-		CRATE_OUTER_A	= 0,
-		CRATE_INNER_A	= 1,
-		CRATE_INNER_B	= 2,
-		CRATE_OUTER_B	= 3,
-		CRATE_NUM,
-	};
+	// Small little things for gyro correction.
+	int isRotating = 0;
+	float error = 0.0;
+	short alignTime = 0;
 
-	const int initialize_delay = 500;
-	const int wait_delay = 15*1000;
-	// TODO: Determine all the following values.
-	const int fine_tune_power = 100;
-	const int LIFT_LOW_POS = 0;
-	const int LIFT_MED_POS = 4000;
-	const int LIFT_HIGH_POS = 5000;
-	const short IR_threshold = 45;
-	const int servo_dump_closed = 0;
-	const int servo_dump_open = 30;
-	// Some example values: {672,697,603-657}, {1212,1137,1218-1189}, {2246,2236,2254-2245}, {2772,2871,2960-2868}
-	const int drive_time_low[CRATE_NUM]		= {0,	920,	1720,	2550};
-	const int drive_time_high[CRATE_NUM]	= {920,	1720,	2550,	3500};
-	const int drive_time_mid[CRATE_NUM]		= {610,	1190,	1900,	2800};
-	const int dump_time = 380;
-	const int start_to_first_turn_time = 3840; // milliseconds?
-	const int first_turn_to_second_turn_time = 2000; // milliseconds?
-	const int second_turn_to_ramp_time = 3000; // milliseconds?
-	const int iteration_delay = 0; // For flag waving.
-	Crate crate_IR = CRATE_UNKNOWN;
+	const int initialize_delay	= 500;
+	const int wait_delay		= 10*1000;
+	const int pause_delay		= 500;
+	const int align_delay		= 600;
+	const int dump_delay		= 1000;
+	const int end_delay			= 1*1000;
 
-	float time_prev = 0.0;
+	const int LIFT_LOW_POS		= 0;
+	const int LIFT_MED_POS		= 3000;
+	const int LIFT_HIGH_POS		= 5400;
+
+	const int move_to_basket_time	= 780; // Wild guess. As are the following.
+	const int approach_basket_time	= 884;
+	const int retreat_basket_time	= 400;
+	const int forward_to_ramp_time	= 1700;
+	const int move_onto_ramp_time	= 2100;
 
 	Joystick_WaitForStart();
-	Time_ClearTimer(T1); // We will use this to guage which crate we're putting cubes into.
-	Time_ClearTimer(T2); // We will use this to guage how far to drive until we're directly in front of the correct crate.
-
-	Servo_SetPosition(servo_dump, servo_dump_closed);
 	if (AUTON_WAIT==true) {
 		Time_Wait(wait_delay);
 	} else {
 		Time_Wait(initialize_delay);
 	}
 
-	// Raise the lift and move sideways until in front of the IR beacon.
-	//translation_x = AUTON_L_R*(-100);
-	//Time_Wait(950);
-	//translation_x = 0;
-	//Time_Wait(200);
+	// Move forward as far as the baskets.
+	fine_tune_factor = 0.0;
+	translation_y = 40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(move_to_basket_time);
+	translation_y = 0;
+	Time_Wait(pause_delay);
 
-	//rotation_global = AUTON_L_R*(-1)*100;
-	//lift_target = LIFT_HIGH_POS;
-	//Time_Wait(2000);
-	//rotation_global = 0;
+	// Raise the lift.
+	lift_target = LIFT_HIGH_POS;
 
-	rotation_global = 100;
-	EndTimeSlice();
-	Time_Wait(10000);
+	// Rotate to 0 degrees.
+	fine_tune_factor = 0.0;
+	rotation_global = 40;
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_ClearTimer(alignTime);
+	while (isRotating<50) {
+		error = (90)-heading; // MAGIC_NUM
+		rotation_global = error*1.45; // MAGIC_NUM
+		if (abs(error)<5) { // MAGIC_NUM
+			isRotating++;
+		} else {
+			isRotating = 0;
+		}
+		if (Time_GetTime(alignTime)>10*1000) {
+			break;
+		}
+		Time_Wait(2); // MAGIC_NUM
+	}
+	rotation_global = 0;
+	isRotating = 0;
+	Time_Wait(pause_delay);
 
-	//lift_target = LIFT_LOW_POS;
-	//Time_Wait(1000);
+	// Approach the baskets.
+	fine_tune_factor = 0.0;
+	translation_x = 40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(approach_basket_time);
+	translation_x = 0;
 
-	Task_Spawn(SaveData);
+	// Rotate to 0 degrees.
+	fine_tune_factor = 0.0;
+	rotation_global = 40;
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_ClearTimer(alignTime);
+	while (isRotating<50) {
+		error = (90)-heading; // MAGIC_NUM
+		rotation_global = error*1.54; // MAGIC_NUM
+		if (abs(error)<2.4) { // MAGIC_NUM
+			isRotating++;
+		} else {
+			isRotating = 0;
+		}
+		if (Time_GetTime(alignTime)>5*1000) {
+			break;
+		}
+		Time_Wait(2); // MAGIC_NUM
+	}
+	rotation_global = 0;
+	isRotating = 0;
+	Time_Wait(pause_delay);
+
+	// Dump the cubes, then lower the lift.
 	dumpCubes(4);
-	Time_Wait(3000);
+	Time_Wait(dump_delay);
+	lift_target = LIFT_LOW_POS;
+
+	// Back up a bit.
+	fine_tune_factor = 0.0;
+	translation_x = -40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(retreat_basket_time);
+	translation_x = 0;
+	Time_Wait(pause_delay);
+
+	// Get lined up with the ramp.
+	fine_tune_factor = 0.0;
+	translation_y = 40; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(forward_to_ramp_time);
+	translation_y = 0;
+	Time_Wait(pause_delay);
+
+	// Make sure the robot is "0" degrees again, and lower lift.
+	fine_tune_factor = 0.0;
+	rotation_global = 40;
+	Time_Wait(align_delay);
+	lift_target = LIFT_LOW_POS;
+	fine_tune_factor = 1.0;
+	Time_ClearTimer(alignTime);
+	while (isRotating<50) {
+		error = (90)-heading; // MAGIC_NUM
+		rotation_global = error*1.54; // MAGIC_NUM
+		if (abs(error)<2.4) { // MAGIC_NUM
+			isRotating++;
+		} else {
+			isRotating = 0;
+		}
+		if (Time_GetTime(alignTime)>5*1000) {
+			break;
+		}
+		Time_Wait(2); // MAGIC_NUM
+	}
+	rotation_global = 0;
+	isRotating = 0;
+	Time_Wait(pause_delay);
+
+	// Move onto the ramp.
+	fine_tune_factor = 0.0;
+	translation_x = 60; // MAGIC_NUM
+	Time_Wait(align_delay);
+	fine_tune_factor = 1.0;
+	Time_Wait(move_onto_ramp_time);
+	translation_x = 0;
+	Time_Wait(pause_delay);
+
+	// Done! Save pod data.
+	Task_Spawn(SaveData);
+	Task_Spawn(SaveData);
+	Time_Wait(pause_delay);
+	Task_Spawn(SaveData);
+	Task_Spawn(SaveData);
+
+	// Signal that we're done.
+	Motor_SetPower(100, motor_flag);
+	Time_Wait(end_delay);
+	Motor_SetPower(0, motor_flag);
 }
 
 
@@ -209,14 +255,20 @@ task Drive()
 	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
 	const int maxTurns = 2; // On each side. To prevent the wires from getting too twisted.
 
+	float gyro_prev = 0.0;
+	float gyro_current = 0.0;
+
 	Joystick_WaitForStart();
 	Time_ClearTimer(T3); // We will use this to guage the loop time for driving.
+	heading = 45.0; // MAGIC_NUM
 
 	while (true) {
 		Joystick_UpdateData();
 
-		heading -= (float)HTGYROreadRot(sensor_protoboard)*(float)Time_GetTime(T3)/(float)1000.0;
+		gyro_current = (float)HTGYROreadRot(sensor_protoboard);
+		heading += (gyro_current+gyro_prev)*(float)Time_GetTime(T3)/(float)2000.0; // Trapezoid.
 		Time_ClearTimer(T3);
+		gyro_prev = gyro_current;
 
 		// A rotation vector is added to translation vector, and the resultant vector
 		// is normalized. A differential analysis of the parametric equations of
@@ -263,6 +315,9 @@ task Drive()
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
 			g_MotorData[i].power = combined[i].r;
 		}
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			g_MotorData[i].fineTuneFactor = fine_tune_factor;
+		}
 	}
 }
 
@@ -290,7 +345,7 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {0.8,	0.8,	0.8,	0.8}; // MAGIC_NUM: TODO: PID tuning.
+	float kP[POD_NUM] = {1.1,	1.1,	1.1,	1.1}; // MAGIC_NUM: TODO: PID tuning.
 	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
@@ -300,8 +355,8 @@ task PID()
 	int pod_pos_prev[POD_NUM] = {0,0,0,0};
 
 	// Variables for lift PID calculations.
-	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.08;
+	float kP_lift_up	= 0.28; // TODO: PID tuning. MAGIC_NUM.
+	float kP_lift_down	= 0.07;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -404,10 +459,10 @@ task PID()
 			}
 			error_sum_pod[i][0] = error_pod[i]*t_delta;
 			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-			if (abs(error_pod[i])>10) { //10 is an arbitrary number :P
+			if (abs(error_pod[i])>12) { //12 is an arbitrary number :P
 				isAligned = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>5) {
-				isAligned = ALIGNED_MEDIUM;
+			//} else if (abs(error_pod[i])>6) {
+			//	isAligned = ALIGNED_MEDIUM;
 			} else {
 				isAligned = ALIGNED_CLOSE;
 			}
@@ -416,6 +471,7 @@ task PID()
 			term_D_pod[i] = kD[i]*error_rate_pod[i];
 			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
 		}
+		nxtDisplayTextLine(7, "%d", isAligned);
 
 		// "Damp" motors depending on how far the wheel pods are from their targets.
 		for (int i=MOTOR_FR; i<(int)MOTOR_NUM; i++) {
@@ -424,9 +480,12 @@ task PID()
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
 				case ALIGNED_MEDIUM:
-					g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%.
+					g_MotorData[i].fineTuneFactor *= 1;
+					//g_MotorData[i].fineTuneFactor *= 1/abs(error_pod[i])*10; // Ranges from 28~83%
 					break;
-				// Skipping the "ALIGNED_CLOSE" condition could increase performance.
+				case ALIGNED_CLOSE:
+					g_MotorData[i].fineTuneFactor *= 1;
+					break;
 			}
 		}
 
@@ -504,10 +563,15 @@ task Display()
 				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
 				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
 				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				//nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
+				//nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
+				//nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
+				//nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+
+				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].fineTuneFactor);
+				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].fineTuneFactor);
+				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].fineTuneFactor);
+				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].fineTuneFactor);
 				break;
 			case DISP_SWERVE_PID :
 				nxtDisplayTextLine(0, "FR err%d P:%d", error_pod[POD_FR], term_P_pod[POD_FR]);

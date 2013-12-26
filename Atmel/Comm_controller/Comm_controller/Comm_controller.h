@@ -2,11 +2,31 @@
 #ifndef COMM_CONTROLLER_H
 #define COMM_CONTROLLER_H
 
-void setupPins();
+// 0x68 with AD0 low, 0x69 with AD0 high.
+#define MPU6050_ADDRESS (0x68)
 
-void setupPins() {
+void setupPins(void);
+namespace TWI
+{
+	// Common uses:
+	// start-write_address-write_data-stop
+	// start-write_address-read_data_once-stop
 	
-	// Set up I/O port directions with the DDRx registries. 1=out, 0=in.
+	void setup(void);
+	void start(void);
+	void stop(void);
+	void write_address(uint8_t u8data);
+	void write_data(uint8_t u8data);
+	// TODO: repeated write
+	uint8_t read_data_once(void);
+	// TODO: uint8_t read_data_cont(void);
+	
+	uint8_t status(void);
+}
+
+void setupPins(void)
+{
+	// Set up I/O port directions with the DDRx registers. 1=out, 0=in.
 	// These can be changed later in the program (and some sensors need
 	// to do this, e.g. ultrasonic sensors).
 	//----------------SCHEMATIC----------------
@@ -48,10 +68,10 @@ void setupPins() {
 			(1<<PD6) |
 			(1<<PD7));
 	
-	// (PORTx registries) Initialize outputs to 0 (LOW), and enable internal
+	// (PORTx registers) Initialize outputs to 0 (LOW), and enable internal
 	// pull-up resistors for the appropriate inputs (most notably the SDA &
 	// SCL pins). 1=pull-up resistor enabled. For details, see schematic for
-	// the DDRx registries' set-up.
+	// the DDRx registers' set-up.
 	// SPI shouldn't need pull-up resistors. Nor do multiplexer read pins.
 	PORTB = ((0<<PB0) |
 			 (1<<PB1) |
@@ -76,8 +96,6 @@ void setupPins() {
 			 (0<<PD5) |
 			 (0<<PD6) |
 			 (0<<PD7));
-	
-	// TODO: Set up TWI. Remember pull-up resistors!
 }
 
 #endif // COMM_CONTROLLER_H

@@ -52,23 +52,24 @@ void setupPins() {
 	// pull-up resistors for the appropriate inputs (most notably the SDA &
 	// SCL pins). 1=pull-up resistor enabled. For details, see schematic for
 	// the DDRx registries' set-up.
+	// SPI shouldn't need pull-up resistors. Nor do multiplexer read pins.
 	PORTB = ((0<<PB0) |
 			 (1<<PB1) |
 			 (0<<PB2) |
 			 (0<<PB3) |
-			 (1<<PB4) | // TODO: Not sure of this one. (MISO)
+			 (0<<PB4) |
 			 (0<<PB5) |
 			 (0<<PB6) |
 			 (0<<PB7));
-	PORTC = ((1<<PC0) | // TODO: Unnecessary? (multiplexer read pin)
+	PORTC = ((0<<PC0) |
 			 (0<<PC1) |
 			 (0<<PC2) |
 			 (0<<PC3) |
 			 (0<<PC4) |
 			 (0<<PC5) |
-			 (1<<PC6)); // No bit 7. TODO: Is pull-up necessary here?
-	PORTD = ((1<<PD0) | // TODO: Unnecessary? (SCLK_NXT)
-			 (1<<PD1) | // TODO: Unnecessary? (MISO_NXT)
+			 (0<<PC6)); // Pull-up unnecessary for RESET pin. No bit 7.
+	PORTD = ((0<<PD0) |
+			 (0<<PD1) |
 			 (0<<PD2) |
 			 (0<<PD3) |
 			 (0<<PD4) |

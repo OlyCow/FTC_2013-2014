@@ -6,16 +6,8 @@
 
 
 
-void Time_Wait(int milliseconds) {
-	wait1Msec(milliseconds);
-}
-void Time_Sleep(int milliseconds) {
-	Sleep(milliseconds);
-}
-void Time_Freeze(int opcodes) {
-	for (int i=0; i<opcodes; i++) {
-		noOp();
-	}
+void Time_ClearTimer(int &timer) {
+	timer = nPgmTime;
 }
 void Time_ClearTimer(TTimers timer) {
 	ClearTimer(timer);
@@ -24,6 +16,12 @@ void Time_ClearAllTimers() {
 	for (int i=T1; i<g_TimerNumber; i++) {
 		ClearTimer(i);
 	}
+}
+void Time_SetTime(int &timer, int milliseconds) {
+	timer = nPgmTime-milliseconds;
+}
+int  Time_GetTime(int timer) {
+	return (nPgmTime - timer);
 }
 int  Time_GetTime(TTimers timer) {
 	return time1[timer];
@@ -42,6 +40,11 @@ int  Time_GetTime(TimerType type) {
 			break;
 	}
 	return time;
+}
+void Time_Freeze(int opcodes) {
+	for (int i=0; i<opcodes; i++) {
+		noOp();
+	}
 }
 
 

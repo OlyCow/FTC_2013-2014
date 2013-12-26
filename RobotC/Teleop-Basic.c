@@ -6,7 +6,7 @@
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_F,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
@@ -292,7 +292,7 @@ task main()
 					if (combined[i].r>g_FullPower) {
 						shouldNormalize = true;
 					}
-					if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) { // AND encoder is within 2 turns.
+					if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) {
 						combined[i].theta = combined_angle_prev[i];
 						// No need to update `combined_angle_prev[i]` because it stays the same.
 						Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
@@ -519,9 +519,11 @@ task PID()
 		}
 	}
 	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.6,	1.6,	1.6,	1.6}; // MAGIC_NUM: TODO: PID tuning.
-	float kI[POD_NUM] = {0.002,	0.002,	0.002,	0.002};
-	float kD[POD_NUM] = {130.0,	130.0,	130.0,	130.0};
+	float kP[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // MAGIC_NUM: TODO: PID tuning.
+	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
+	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
+	//float kI[POD_NUM] = {0.001,	0.001,	0.001,	0.001};
+	//float kD[POD_NUM] = {130.0,	130.0,	130.0,	130.0};
 	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
 	float error_rate_pod[POD_NUM] = {0,0,0,0};
 

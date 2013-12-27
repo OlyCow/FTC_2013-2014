@@ -12,22 +12,6 @@ typedef enum WheelPod {
 	POD_NUM,
 } WheelPod;
 
-typedef enum Motor {
-	MOTOR_FR = 0,
-	MOTOR_FL = 1,
-	MOTOR_BL = 2,
-	MOTOR_BR = 3,
-	MOTOR_NUM,
-} Motor;
-
-typedef enum Servo {
-	SERVO_FR = 0,
-	SERVO_FL = 1,
-	SERVO_BL = 2,
-	SERVO_BR = 3,
-	SERVO_NUM,
-} Servo;
-
 typedef struct motorData {
 	bool	isReversed;
 	int		angleOffset;
@@ -48,7 +32,7 @@ const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 const int g_IRthreshold = 10; // arbitrary units from 0~1024.
 
 // TODO: This number is just a guess. Not verified at all.
-const float g_EncoderDeadband = 1.0;
+const int g_EncoderDeadband = 1; // degrees.
 
 // Transfers data between tasks. These have physical significance,
 // such as the positioning of each pod (relative to the center of
@@ -59,17 +43,21 @@ servoData g_ServoData[POD_NUM];
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup = 0;
-const int lift_pos_dump = 6000;
-const int lift_pos_top = 6200;
-const int servo_funnel_L_open = 40;
-const int servo_funnel_L_closed = 180;
-const int servo_funnel_R_open = -127;
-const int servo_funnel_R_closed = 128;
+const int lift_pos_dump = 5400;
+const int lift_pos_top = 5800;
+const int servo_climb_L_open = 115;
+const int servo_climb_L_closed = 240;
+const int servo_climb_R_open = 255;
+const int servo_climb_R_closed = 140;
 const int servo_dump_open = 30;
 const int servo_dump_closed = 0;
-const int servo_flag_L = -127;
-const int servo_flag_R = 128;
-const int servo_flag_M = 0;
+const int servo_flip_L_up = 10;
+const int servo_flip_L_down = 215;
+const int servo_flip_R_up = 245;
+const int servo_flip_R_down = 40;
+const int servo_flag_L = 0;
+const int servo_flag_R = 255;
+const int servo_flag_M = 128;
 
 // `waveFlagTask` uses this to decide whether to start a new instance.
 bool f_isWavingFlag = false;
@@ -80,10 +68,10 @@ int f_waveNum = 3; // MAGIC_NUM: Seems suitable.
 // Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
 int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.
 
-tMotor	Motor_Convert(Motor motorName);
-Motor	Motor_Convert(tMotor motorName);
-TServoIndex Servo_Convert(Servo servoName); // TODO: Doesn't work.
-Servo	Servo_Convert(TServoIndex servoName); // TODO: Doesn't work.
+tMotor		Motor_Convert(WheelPod motorName);
+WheelPod	Motor_Convert(tMotor motorName);
+TServoIndex Servo_Convert(WheelPod servoName); // TODO: Doesn't work.
+WheelPod	Servo_Convert(TServoIndex servoName); // TODO: Doesn't work.
 
 void initializeRobotVariables();
 
@@ -94,74 +82,74 @@ task waveFlagTask();
 
 
 
-tMotor	Motor_Convert(Motor motorName) {
+tMotor		Motor_Convert(WheelPod motorName) {
 	tMotor conversion;
 	switch (motorName) {
-		case MOTOR_FL:
+		case POD_FL:
 			conversion = motor_FL;
 			break;
-		case MOTOR_FR:
+		case POD_FR:
 			conversion = motor_FR;
 			break;
-		case MOTOR_BR:
+		case POD_BR:
 			conversion = motor_BR;
 			break;
-		case MOTOR_BL:
+		case POD_BL:
 			conversion = motor_BL;
 			break;
 	}
 	return conversion;
 }
-Motor	Motor_Convert(tMotor motorName) {
-	Motor conversion;
+WheelPod	Motor_Convert(tMotor motorName) {
+	WheelPod conversion;
 	switch (motorName) {
 		case motor_FR:
-			conversion = MOTOR_FR;
+			conversion = POD_FR;
 			break;
 		case motor_FL:
-			conversion = MOTOR_FL;
+			conversion = POD_FL;
 			break;
 		case motor_BL:
-			conversion = MOTOR_BL;
+			conversion = POD_BL;
 			break;
 		case motor_BR:
-			conversion = MOTOR_BR;
+			conversion = POD_BR;
 			break;
 	}
 	return conversion;
 }
-TServoIndex Servo_Convert(Servo servoName) {
+TServoIndex Servo_Convert(WheelPod servoName) {
 	TServoIndex conversion;
 	switch (servoName) {
-		case servo_FR:
-			conversion = SERVO_FR;
+		case POD_FR:
+			conversion = servo_FR;
 			break;
-		case servo_FL:
-			conversion = SERVO_FL;
+		case POD_FL:
+			conversion = servo_FL;
 			break;
-		case servo_BL:
-			conversion = SERVO_BL;
+		case POD_BL:
+			conversion = servo_BL;
 			break;
-		case servo_BR:
-			conversion = SERVO_BR;
+		case POD_BR:
+			conversion = servo_BR;
 			break;
 	}
 	return conversion;
 }
-Servo	Servo_Convert(TServoIndex servoName) {
-	Servo conversion;
+WheelPod	Servo_Convert(TServoIndex servoName) {
+	WheelPod conversion;
 	switch (servoName) {
-		case SERVO_FR:
-			conversion = servo_FR;
+		case servo_FR:
+			conversion = POD_FR;
 			break;
-		case SERVO_FL:
-			conversion = servo_FL;
+		case servo_FL:
+			conversion = POD_FL;
 			break;
-		case SERVO_BL:
-			conversion = servo_BL;
+		case servo_BL:
+			conversion = POD_BL;
 			break;
-		case SERVO_BR:
-			conversion = servo_BR;
+		case servo_BR:
+			conversion = POD_BR;
 			break;
 	}
 	return conversion;
@@ -172,13 +160,14 @@ void initializeRobotVariables()
 	Motor_ResetEncoder(motor_lift);
 
 	// MAGIC_NUM. These can't be set in a loop.
-	g_MotorData[MOTOR_FR].angleOffset = 45;
-	g_MotorData[MOTOR_FL].angleOffset = 135;
-	g_MotorData[MOTOR_BL].angleOffset = -135;
-	g_MotorData[MOTOR_BR].angleOffset = -45;
+	g_MotorData[POD_FR].angleOffset = 45;
+	g_MotorData[POD_FL].angleOffset = 135;
+	g_MotorData[POD_BL].angleOffset = -135;
+	g_MotorData[POD_BR].angleOffset = -45;
 
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		Motor_ResetEncoder(Motor_Convert((Motor)i));
+		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
+		Servo_SetPower(Servo_Convert((WheelPod)i), 0); // prevents CR servos from freaking out during init.
 
 		g_MotorData[i].isReversed = false;
 		g_MotorData[i].fineTuneFactor = 1;
@@ -186,6 +175,13 @@ void initializeRobotVariables()
 		g_ServoData[i].angle = 0;
 		g_ServoData[i].power = 0;
 	}
+
+	Servo_SetPosition(servo_dump, servo_dump_closed);
+	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+
+	HTGYROstartCal(sensor_protoboard);
+	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 }
 
 void dumpCubes(int num)

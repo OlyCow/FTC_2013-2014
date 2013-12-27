@@ -529,8 +529,10 @@ task main()
 
 		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
 		if (bDisconnected==true) {
-			Task_HogCPU();
-			while (true) {
+			Task_Suspend(PID);
+			//Task_Suspend(CommLink);
+			while (bDisconnected==true) {
+				Task_HogCPU();
 				Motor_SetPower(0, motor_FR);
 				Motor_SetPower(0, motor_FL);
 				Motor_SetPower(0, motor_BL);
@@ -554,8 +556,11 @@ task main()
 				if (bSoundActive==false) {
 					PlaySound(soundFastUpwardTones);
 				}
+				Task_ReleaseCPU();
+				Task_EndTimeslice();
 			}
-			Task_ReleaseCPU();
+			Task_Resume(PID);
+			//Task_Resume(CommLink);
 		}
 	}
 }

@@ -28,16 +28,16 @@
 #include "includes.h"
 #include "swerve-drive.h"
 
-//#define WILL_EXPLODE // Uncomment this line (Ctrl-Q) to prevent development code from compiling.
+#define WILL_EXPLODE // Uncomment this line to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif
 
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-//task CommLink(); // Reads/writes to the protoboard as tightly as possible.
+task CommLink(); // Reads/writes to the prototype board as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
-task TimedOperations();
-task SaveData();
+task TimedOperations(); // Anything depending on match time (release climbing, etc.).
+task SaveData(); // Saves wheel pod position-DEPRECATED
 task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
@@ -141,7 +141,6 @@ typedef enum CommLinkMode { // TODO: Make more efficient by putting vars complet
 	COMM_LINK_STD_E,
 	COMM_LINK_STD_F,
 } CommLinkMode; // TODO: Flesh this out.
-// TODO: If there are too many variables here, start combining them, esp. the bitmaps.
 const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
 const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
 ubyte f_byte_write = 0;
@@ -188,7 +187,7 @@ task main()
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	//Task_Spawn(CommLink);
+	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
@@ -532,7 +531,7 @@ task main()
 			int original_counter_limit = nNoMessageCounterLimit;
 			nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
 			Task_Suspend(PID);
-			//Task_Suspend(CommLink);
+			Task_Suspend(CommLink);
 			while (bDisconnected==true) {
 				Task_HogCPU();
 				Motor_SetPower(0, motor_FR);
@@ -562,7 +561,7 @@ task main()
 				Task_EndTimeslice();
 			}
 			Task_Resume(PID);
-			//Task_Resume(CommLink);
+			Task_Resume(CommLink);
 			nNoMessageCounterLimit = original_counter_limit;
 		}
 	}
@@ -793,23 +792,23 @@ void processCommTick()
 	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
 	HTSPBwriteIO(sensor_protoboard, f_byte_write);
 	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
-	isClockHigh = !isClockHigh; // TODO: Replace w/ XOR. (If possible.)
+	isClockHigh = !isClockHigh; // Cannot use XOR (bools are weird).
 }
 task CommLink()
 {
 	bool isResync = true; // We start off with a resync.
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	const int max_error_num = 15; // If we get more corrupted packets, we should restart transmission.
+	const int max_error_num = 6; // If we get more corrupted packets, we should restart transmission.
 	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
 	bool wasCorrupted = false;
 	bool header_write = false;
 	bool header_read[6] = {false, false, false, false, false, false};
 	ubyte frame_write[4] = {0,0,0,0};
 	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-	ubyte check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
-	ubyte check_read[6] = {0,0,0,0,0,0}; // Value read.
-	ubyte check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
+	bool check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
+	bool check_read[6] = {0,0,0,0,0,0}; // Value read.
+	bool check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
 	bool isBadData[6] = {false, false, false, false, false, false};
 
 	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
@@ -820,7 +819,7 @@ task CommLink()
 		// Restart the communication link.
 		while (isResync==true) {
 			// First make sure we're in sync.
-			int sync_count = 0; // TODO: Use a byte if we want to save memory :P
+			byte sync_count = 0;
 			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
 			while (sync_count<6) { // 3 high and 3 low.
 				f_byte_write |= (1<<6); // Set the data bit high.
@@ -871,13 +870,11 @@ task CommLink()
 		f_byte_write &= ~(1<<6); // Clear the data bit.
 
 		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
-		// TODO: use ubyte instead of bool and just use last bit.
+		// TODO: use ubyte instead of bool and just use last bit?
 		// A bool can be true but not have the last bit be on.
 		if (header_write==true) {
 			f_byte_write |= (1<<6);
-		} else {
-			f_byte_write |= (0<<6);
-		}
+		} // No "else" needed (already set to 0).
 		processCommTick();
 
 		// Read in all 6 data lines.
@@ -908,7 +905,10 @@ task CommLink()
 			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
 			f_byte_write |= (byte_temp<<6); // Set the data bit.
 
-			check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
+			//// TODO: Do we need this next line anymore (can I delete it)?
+			//check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
+			// TODO: switch over to ubyte again :P
+			check_write = (((bool)byte_temp) != ((bool)check_write));
 			processCommTick();
 
 			// Read in all 6 data lines (MISO).
@@ -922,8 +922,10 @@ task CommLink()
 				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
 				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
-				// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
+				//// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
+				//check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
+				// TODO: Make sure the below works (double-check).
+				check_read_ack[line] = (((bool)check_read_ack[line]) != ((bool)byte_temp));
 
 				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
 				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
@@ -931,39 +933,28 @@ task CommLink()
 			}
 		}
 
-		// Check bits. `bit`="current bit".
-		for (int bit=0; bit<4; bit++) {
-			// Write check bit.
-			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<bit); // Set the data bit we want to find.
+		// Check bits.
+		// TODO: None of the following is guarunteed to work :P
+		f_byte_write &= ~(1<<6); // Clear the data bit.
+		if (check_write==true) {
+			f_byte_write |= 0b01000000;
+		} // No need for "else" condition (byte already cleared).
+		processCommTick();
+		check_write = 0; // Clear this now that we've sent it already.
 
-			// See same operation for data. This is essentially the same logic.
-			byte_temp = check_write&current_index_mask;
-
-			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>bit;
-			f_byte_write |= (byte_temp<<6); // Set the data bit in `f_byte_write`.
-			processCommTick();
-
-			// Read check bits. TODO: This can be further simplified (take out "for" loop?).
-			// TODO: `bit++` might be evaluated before this "for" loop; need to double-check that.
-			for (int line=0; line<6; line++) {
-				current_index_mask = 0; // Clear the mask.
-				current_index_mask |= (1<<bit); // Select the bit we want to find. TODO: This is already in the correct format! THESE TWO STEPS ARE UNNECESSARY?
-				check_read[line] &= ~(1<<bit); // Clear the bit.
-				check_read[line] |= (f_byte_read&current_index_mask); // Set the bit we read.
-
-				if (check_read[line]!=check_read_ack[line]) {
-					isBadData[line] = true;
-					error_num++;
-					wasCorrupted = true;
-				} else {
-					isBadData[line] = false;
-				}
+		// Read check bits.
+		for (int line=0; line<6; line++) {
+			current_index_mask = 0; // Clear the mask.
+			current_index_mask |= (1<<line); // Select the bit we want to find.
+			check_read[line] = (bool)(f_byte_read&current_index_mask);
+			if (check_read[line]!=check_read_ack[line]) {
+				isBadData[line] = true;
+				error_num++;
+				wasCorrupted = true;
+			} else {
+				isBadData[line] = false;
 			}
 		}
-		check_write = 0; // Clear this now that we've sent it already.
 
 		if (error_num>max_error_num) {
 			isResync = true; // This happens at the beginning of the next iteration.
@@ -1044,7 +1035,7 @@ task Display()
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
-		//DISP_COMM_STATUS,		// Each line of each frame.
+		DISP_COMM_STATUS,		// Each line of each frame.
 		//DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
@@ -1092,6 +1083,11 @@ task Display()
 				nxtDisplayTextLine(3, "BR %+5d  %d", encoder_pod[POD_BR], isAligned[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
+				break;
+			case DISP_COMM_STATUS :
+				nxtDisplayTextLine(0, "x_rot %+4d", f_angle_x);
+				nxtDisplayTextLine(0, "y_rot %+4d", f_angle_y);
+				nxtDisplayTextLine(0, "z_rot %+4d", f_angle_z);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");

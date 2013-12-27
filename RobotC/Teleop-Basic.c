@@ -286,9 +286,16 @@ task main()
 				// The following code is essentially wizardry (practically speaking).
 				translation.x = Joystick_GenericInput(JOYSTICK_R, AXIS_X);
 				translation.y = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
+				if (isFineTuning==true) {
+					translation.x *= 0.25;
+					translation.y *= 0.25;
+				}
 				Vector2D_UpdateRot(translation);
 				Vector2D_Rotate(translation, -heading); // We want to correct it, not compound.
 				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
+				if (isFineTuning==true) {
+					rotation_temp *= 0.4;
+				}
 
 				for (int i=POD_FR; i<(int)POD_NUM; i++) {
 					rotation[i].r = rotation_temp;
@@ -341,10 +348,10 @@ task main()
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
 			}
-		} else if (isFineTuning==true) {
-			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
-			}
+		//} else if (isFineTuning==true) {
+		//	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		//		g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
+		//	}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
@@ -387,9 +394,9 @@ task main()
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
-			dumpCubes(2); // MAGIC_NUM.
-		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
+		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
+			dumpCubes(1); // MAGIC_NUM.
 		}
 
 		// TODO: Make sure driver 1 does indeed override driver 2.

@@ -5,6 +5,13 @@
 // 0x68 with AD0 low, 0x69 with AD0 high.
 #define MPU6050_ADDRESS (0x68)
 
+// Number of I/O lines.
+#define NXT_LINE_NUM 6
+
+// Clock counts for debounce to trigger.
+// 9999 = 10 ms
+#define DEBOUNCE_COUNTS 9999
+
 void setupPins(void);
 namespace TWI
 {

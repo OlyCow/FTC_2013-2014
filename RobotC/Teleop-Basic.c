@@ -1,11 +1,11 @@
 #pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
+#pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
+#pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -14,13 +14,13 @@
 #pragma config(Motor,  mtr_S2_C1_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C1_1,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_3,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_4,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S1_C1_3,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_4,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_5,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_R,         tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
@@ -214,6 +214,7 @@ task main()
 	float power_R = 0.0;
 
 	// Misc. variables.
+	bool isFineTuning = false;
 	SweepDirection sweepDirection = SWEEP_OFF;
 	float power_flag = 0.0;
 	float power_climb = 0.0;
@@ -244,11 +245,16 @@ task main()
 		//Task_HogCPU();
 		switch (isTank) {
 			case true :
-				// MAGIC_NUM: Ian says these angles make the pods skid less.
-				g_ServoData[POD_FR].angle = 102;
-				g_ServoData[POD_FL].angle = 78;
-				g_ServoData[POD_BL].angle = 78;
-				g_ServoData[POD_BR].angle = 102;
+				// TODO: Figure out what the heck is going on.
+				g_ServoData[POD_FR].angle = 90;
+				g_ServoData[POD_FL].angle = 90;
+				g_ServoData[POD_BL].angle = 90;
+				g_ServoData[POD_BR].angle = 90;
+				//// MAGIC_NUM: Ian says these angles make the pods skid less.
+				//g_ServoData[POD_FR].angle = 102;
+				//g_ServoData[POD_FL].angle = 78;
+				//g_ServoData[POD_BL].angle = 78;
+				//g_ServoData[POD_BR].angle = 102;
 				power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
 				power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 				g_MotorData[POD_FR].power = power_R;
@@ -328,11 +334,14 @@ task main()
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
 		// while holding both triggers stops movement? The `if... else if...` structure
 		// is also a problem, since BUTTON_LT will take precedence over BUTTON_RT.
+		if (Joystick_ButtonReleased(BUTTON_RT)==true) {
+			isFineTuning = !isFineTuning;
+		}
 		if (Joystick_Button(BUTTON_LT)==true) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
 			}
-		} else if (Joystick_Button(BUTTON_RT)==true) {
+		} else if (isFineTuning==true) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
 			}
@@ -358,7 +367,7 @@ task main()
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*0.2; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*0.4; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
 			//Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
@@ -487,17 +496,60 @@ task main()
 		switch (sweepDirection) {
 			case SWEEP_IN :
 				Motor_SetPower(g_FullPower, motor_sweeper);
+				Motor_SetPower(g_FullPower, motor_assist_L);
+				Motor_SetPower(g_FullPower, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 				break;
 			case SWEEP_OUT :
 				Motor_SetPower(-g_FullPower, motor_sweeper);
+				Motor_SetPower(0, motor_assist_L);
+				Motor_SetPower(0, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 				break;
 			case SWEEP_OFF :
 				Motor_SetPower(0, motor_sweeper);
+				Motor_SetPower(0, motor_assist_L);
+				Motor_SetPower(0, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 				break;
 		}
 		// TODO: make the flag and climbing stuff actually work according to how
 		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag);
+
+		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
+		if (bDisconnected==true) {
+			Task_HogCPU();
+			while (true) {
+				Motor_SetPower(0, motor_FR);
+				Motor_SetPower(0, motor_FL);
+				Motor_SetPower(0, motor_BL);
+				Motor_SetPower(0, motor_BR);
+				Motor_SetPower(0, motor_lift);
+				Motor_SetPower(0, motor_sweeper);
+				Motor_SetPower(0, motor_flag);
+				Motor_SetPower(0, motor_climb);
+				Motor_SetPower(0, motor_assist_L);
+				Motor_SetPower(0, motor_assist_R);
+				Servo_SetPower(servo_FR, 0);
+				Servo_SetPower(servo_FL, 0);
+				Servo_SetPower(servo_BL, 0);
+				Servo_SetPower(servo_BR, 0);
+				Servo_SetPosition(servo_dump, servo_dump_open);
+				Servo_SetPosition(servo_flag, servo_flag_M);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+				Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+				Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+				if (bSoundActive==false) {
+					PlaySound(soundFastUpwardTones);
+				}
+			}
+			Task_ReleaseCPU();
+		}
 	}
 }
 

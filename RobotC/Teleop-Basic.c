@@ -529,6 +529,8 @@ task main()
 
 		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
 		if (bDisconnected==true) {
+			int original_counter_limit = nNoMessageCounterLimit;
+			nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
 			Task_Suspend(PID);
 			//Task_Suspend(CommLink);
 			while (bDisconnected==true) {
@@ -561,6 +563,7 @@ task main()
 			}
 			Task_Resume(PID);
 			//Task_Resume(CommLink);
+			nNoMessageCounterLimit = original_counter_limit;
 		}
 	}
 }

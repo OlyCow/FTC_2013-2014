@@ -51,9 +51,13 @@ const int servo_climb_R_open = 255;
 const int servo_climb_R_closed = 140;
 const int servo_dump_open = 30;
 const int servo_dump_closed = 0;
-const int servo_flag_L = -127;
-const int servo_flag_R = 128;
-const int servo_flag_M = 0;
+const int servo_flip_L_up = 10;
+const int servo_flip_L_down = 215;
+const int servo_flip_R_up = 245;
+const int servo_flip_R_down = 40;
+const int servo_flag_L = 0;
+const int servo_flag_R = 255;
+const int servo_flag_M = 128;
 
 // `waveFlagTask` uses this to decide whether to start a new instance.
 bool f_isWavingFlag = false;
@@ -176,7 +180,7 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 
-	HTGYROstartCal(sensor_protoboard);
+	//HTGYROstartCal(sensor_protoboard);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 }
 

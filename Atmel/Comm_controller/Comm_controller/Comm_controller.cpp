@@ -157,9 +157,12 @@ int main(void)
 		}
 		
 		// Process gyro data.
-		//// TODO: This is temporary!
-		//uint8_t Who_Am_I = 0x00;
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, Who_Am_I);
+		// TODO: This is temporary!
+		uint8_t Who_Am_I = 0x00;
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, Who_Am_I);
+		if (Who_Am_I==0x0068) {
+			PORTB |= (1<<PB2);
+		}
 	}
 }
 
@@ -168,6 +171,19 @@ int main(void)
 //{
 	//
 //}
+
+
+
+void MPU::read(uint8_t address, uint8_t request, uint8_t &data)
+{
+	TWI::start();
+	TWI::write_SLAW(address);
+	TWI::write_data(request);
+	TWI::start(); // Actually, repeated start. :)
+	TWI::write_SLAR(address);
+	TWI::read_data_once(data);
+	TWI::stop();
+}
 
 
 

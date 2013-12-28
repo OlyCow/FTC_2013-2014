@@ -1,3 +1,5 @@
+// Not-so-primitive I2C library-maybe even better than Arduino's
+// Wire library, if I do say so myself.
 #ifndef TWI_H
 #define TWI_H
 

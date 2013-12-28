@@ -1,4 +1,6 @@
-﻿#include "I2C.h"
+﻿// Not-so-primitive I2C library-maybe even better than Arduino's
+// Wire library, if I do say so myself.
+#include "I2C.h"
 
 void TWI::setup(void)
 {

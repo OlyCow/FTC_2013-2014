@@ -219,7 +219,7 @@ task main()
 	float power_climb = 0.0;
 
 	// TODO: Fix the eject and delete the corresponding code & vars.
-	const int eject_delay = 250;
+	const int eject_delay = 1000;
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_gyro);
@@ -230,7 +230,8 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		gyro_current = (float)HTGYROreadRot(sensor_protoboard);
-		heading += (gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
+		//heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
+		heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
 		Time_ClearTimer(timer_gyro);
 		gyro_prev = gyro_current;
 		f_angle_z = round(heading);
@@ -244,16 +245,16 @@ task main()
 		//Task_HogCPU();
 		switch (isTank) {
 			case true :
-				// TODO: Figure out what the heck is going on.
-				g_ServoData[POD_FR].angle = 90;
-				g_ServoData[POD_FL].angle = 90;
-				g_ServoData[POD_BL].angle = 90;
-				g_ServoData[POD_BR].angle = 90;
-				//// MAGIC_NUM: Ian says these angles make the pods skid less.
-				//g_ServoData[POD_FR].angle = 102;
-				//g_ServoData[POD_FL].angle = 78;
-				//g_ServoData[POD_BL].angle = 78;
-				//g_ServoData[POD_BR].angle = 102;
+				//// TODO: Figure out what the heck is going on.
+				//g_ServoData[POD_FR].angle = 90;
+				//g_ServoData[POD_FL].angle = 90;
+				//g_ServoData[POD_BL].angle = 90;
+				//g_ServoData[POD_BR].angle = 90;
+				// MAGIC_NUM: Ian says these angles make the pods skid less.
+				g_ServoData[POD_FR].angle = 100;
+				g_ServoData[POD_FL].angle = 80;
+				g_ServoData[POD_BL].angle = 80;
+				g_ServoData[POD_BR].angle = 100;
 				power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
 				power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 				g_MotorData[POD_FR].power = power_R;
@@ -271,10 +272,10 @@ task main()
 					f_angle_z = 0;
 					heading = 0;
 				}
-				if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
-					f_angle_z = 0;
-					heading = 0;
-				}
+				//if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
+				//	f_angle_z = 0;
+				//	heading = 0;
+				//}
 
 				// A rotation vector is added to translation vector, and the resultant vector
 				// is normalized. A differential analysis of the parametric equations of
@@ -286,14 +287,14 @@ task main()
 				translation.x = Joystick_GenericInput(JOYSTICK_R, AXIS_X);
 				translation.y = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 				if (isFineTuning==true) {
-					translation.x *= 0.25;
-					translation.y *= 0.25;
+					translation.x *= 0.35;
+					translation.y *= 0.35;
 				}
 				Vector2D_UpdateRot(translation);
 				Vector2D_Rotate(translation, -heading); // We want to correct it, not compound.
 				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
 				if (isFineTuning==true) {
-					rotation_temp *= 0.4;
+					rotation_temp *= 0.45;
 				}
 
 				for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -373,7 +374,7 @@ task main()
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*0.4; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.2; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
 			//Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
@@ -417,8 +418,12 @@ task main()
 					// TODO: Make this a task?
 					sweepDirection = SWEEP_OFF;
 					Motor_SetPower(-g_FullPower, motor_sweeper); // <- TODO: kludge, make better!
+					Motor_SetPower(-g_FullPower, motor_assist_L);
+					Motor_SetPower(-g_FullPower, motor_assist_R);
 					Time_Wait(eject_delay);
 					Motor_SetPower(0, motor_sweeper);
+					Motor_SetPower(0, motor_assist_L);
+					Motor_SetPower(0, motor_assist_R);
 					break;
 				case SWEEP_OUT :
 					sweepDirection = SWEEP_OFF;
@@ -786,242 +791,242 @@ task PID()
 
 
 
-void processCommTick()
-{
-	f_byte_write &= ~(1<<7); // Clear the clock bit.
-	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
-	HTSPBwriteIO(sensor_protoboard, f_byte_write);
-	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
-	isClockHigh = !isClockHigh; // Cannot use XOR (bools are weird).
-}
+//void processCommTick()
+//{
+//	f_byte_write &= ~(1<<7); // Clear the clock bit.
+//	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
+//	HTSPBwriteIO(sensor_protoboard, f_byte_write);
+//	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
+//	isClockHigh = !isClockHigh; // Cannot use XOR (bools are weird).
+//}
 task CommLink()
 {
-	bool isResync = true; // We start off with a resync.
-	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	const int max_error_num = 6; // If we get more corrupted packets, we should restart transmission.
-	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
-	bool wasCorrupted = false;
-	bool header_write = false;
-	bool header_read[6] = {false, false, false, false, false, false};
-	ubyte frame_write[4] = {0,0,0,0};
-	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
-	bool check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
-	bool check_read[6] = {0,0,0,0,0,0}; // Value read.
-	bool check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
-	bool isBadData[6] = {false, false, false, false, false, false};
+	//bool isResync = true; // We start off with a resync.
+	//ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+	//ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
+	//const int max_error_num = 6; // If we get more corrupted packets, we should restart transmission.
+	//int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
+	//bool wasCorrupted = false;
+	//bool header_write = false;
+	//bool header_read[6] = {false, false, false, false, false, false};
+	//ubyte frame_write[4] = {0,0,0,0};
+	//ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+	//bool check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
+	//bool check_read[6] = {0,0,0,0,0,0}; // Value read.
+	//bool check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.
+	//bool isBadData[6] = {false, false, false, false, false, false};
 
-	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
-	Joystick_WaitForStart();
+	//HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
+	//Joystick_WaitForStart();
 
-	while (true) {
+	//while (true) {
 
-		// Restart the communication link.
-		while (isResync==true) {
-			// First make sure we're in sync.
-			byte sync_count = 0;
-			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
-			while (sync_count<6) { // 3 high and 3 low.
-				f_byte_write |= (1<<6); // Set the data bit high.
-				processCommTick();
-				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
-				switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
-					case false : // These may seem flipped, but that's because the clock is ready for the next tick.
-						f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
-						break;
-					case true : // These may seem flipped, but that's because the clock is ready for the next tick.
-						f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
-						break;
-				}
-				if (f_byte_read==0b11111111) {
-					sync_count++;
-				} else {
-					sync_count = 0;
-					fail_count++;
-				}
-			}
-			if (isClockHigh==true) {
-				// If so, let it go for another tick.
-				processCommTick();
-			}
+	//	// Restart the communication link.
+	//	while (isResync==true) {
+	//		// First make sure we're in sync.
+	//		byte sync_count = 0;
+	//		int fail_count = 0; // TODO: If this gets too high, alert the drivers.
+	//		while (sync_count<6) { // 3 high and 3 low.
+	//			f_byte_write |= (1<<6); // Set the data bit high.
+	//			processCommTick();
+	//			f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.
+	//			switch (isClockHigh) { // We want all the bits to be high (0b11111111). The MAGIC_NUM depends on the clock.
+	//				case false : // These may seem flipped, but that's because the clock is ready for the next tick.
+	//					f_byte_read = f_byte_read^0b00000000; // MAGIC_NUM, kinda
+	//					break;
+	//				case true : // These may seem flipped, but that's because the clock is ready for the next tick.
+	//					f_byte_read = f_byte_read^0b00111111; // MAGIC_NUM, kinda
+	//					break;
+	//			}
+	//			if (f_byte_read==0b11111111) {
+	//				sync_count++;
+	//			} else {
+	//				sync_count = 0;
+	//				fail_count++;
+	//			}
+	//		}
+	//		if (isClockHigh==true) {
+	//			// If so, let it go for another tick.
+	//			processCommTick();
+	//		}
 
-			// Now bring the data line low for 2 clock ticks.
-			f_byte_write &= ~(1<<6); // Clear the data bit low.
-			processCommTick();
-			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b00000000) {
-				isResync = true;
-				continue;
-			} else {
-				isResync = false;
-			}
-			processCommTick(); // Wait another tick...
-			f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
-			if (f_byte_read!=0b00000000) { // 0, DUH...
-				isResync = true;
-				continue;
-			} else {
-				isResync = false;
-			}
-			// If everything is still good at this point, go on.
-		}
+	//		// Now bring the data line low for 2 clock ticks.
+	//		f_byte_write &= ~(1<<6); // Clear the data bit low.
+	//		processCommTick();
+	//		f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+	//		if (f_byte_read!=0b00000000) {
+	//			isResync = true;
+	//			continue;
+	//		} else {
+	//			isResync = false;
+	//		}
+	//		processCommTick(); // Wait another tick...
+	//		f_byte_read &= 0b00111111; // Make sure the "write" bits aren't random.
+	//		if (f_byte_read!=0b00000000) { // 0, DUH...
+	//			isResync = true;
+	//			continue;
+	//		} else {
+	//			isResync = false;
+	//		}
+	//		// If everything is still good at this point, go on.
+	//	}
 
-		// Write header.
-		f_byte_write &= ~(1<<6); // Clear the data bit.
+	//	// Write header.
+	//	f_byte_write &= ~(1<<6); // Clear the data bit.
 
-		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
-		// TODO: use ubyte instead of bool and just use last bit?
-		// A bool can be true but not have the last bit be on.
-		if (header_write==true) {
-			f_byte_write |= (1<<6);
-		} // No "else" needed (already set to 0).
-		processCommTick();
+	//	// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
+	//	// TODO: use ubyte instead of bool and just use last bit?
+	//	// A bool can be true but not have the last bit be on.
+	//	if (header_write==true) {
+	//		f_byte_write |= (1<<6);
+	//	} // No "else" needed (already set to 0).
+	//	processCommTick();
 
-		// Read in all 6 data lines.
-		for (int line=0; line<6; line++) {
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
+	//	// Read in all 6 data lines.
+	//	for (int line=0; line<6; line++) {
+	//		current_index_mask = 0; // Clear mask.
+	//		current_index_mask |= (1<<line); // Shift a bit over to be the mask.
 
-			// No fancy shifting needed here (header_read is a bool).
-			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
-		}
+	//		// No fancy shifting needed here (header_read is a bool).
+	//		header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+	//	}
 
-		// Data:
-		for (int line=0; line<6; line++) {
-			check_read_ack[line] = 0; // Clear parity bits.
-		}
-		for (int bit=0; bit<32; bit++) {
-			// Set MOSI.
-			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
+	//	// Data:
+	//	for (int line=0; line<6; line++) {
+	//		check_read_ack[line] = 0; // Clear parity bits.
+	//	}
+	//	for (int bit=0; bit<32; bit++) {
+	//		// Set MOSI.
+	//		f_byte_write &= ~(1<<6); // Clear the data bit.
+	//		current_index_mask = 0; // Clear mask.
+	//		current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
 
-			// Intentional int division (returns intended byte) (see next statement).
-			// Using a temp var because `true!=1` (can be any positive int); statement
-			// also clears byte_temp because the mask was cleared (and now AND'd).
-			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+	//		// Intentional int division (returns intended byte) (see next statement).
+	//		// Using a temp var because `true!=1` (can be any positive int); statement
+	//		// also clears byte_temp because the mask was cleared (and now AND'd).
+	//		byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
 
-			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
-			f_byte_write |= (byte_temp<<6); // Set the data bit.
+	//		// TODO: combine the two shifts below into one shift.
+	//		byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
+	//		f_byte_write |= (byte_temp<<6); // Set the data bit.
 
-			//// TODO: Do we need this next line anymore (can I delete it)?
-			//check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
-			// TODO: switch over to ubyte again :P
-			check_write = (((bool)byte_temp) != ((bool)check_write));
-			processCommTick();
+	//		//// TODO: Do we need this next line anymore (can I delete it)?
+	//		//check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
+	//		// TODO: switch over to ubyte again :P
+	//		check_write = (((bool)byte_temp) != ((bool)check_write));
+	//		processCommTick();
 
-			// Read in all 6 data lines (MISO).
-			for (int line=0; line<6; line++) {
-				// TODO: Optimize by (maybe?) making assigning this cyclically.
-				// Would only work for the inner-most loop, since this variable
-				// is reused outside of the loop (for every "for" statement).
-				// Also see note in check bit part about eliminating "for" loop.
-				current_index_mask = 0; // Clear mask.
-				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
-				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
-				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
+	//		// Read in all 6 data lines (MISO).
+	//		for (int line=0; line<6; line++) {
+	//			// TODO: Optimize by (maybe?) making assigning this cyclically.
+	//			// Would only work for the inner-most loop, since this variable
+	//			// is reused outside of the loop (for every "for" statement).
+	//			// Also see note in check bit part about eliminating "for" loop.
+	//			current_index_mask = 0; // Clear mask.
+	//			current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
+	//			frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
+	//			byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
 
-				//// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				//check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
-				// TODO: Make sure the below works (double-check).
-				check_read_ack[line] = (((bool)check_read_ack[line]) != ((bool)byte_temp));
+	//			//// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
+	//			//check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
+	//			// TODO: Make sure the below works (double-check).
+	//			check_read_ack[line] = (((bool)check_read_ack[line]) != ((bool)byte_temp));
 
-				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
-				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
-				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
-			}
-		}
+	//			// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
+	//			byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
+	//			frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
+	//		}
+	//	}
 
-		// Check bits.
-		// TODO: None of the following is guarunteed to work :P
-		f_byte_write &= ~(1<<6); // Clear the data bit.
-		if (check_write==true) {
-			f_byte_write |= 0b01000000;
-		} // No need for "else" condition (byte already cleared).
-		processCommTick();
-		check_write = 0; // Clear this now that we've sent it already.
+	//	// Check bits.
+	//	// TODO: None of the following is guarunteed to work :P
+	//	f_byte_write &= ~(1<<6); // Clear the data bit.
+	//	if (check_write==true) {
+	//		f_byte_write |= 0b01000000;
+	//	} // No need for "else" condition (byte already cleared).
+	//	processCommTick();
+	//	check_write = 0; // Clear this now that we've sent it already.
 
-		// Read check bits.
-		for (int line=0; line<6; line++) {
-			current_index_mask = 0; // Clear the mask.
-			current_index_mask |= (1<<line); // Select the bit we want to find.
-			check_read[line] = (bool)(f_byte_read&current_index_mask);
-			if (check_read[line]!=check_read_ack[line]) {
-				isBadData[line] = true;
-				error_num++;
-				wasCorrupted = true;
-			} else {
-				isBadData[line] = false;
-			}
-		}
+	//	// Read check bits.
+	//	for (int line=0; line<6; line++) {
+	//		current_index_mask = 0; // Clear the mask.
+	//		current_index_mask |= (1<<line); // Select the bit we want to find.
+	//		check_read[line] = (bool)(f_byte_read&current_index_mask);
+	//		if (check_read[line]!=check_read_ack[line]) {
+	//			isBadData[line] = true;
+	//			error_num++;
+	//			wasCorrupted = true;
+	//		} else {
+	//			isBadData[line] = false;
+	//		}
+	//	}
 
-		if (error_num>max_error_num) {
-			isResync = true; // This happens at the beginning of the next iteration.
-			error_num = 0;
-			wasCorrupted = false;
-		} else if ((error_num!=0)&&(wasCorrupted==false)) {
-			error_num = 0; // Not a consecutive error.
-		} else if (error_num==0) {
-			wasCorrupted = false;
-		}
+	//	if (error_num>max_error_num) {
+	//		isResync = true; // This happens at the beginning of the next iteration.
+	//		error_num = 0;
+	//		wasCorrupted = false;
+	//	} else if ((error_num!=0)&&(wasCorrupted==false)) {
+	//		error_num = 0; // Not a consecutive error.
+	//	} else if (error_num==0) {
+	//		wasCorrupted = false;
+	//	}
 
-		// TODO: Assign data to whatever the I/O lines are set to.
-		// TODO: Check this section of code for integrity.
-		for (int line=0; line<6; line++) {
-			if (isBadData[line]==true) {
-				continue;
-			}
-			if (header_read[line]==false) {
-				switch (f_commLinkMode) {
-					case COMM_LINK_STD_A :
-						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_pos_x = frame_read[line][0];
-						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
-						f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
-						Task_ReleaseCPU();
-						Task_HogCPU();
-						f_angle_x = frame_read[line][1];
-						f_angle_x &= 0b01111111;
-						Task_ReleaseCPU();
-						break;
-					case COMM_LINK_STD_B :
-						Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_pos_y = frame_read[line][0];
-						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
-						f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
-						Task_ReleaseCPU();
-						Task_HogCPU();
-						f_angle_y = frame_read[line][1];
-						f_angle_y &= 0b01111111;
-						Task_ReleaseCPU();
-						break;
-					case COMM_LINK_STD_C :
-						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						//f_pos_z = frame_read[line][0];
-						//f_pos_z = f_pos_z>>2; // We just read two extra bits.
-						//f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
-						//Task_ReleaseCPU();
-						//Task_HogCPU();
-						//f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
-						//byte_temp = frame_read[line][0]&0b00000011;
-						//f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
-						//Task_ReleaseCPU();
-						break;
-					case COMM_LINK_STD_D :
-						break;
-					case COMM_LINK_STD_E :
-						break;
-					case COMM_LINK_STD_F :
-						break;
-					default : // TODO: Purpose is to discard data?
-						break;
-				}
-			} else {
-				// Handle special codes here.
-			}
-		}
-	}
+	//	// TODO: Assign data to whatever the I/O lines are set to.
+	//	// TODO: Check this section of code for integrity.
+	//	for (int line=0; line<6; line++) {
+	//		if (isBadData[line]==true) {
+	//			continue;
+	//		}
+	//		if (header_read[line]==false) {
+	//			switch (f_commLinkMode) {
+	//				case COMM_LINK_STD_A :
+	//					Task_HogCPU(); // So that the main program doesn't try to access these vars.
+	//					f_pos_x = frame_read[line][0];
+	//					f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
+	//					f_pos_x |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+	//					Task_ReleaseCPU();
+	//					Task_HogCPU();
+	//					f_angle_x = frame_read[line][1];
+	//					f_angle_x &= 0b01111111;
+	//					Task_ReleaseCPU();
+	//					break;
+	//				case COMM_LINK_STD_B :
+	//					Task_HogCPU(); // So that the main program doesn't try to access these vars.
+	//					f_pos_y = frame_read[line][0];
+	//					f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
+	//					f_pos_y |= (frame_read[line][1]>>7); // TODO: This only works if right-shift leaves leading zeroes.
+	//					Task_ReleaseCPU();
+	//					Task_HogCPU();
+	//					f_angle_y = frame_read[line][1];
+	//					f_angle_y &= 0b01111111;
+	//					Task_ReleaseCPU();
+	//					break;
+	//				case COMM_LINK_STD_C :
+	//					//Task_HogCPU(); // So that the main program doesn't try to access these vars.
+	//					//f_pos_z = frame_read[line][0];
+	//					//f_pos_z = f_pos_z>>2; // We just read two extra bits.
+	//					//f_pos_z &= 0b00111111; // TODO: If right-shift results in leading zeroes, we can delete this line.
+	//					//Task_ReleaseCPU();
+	//					//Task_HogCPU();
+	//					//f_angle_z = frame_read[line][1]>>1; // TODO: Only works when shifting right gives leading zeroes.
+	//					//byte_temp = frame_read[line][0]&0b00000011;
+	//					//f_angle_z |= (byte_temp<<6); // TODO: See above note about right-shifting.
+	//					//Task_ReleaseCPU();
+	//					break;
+	//				case COMM_LINK_STD_D :
+	//					break;
+	//				case COMM_LINK_STD_E :
+	//					break;
+	//				case COMM_LINK_STD_F :
+	//					break;
+	//				default : // TODO: Purpose is to discard data?
+	//					break;
+	//			}
+	//		} else {
+	//			// Handle special codes here.
+	//		}
+	//	}
+	//}
 }
 
 

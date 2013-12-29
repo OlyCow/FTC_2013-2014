@@ -5,6 +5,7 @@ int main(void)
 {
 	setupPins();
 	TWI::setup();
+	MPU::initialize();
 	
 	//// TODO: Uncomment this stuff when we get the ATmega328s.
 	//// TODO: Move this interrupt registry stuff over to the
@@ -19,6 +20,9 @@ int main(void)
 	// When CS10=1 and CS11, CS12=0, clock prescaling = 1.
 	// TODO: Is this the best way to set 3 different bits?
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
+	
+	// Setting up a timer for the gyro and stuffs.
+	TCCR1A |= (1 << CS10);
 	
 	// Variables for I/O with the NXT (prototype board).
 	bool clock_NXT_current = false;				// TODO: I don't think this initialization matters... Does it?
@@ -49,6 +53,22 @@ int main(void)
 	bool cube_counter_current = false;
 	bool cube_counter_prev = false;
 	bool isDebouncing = false;
+	
+	// Variables to process MPU-6050 data.
+	double dt = 0.0;
+	//uint8_t	gyro_x_L = 0,
+			//gyro_x_H = 0,
+			//gyro_y_L = 0,
+			//gyro_y_H = 0,
+			//gyro_z_L = 0,
+			//gyro_z_H = 0;
+		uint8_t gyro_x_L[1] = {0};
+	uint16_t gyro_x = 0,
+			 gyro_y = 0,
+			 gyro_z = 0;
+	double	rot_x = 0.0,
+			rot_y = 0.0,
+			rot_z = 0.0;
 	
 	while (true) {
 		// Process NXT (prototype board) I/O.
@@ -132,7 +152,7 @@ int main(void)
 		}
 		
 		// Process cube counting.
-		cube_counter_current = (PINB & (1<<PINB));
+		cube_counter_current = (PINB & (1<<PB1));
 		if (cube_counter_current!=cube_counter_prev) {
 			switch (isDebouncing) {
 				case false :
@@ -156,11 +176,25 @@ int main(void)
 		}
 		
 		// Process gyro data.
-		// TODO: This is temporary!
-		uint8_t Who_Am_I = 0x00;
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, Who_Am_I);
-		if (Who_Am_I==0x0068) {
-			PORTB |= (1<<PB2);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, gyro_x_L, 1);
+		if (gyro_x_L[0]>0) {
+			alert();
+		} else {
+			clear();
+		}
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, &gyro_z_L, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, &gyro_z_H, 1);
+		//gyro_z = gyro_z_L+(((uint16_t)(gyro_z_H))<<8);
+		//if (gyro_z_L == 0) {
+			//alert();
+		//} else {
+			////clear();
+		//}
+		
+		
+		// TODO: Get rid of the below. Debugging fun stuff.
+		if (cube_num==4) {
+			//alert();
 		}
 	}
 }
@@ -243,4 +277,13 @@ void setupPins(void)
 			 (0<<PD5) |
 			 (0<<PD6) |
 			 (0<<PD7));
+}
+
+void alert(void)
+{
+	PORTB |= (1<<PB2);
+}
+void clear(void)
+{
+	PORTB &= ~(1<<PB2);
 }

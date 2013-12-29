@@ -39,5 +39,7 @@
 #define DEBOUNCE_COUNTS		9999
 
 void setupPins(void);
+void alert(void);
+void clear(void);
 
 #endif // COMM_CONTROLLER_H

@@ -12,19 +12,13 @@ namespace TWI
 	// start-write_address-read_data_once-stop
 	
 	void setup(void);
-	void start(void); // REPEATED START is same as START (according to datasheet).
+	void start(void);
+	void hold(void); // only difference between this and `start()` is status ACK.
 	void stop(void);
-	void write_address(uint8_t u8data);
+	void write_SLA_W(uint8_t u8data);
+	void write_SLA_R(uint8_t u8data);
 	void write_data(uint8_t u8data);
-	void read_data_once(uint8_t &u8data);
-	
-	//// TODO!
-	//void read_data_cont(int size);
-	
-	void write_SLAW(uint8_t address);
-	void write_SLAR(uint8_t address);
-	
-	uint8_t status(void);
+	void read_data(uint8_t u8data[], int byte_num);
 }
 
 #endif // TWI_H

@@ -56,19 +56,20 @@ int main(void)
 	
 	// Variables to process MPU-6050 data.
 	double dt = 0.0;
-	//uint8_t	gyro_x_L = 0,
-			//gyro_x_H = 0,
-			//gyro_y_L = 0,
-			//gyro_y_H = 0,
-			//gyro_z_L = 0,
-			//gyro_z_H = 0;
-		uint8_t gyro_x_L[1] = {0};
+	uint8_t	gyro_x_L = 0,
+			gyro_x_H = 0,
+			gyro_y_L = 0,
+			gyro_y_H = 0,
+			gyro_z_L = 0,
+			gyro_z_H = 0;
 	uint16_t gyro_x = 0,
 			 gyro_y = 0,
 			 gyro_z = 0;
 	double	rot_x = 0.0,
 			rot_y = 0.0,
 			rot_z = 0.0;
+	// TODO: get rid of the test_val (or not :P ).
+	uint8_t test_val[1] = {0b01010101};
 	
 	while (true) {
 		// Process NXT (prototype board) I/O.
@@ -175,13 +176,34 @@ int main(void)
 			}
 		}
 		
-		// Process gyro data.
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, gyro_x_L, 1);
-		if (gyro_x_L[0]>0) {
+		// Process gyro data.		
+		// MPU6050_RA_SELF_TEST_Z & 0b00011111 == 19; FT_GZ == 7358.37
+		
+		//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_CONFIG, test_val, 1);
+		//test_val[0] &= 0b00000111;
+		//// test_val[0] == xxxx x000
+		
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_H, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_L, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_YOUT_H, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_YOUT_L, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_XOUT_H, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_XOUT_L, test_val, 1);
+		
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, test_val, 1);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, test_val, 1);
+		
+		if (test_val[0] == 0) {
 			alert();
 		} else {
 			clear();
 		}
+		
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, &gyro_z_L, 1);
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, &gyro_z_H, 1);
 		//gyro_z = gyro_z_L+(((uint16_t)(gyro_z_H))<<8);

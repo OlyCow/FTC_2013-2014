@@ -133,8 +133,13 @@ void MPU::setRate(uint8_t rate) {
 
 void MPU::setSleepEnabled(bool isEnabled)
 {
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0);
-	// TODO: The above is unbelievably hackish. Unbelievably.
+	switch (isEnabled) {
+		case true :
+			MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0b01000000); // This resets a bunch of other stuff :|
+		case false :
+			MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0);
+	}
+	// TODO: This function is unbelievably hackish. Unbelievably.
 }
 
 bool MPU::who_am_I(void)

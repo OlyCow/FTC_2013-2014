@@ -172,6 +172,11 @@ ubyte f_byte_write = 0;
 ubyte f_byte_read = 0;
 bool isClockHigh = true;
 bool isResync = true; // We start off with a resync.
+int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
+bool header_write = false;
+bool header_read[6] = {false, false, false, false, false, false};
+ubyte frame_write[4] = {0,0,0,0};
+ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
 // I dunno why this is even here...
 bool isTank = false;
@@ -805,12 +810,7 @@ task CommLink()
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 6; // If we get more corrupted packets, we should restart transmission.
-	int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
 	bool wasCorrupted = false;
-	bool header_write = false;
-	bool header_read[6] = {false, false, false, false, false, false};
-	ubyte frame_write[4] = {0,0,0,0};
-	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 	// Check bits DO NOT include header bits!
 	bool check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
 	bool check_read[6] = {0,0,0,0,0,0}; // Value read.
@@ -821,7 +821,6 @@ task CommLink()
 
 	// We don't want to wait for start here (we need to establish
 	// a communication link as soon as possible).
-	Joystick_WaitForStart();
 
 	while (true) {
 
@@ -1071,12 +1070,13 @@ task Display()
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
+		DISP_COMM_DEBUG,
 		DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
 		//DISP_TASKS,				// Which tasks are running.
 		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
-		DISP_NUM,
+		DISP_NUM
 	};
 
 	DisplayMode isMode = DISP_FCS;
@@ -1136,6 +1136,16 @@ task Display()
 						nxtDisplayTextLine(1, "Transmitting...");
 						break;
 				}
+				break;
+				nxtDisplayTextLine(2, "lost packets: %d", error_num);
+			case DISP_COMM_DEBUG :
+				nxtDisplayCenteredTextLine(0, "W %#4X  R %#4X", f_byte_write, f_byte_read);
+				nxtDisplayTextLine(2, "F %2X-%2X-%2X-%2X", frame_read[5][0], frame_read[5][1], frame_read[5][2], frame_read[5][3]);
+				nxtDisplayTextLine(3, "E %2X-%2X-%2X-%2X", frame_read[4][0], frame_read[4][1], frame_read[4][2], frame_read[4][3]);
+				nxtDisplayTextLine(4, "D %2X-%2X-%2X-%2X", frame_read[3][0], frame_read[3][1], frame_read[3][2], frame_read[3][3]);
+				nxtDisplayTextLine(5, "C %2X-%2X-%2X-%2X", frame_read[2][0], frame_read[2][1], frame_read[2][2], frame_read[2][3]);
+				nxtDisplayTextLine(6, "B %2X-%2X-%2X-%2X", frame_read[1][0], frame_read[1][1], frame_read[1][2], frame_read[1][3]);
+				nxtDisplayTextLine(7, "A %2X-%2X-%2X-%2X", frame_read[0][0], frame_read[0][1], frame_read[0][2], frame_read[0][3]);
 				break;
 			case DISP_SENSORS :
 				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);

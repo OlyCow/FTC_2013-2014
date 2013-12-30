@@ -72,7 +72,7 @@ int main(void)
 	uint8_t rot_x = 0;
 	uint8_t rot_y = 0;
 	uint16_t rot_z = 0;
-	bool isRedAlliance = false; // Might as well.
+	bool isRedAlliance = true; // Might as well.
 	uint8_t line_sensor_bmp = 0;
 	uint8_t cube_detect_bmp = 0;
 	uint8_t close_range_A = 0;
@@ -130,12 +130,18 @@ int main(void)
 						}
 					} else {
 						byte_write = 0x00; // 0b00000000
-						// Checking for `>=` in case counter somehow jumps too high.
-						if (resetAckCounter >= 1) {
-							isIOstate = IO_STATE_HEADER;
-							resetAckCounter = 0;
+						switch (resetAckCounter) {
+							case 0 :
+								resetAckCounter++;
+								break;
+							case 1 :
+								isIOstate = IO_STATE_HEADER;
+								resetAckCounter = 0;
+								break;
+							default :
+								resetAckCounter = 0;
+								break;
 						}
-						resetAckCounter++;
 					}
 					break;
 				case IO_STATE_HEADER :
@@ -155,7 +161,7 @@ int main(void)
 					data_read |= (byte_read << bit_count);
 					parity_read_check = (parity_read_check != bool(byte_read)); // bool equiv. of XOR
 					byte_write = 0;
-					for (short line=0; line<NXT_LINE_NUM; line++, bit_count++) {
+					for (short line=0; line<NXT_LINE_NUM; line++) {
 						if (bool(data_write[line]&(uint32_t(1)<<bit_count)) == true) {
 							byte_write |= (1<<line);
 							parity_write[line] = (parity_write[line] != true);
@@ -172,6 +178,8 @@ int main(void)
 						for (short line=0; line<NXT_LINE_NUM; line++) {
 							parity_write[line] = false;
 						}
+					} else {
+						bit_count++;
 					}
 					break;
 				case IO_STATE_PARITY :
@@ -224,6 +232,8 @@ int main(void)
 						break;
 				}
 				data_ready = false;
+			} else if (data_read==NXT_CODE_COMM_RESET) {
+				isIOstate = IO_STATE_RESET;
 			}
 			
 			// Output values on the lines.

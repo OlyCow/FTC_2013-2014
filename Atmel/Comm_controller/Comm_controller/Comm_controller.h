@@ -11,6 +11,8 @@
 #endif
 #include <util/delay.h>
 #include <math.h>
+#include "../../Libraries/I2C.h"
+#include "../../Libraries/MPU6050.h"
 
 // Number of I/O lines.
 #define NXT_LINE_NUM		6
@@ -36,32 +38,13 @@
 // 9999 = 10 ms
 #define DEBOUNCE_COUNTS		9999
 
-
+// NXT read codes. These are long because they're 32 bits.
+#define NXT_CODE_COMM_RESET		0xFFFFFFFF
+#define NXT_CODE_ROT_RESET		0x00000001
+#define NXT_CODE_CUBE_RESET		0x00000002
 
 void setupPins(void);
-
-namespace TWI
-{
-	// Common uses:
-	// start-write_address-write_data-stop
-	// start-write_address-read_data_once-stop
-	
-	void setup(void);
-	void start(void); // REPEATED START is same as START (according to datasheet).
-	void stop(void);
-	void write_address(uint8_t u8data);
-	void write_data(uint8_t u8data);
-	void read_data_once(uint8_t &u8data);
-	
-	//// TODO!
-	//void read_data_cont(int size);
-	
-	void write_SLAW(uint8_t address);
-	void write_SLAR(uint8_t address);
-	
-	uint8_t status(void);
-}
-
-
+void alert(void);
+void clear(void);
 
 #endif // COMM_CONTROLLER_H

@@ -17,22 +17,38 @@
 // Number of I/O lines.
 #define NXT_LINE_NUM		6
 
-// TODO: Enum this?
+//// TODO: Enum this?
+//// Each NXT line.
+//#define NXT_LINE_A			PB6
+//#define NXT_LINE_B			PB7
+//#define NXT_LINE_C			PD5
+//#define NXT_LINE_D			PD6
+//#define NXT_LINE_E			PD7
+//#define NXT_LINE_F			PB0
+//
+//// Ports of each NXT line.
+//#define NXT_LINE_A_PORT		PORTB
+//#define NXT_LINE_B_PORT		PORTB
+//#define NXT_LINE_C_PORT		PORTD
+//#define NXT_LINE_D_PORT		PORTD
+//#define NXT_LINE_E_PORT		PORTD
+//#define NXT_LINE_F_PORT		PORTB
+
 // Each NXT line.
-#define NXT_LINE_A			PB6
-#define NXT_LINE_B			PB7
-#define NXT_LINE_C			PD5
-#define NXT_LINE_D			PD6
-#define NXT_LINE_E			PD7
-#define NXT_LINE_F			PB0
+#define NXT_LINE_F			PB6
+#define NXT_LINE_E			PB7
+#define NXT_LINE_D			PD5
+#define NXT_LINE_C			PD6
+#define NXT_LINE_B			PD7
+#define NXT_LINE_A			PB0
 
 // Ports of each NXT line.
-#define NXT_LINE_A_PORT		PORTB
-#define NXT_LINE_B_PORT		PORTB
-#define NXT_LINE_C_PORT		PORTD
-#define NXT_LINE_D_PORT		PORTD
-#define NXT_LINE_E_PORT		PORTD
 #define NXT_LINE_F_PORT		PORTB
+#define NXT_LINE_E_PORT		PORTB
+#define NXT_LINE_D_PORT		PORTD
+#define NXT_LINE_C_PORT		PORTD
+#define NXT_LINE_B_PORT		PORTD
+#define NXT_LINE_A_PORT		PORTB
 
 // Clock counts for debounce to trigger.
 // 9999 = 10 ms

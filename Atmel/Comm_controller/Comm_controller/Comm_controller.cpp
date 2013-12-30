@@ -4,8 +4,9 @@
 int main(void)
 {
 	setupPins();
-	TWI::setup();
-	MPU::initialize();
+	// TODO: UNCOMMENT THIS! OR PREPARE FOR UNLIMITED SORROW!
+	//TWI::setup();
+	//MPU::initialize();
 	
 	//// TODO: Uncomment this stuff when we get the ATmega328s.
 	//// TODO: Move this interrupt registry stuff over to the
@@ -71,7 +72,7 @@ int main(void)
 	uint8_t rot_x = 0;
 	uint8_t rot_y = 0;
 	uint16_t rot_z = 0;
-	bool isRedAlliance = true; // Might as well.
+	bool isRedAlliance = false; // Might as well.
 	uint8_t line_sensor_bmp = 0;
 	uint8_t cube_detect_bmp = 0;
 	uint8_t close_range_A = 0;
@@ -92,20 +93,8 @@ int main(void)
 	bool cube_counter_prev = false;
 	bool isDebouncing = false;
 	
-	//// Variables to process MPU-6050 data.
-	//double dt = 0.0;
-	//uint8_t	gyro_x_L = 0,
-			//gyro_x_H = 0,
-			//gyro_y_L = 0,
-			//gyro_y_H = 0,
-			//gyro_z_L = 0,
-			//gyro_z_H = 0;
-	//uint16_t gyro_x = 0,
-			 //gyro_y = 0,
-			 //gyro_z = 0;
-	//double	rot_x = 0.0,
-			//rot_y = 0.0,
-			//rot_z = 0.0;
+	// Variables to process MPU-6050 data.
+	
 	// TODO: get rid of the test_val (or not :P ).
 	uint8_t test_val[1] = {0x55}; // 0b01010101
 		
@@ -113,7 +102,7 @@ int main(void)
 	
 	while (true) {
 		// Process NXT (prototype board) I/O.
-		clock_NXT_current = (PIND & (1<<PD0));
+		clock_NXT_current = bool(PIND & (1<<PD0));
 		if (clock_NXT_current != clock_NXT_prev) {
 			clock_NXT_prev = clock_NXT_current;
 			byte_read = false;
@@ -124,6 +113,7 @@ int main(void)
 			// Set `byte_write`.
 			switch (isIOstate) {
 				case IO_STATE_RESET :
+					alert();
 					// We don't care about the "6 cycles" deal. Once RESET
 					// is triggered, the NXT only has to bring its data line
 					// low for two clock ticks and the next time the clock
@@ -149,6 +139,7 @@ int main(void)
 					}
 					break;
 				case IO_STATE_HEADER :
+					clear();
 					header_read = bool(byte_read);
 					byte_write = 0;
 					for (int line=0; line<NXT_LINE_NUM; line++) {
@@ -238,44 +229,44 @@ int main(void)
 			// Output values on the lines.
 			// --------MOSI_NXT_A--------
 			// Mask: 0b00000001
-			if ((byte_write&0x01) == true) {
+			if (bool(byte_write&0x01) == true) {
 				NXT_LINE_A_PORT |= (1<<NXT_LINE_A);
 			} else {
 				NXT_LINE_A_PORT &= (~(1<<NXT_LINE_A));
 			}
 			// --------MOSI_NXT_B--------
 			// Mask: 0b00000010
-			if ((byte_write&0x02) == true) {
+			if (bool(byte_write&0x02) == true) {
 				NXT_LINE_B_PORT |= (1<<NXT_LINE_B);
-				} else {
+			} else {
 				NXT_LINE_B_PORT &= (~(1<<NXT_LINE_B));
 			}
 			// --------MOSI_NXT_C--------
 			// Mask: 0b00000100
-			if ((byte_write&0x04) == true) {
+			if (bool(byte_write&0x04) == true) {
 				NXT_LINE_C_PORT |= (1<<NXT_LINE_C);
-				} else {
+			} else {
 				NXT_LINE_C_PORT &= (~(1<<NXT_LINE_C));
 			}
 			// --------MOSI_NXT_D--------
 			// Mask: 0b00001000
-			if ((byte_write&0x08) == true) {
+			if (bool(byte_write&0x08) == true) {
 				NXT_LINE_D_PORT |= (1<<NXT_LINE_D);
-				} else {
+			} else {
 				NXT_LINE_D_PORT &= (~(1<<NXT_LINE_D));
 			}
 			// --------MOSI_NXT_E--------
 			// Mask: 0b00010000
-			if ((byte_write&0x10) == true) {
+			if (bool(byte_write&0x10) == true) {
 				NXT_LINE_E_PORT |= (1<<NXT_LINE_E);
-				} else {
+			} else {
 				NXT_LINE_E_PORT &= (~(1<<NXT_LINE_E));
 			}
 			// --------MOSI_NXT_F--------
 			// Mask: 0b00100000
-			if ((byte_write&0x20) == true) {
+			if (bool(byte_write&0x20) == true) {
 				NXT_LINE_F_PORT |= (1<<NXT_LINE_F);
-				} else {
+			} else {
 				NXT_LINE_F_PORT &= (~(1<<NXT_LINE_F));
 			}
 		}
@@ -378,11 +369,11 @@ int main(void)
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, test_val, 1);
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, test_val, 1);
 		
-		if (test_val[0] == 0) {
-			alert();
-		} else {
-			clear();
-		}
+		//if (test_val[0] == 0) {
+			//alert();
+		//} else {
+			//clear();
+		//}
 		
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, &gyro_z_L, 1);
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, &gyro_z_H, 1);
@@ -395,8 +386,10 @@ int main(void)
 		
 		
 		// TODO: Get rid of the below. Debugging fun stuff.
-		if (cube_num==4) {
+		if (isIOstate==IO_STATE_RESET) {
 			//alert();
+		} else {
+			//clear();
 		}
 	}
 }
@@ -421,12 +414,12 @@ void setupPins(void)
 	//  6-PD4: SS_SEL_C			23-PC0: LIGHT_READ
 	//  7-[VCC]					22-[GND]
 	//  8-[GND]					21-[AREF]
-	//  9-PB6: MOSI_NXT_A		20-[AVCC]
-	// 10-PB7: MOSI_NXT_B		19-PB5: SCLK_MCU
-	// 11-PD5: MOSI_NXT_C		18-PB4: MISO_MCU
-	// 12-PD6: MOSI_NXT_D		17-PB3: MOSI_MCU
-	// 13-PD7: MOSI_NXT_E		16-PB2: SS_MCU_WRITE
-	// 14-PB0: MOSI_NXT_F		15-PB1: LIFT_RESET (cube counter)
+	//  9-PB6: MOSI_NXT_F		20-[AVCC]
+	// 10-PB7: MOSI_NXT_E		19-PB5: SCLK_MCU
+	// 11-PD5: MOSI_NXT_D		18-PB4: MISO_MCU
+	// 12-PD6: MOSI_NXT_C		17-PB3: MOSI_MCU
+	// 13-PD7: MOSI_NXT_B		16-PB2: SS_MCU_WRITE
+	// 14-PB0: MOSI_NXT_A		15-PB1: LIFT_RESET (cube counter)
 	DDRB = ((1<<PB0) |
 			(0<<PB1) |
 			(1<<PB2) |

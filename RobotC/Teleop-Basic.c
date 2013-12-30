@@ -143,11 +143,6 @@ typedef enum CommLinkMode {
 	COMM_LINK_TELEOP	= 4,
 	COMM_LINK_BUMPERS	= 5,
 } CommLinkMode;
-const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
-const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
-ubyte f_byte_write = 0;
-ubyte f_byte_read = 0;
-bool isClockHigh = true;
 CommLinkMode f_commLinkMode[6] = {	COMM_LINK_POS_XY,
 									COMM_LINK_ROT_LIGHT,
 									COMM_LINK_RANGE_AB,
@@ -169,6 +164,14 @@ bool f_isFlagBumped = false;
 bool f_isHangBumped = false;
 bool f_isBumped[CARDINAL_DIR_NUM] = {false, false, false, false};
 bool f_isRedAlliance = true; // Might as well pick a side now. ;)
+
+// Comm link debugging vars:
+const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
+const ubyte mask_write = 0b11000000; // We write to the first 2 bits. TODO: Not actually needed to write?
+ubyte f_byte_write = 0;
+ubyte f_byte_read = 0;
+bool isClockHigh = true;
+bool isResync = true; // We start off with a resync.
 
 // I dunno why this is even here...
 bool isTank = false;
@@ -799,7 +802,6 @@ void processCommTick()
 }
 task CommLink()
 {
-	bool isResync = true; // We start off with a resync.
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	const int max_error_num = 6; // If we get more corrupted packets, we should restart transmission.
@@ -816,6 +818,9 @@ task CommLink()
 	bool isBadData[6] = {false, false, false, false, false, false};
 
 	HTSPBsetupIO(sensor_protoboard, mask_write); // `mask_write` happens to conform to the expected format.
+
+	// We don't want to wait for start here (we need to establish
+	// a communication link as soon as possible).
 	Joystick_WaitForStart();
 
 	while (true) {
@@ -1066,7 +1071,7 @@ task Display()
 		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
-		//DISP_SENSORS,			// Might need to split this into two screens.
+		DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		//DISP_SERVOS,			// Show each servo's position.
 		//DISP_TASKS,				// Which tasks are running.
@@ -1115,9 +1120,27 @@ task Display()
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;
 			case DISP_COMM_STATUS :
-				nxtDisplayTextLine(0, "x_rot %+4d", f_angle_x);
-				nxtDisplayTextLine(0, "y_rot %+4d", f_angle_y);
-				nxtDisplayTextLine(0, "z_rot %+4d", f_angle_z);
+				switch (f_isRedAlliance) {
+					case true :
+						nxtDisplayCenteredTextLine(0, "RED ALLIANCE");
+						break;
+					case false :
+						nxtDisplayCenteredTextLine(0, "BLUE ALLIANCE");
+						break;
+				}
+				switch (isResync) {
+					case true :
+						nxtDisplayTextLine(1, "Resyncing...");
+						break;
+					case false :
+						nxtDisplayTextLine(1, "Transmitting...");
+						break;
+				}
+				break;
+			case DISP_SENSORS :
+				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);
+				nxtDisplayTextLine(1, "(%+5d,%+5d,%+3d)", f_pos_x, f_pos_y, f_pos_z);
+				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", f_angle_x, f_angle_y, f_angle_z);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");

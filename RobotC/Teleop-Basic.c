@@ -809,6 +809,7 @@ task CommLink()
 	bool header_read[6] = {false, false, false, false, false, false};
 	ubyte frame_write[4] = {0,0,0,0};
 	ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
+	// Check bits DO NOT include header bits!
 	bool check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
 	bool check_read[6] = {0,0,0,0,0,0}; // Value read.
 	bool check_read_ack[6] = {0,0,0,0,0,0}; // Value computed.

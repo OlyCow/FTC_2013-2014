@@ -31,6 +31,7 @@ int main(void)
 	bool header_write[NXT_LINE_NUM] = {false,false,false,false,false,false};
 	uint32_t data_read = 0;
 	uint32_t data_write[NXT_LINE_NUM] = {0,0,0,0,0,0};
+	// Parity check vars DO NOT include header bits.
 	bool parity_read = false;					// TODO: Leaving this undefined really isn't a good idea either... Oh well.
 	bool parity_read_check = parity_read;		// DERP
 	bool parity_write[NXT_LINE_NUM] = {false,false,false,false,false,false}; // TODO: Same problem as `parity_read`.
@@ -45,7 +46,7 @@ int main(void)
 		IO_STATE_PARITY	= 3
 	};
 	IOstate isIOstate = IO_STATE_RESET;
-	short resetAckCounter = 0; // Goes up to 1 :P
+	short resetAckCounter = 0; // Goes up to... ? TODO
 	enum LineState {
 		LINE_POS_XY		= 0,
 		LINE_ROT_LIGHT	= 1,
@@ -115,11 +116,19 @@ int main(void)
 		clock_NXT_current = (PIND & (1<<PD0));
 		if (clock_NXT_current != clock_NXT_prev) {
 			clock_NXT_prev = clock_NXT_current;
+			byte_read = false;
+			if ((PIND & (1<<PD1)) != 0) {
+				byte_read = 0x01;
+			}
 			
 			// Set `byte_write`.
 			switch (isIOstate) {
 				case IO_STATE_RESET :
-					if ((PIND & (1<<PD1)) == true) {
+					// We don't care about the "6 cycles" deal. Once RESET
+					// is triggered, the NXT only has to bring its data line
+					// low for two clock ticks and the next time the clock
+					// transitions to high, data transmission will start.
+					if (byte_read == 0x01) {
 						resetAckCounter = 0;
 						switch (clock_NXT_current) {
 							case true :
@@ -130,15 +139,17 @@ int main(void)
 								break;
 						}
 					} else {
-						resetAckCounter++;
 						byte_write = 0x00; // 0b00000000
-						if (resetAckCounter >= 2) {
+						// Checking for `>=` in case counter somehow jumps too high.
+						if (resetAckCounter >= 1) {
 							isIOstate = IO_STATE_HEADER;
+							resetAckCounter = 0;
 						}
+						resetAckCounter++;
 					}
 					break;
 				case IO_STATE_HEADER :
-					header_read = bool(PIND & (1<<PD1));
+					header_read = bool(byte_read);
 					byte_write = 0;
 					for (int line=0; line<NXT_LINE_NUM; line++) {
 						if (header_write[line]==true) {
@@ -148,19 +159,32 @@ int main(void)
 					isIOstate = IO_STATE_DATA;
 					// We should clear the data vars as well here.
 					data_read = 0;
-					byte_write = 0;
-					bit_count = 0;
 					break;
 				case IO_STATE_DATA :
-					data_read |= (bool(PIND & (1<<PD1) << bit_count));
+					data_read |= (byte_read << bit_count);
+					parity_read_check = (parity_read_check != bool(byte_read)); // bool equiv. of XOR
+					byte_write = 0;
 					for (short line=0; line<NXT_LINE_NUM; line++, bit_count++) {
 						if (bool(data_write[line]&(uint32_t(1)<<bit_count)) == true) {
 							byte_write |= (1<<line);
+							parity_write[line] = (parity_write[line] != true);
+						} else {
+							// Using else here because I don't want to take that bool out right now.
+							// TODO: Optimize this away (get it?).
+							parity_write[line] = (parity_write[line] != false);
+						}
+					}
+					// Checking for `>=` in case count somehow jumps too high.
+					if (bit_count>=31) {
+						isIOstate = IO_STATE_PARITY;
+						bit_count = 0;
+						for (short line=0; line<NXT_LINE_NUM; line++) {
+							parity_write[line] = false;
 						}
 					}
 					break;
 				case IO_STATE_PARITY :
-					parity_read = bool(PIND & (1<<PD1));
+					parity_read = bool(byte_read);
 					if (parity_read!=parity_read_check) {
 						isBadData = true;
 						// Don't break here; we still want to write to our lines
@@ -172,6 +196,8 @@ int main(void)
 							byte_write |= (1<<line);
 						}
 					}
+					// Don't need to reset `parity_read` because it gets read every time.
+					parity_read_check = false;
 					data_ready = true;
 					isIOstate = IO_STATE_HEADER;
 					break;
@@ -198,7 +224,7 @@ int main(void)
 								cube_num = 0;
 								break;
 							default :
-								// Default response is to ignore code.
+								// Default response is to ignore code. (Right? ...) TODO
 								break;
 						}
 						break;
@@ -206,8 +232,8 @@ int main(void)
 						// TODO: Data handling. Only need to handle one line.
 						break;
 				}
+				data_ready = false;
 			}
-			data_ready = false;
 			
 			// Output values on the lines.
 			// --------MOSI_NXT_A--------
@@ -256,7 +282,7 @@ int main(void)
 		
 		// Now that we can breathe a little, load data into "registers"
 		// if the next state is going to be `IO_STATE_DATA`.
-		if (isIOstate==IO_STATE_DATA) {
+		if ((isIOstate==IO_STATE_DATA) && (bit_count==0)) {
 			for (short line=0; line<NXT_LINE_NUM; line++) {
 				data_write[line] = 0; // Clear this first.
 				switch (lineState[line]) {

@@ -175,7 +175,7 @@ bool isResync = true; // We start off with a resync.
 int error_num = 0; // Incremented every time there's a consecutive error we can't correct.
 bool header_write = false;
 bool header_read[6] = {false, false, false, false, false, false};
-ubyte frame_write[4] = {0,0,0,0};
+ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
 // I dunno why this is even here...
@@ -809,7 +809,7 @@ task CommLink()
 {
 	ubyte current_index_mask = 0; // Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
 	ubyte byte_temp = 0;// Convenience variable. See specific uses. (DARK MAGIC; MIGHT NOT WORK)
-	const int max_error_num = 6; // If we get more corrupted packets, we should restart transmission.
+	const int max_error_num = 5; // If we get more corrupted packets, we should restart transmission.
 	bool wasCorrupted = false;
 	// Check bits DO NOT include header bits!
 	bool check_write = 0; // TODO: Switch to Hamming codes! (Mebbe?) :D
@@ -827,7 +827,7 @@ task CommLink()
 		// Restart the communication link.
 		while (isResync==true) {
 			// First make sure we're in sync.
-			byte sync_count = 0;
+			short sync_count = 0;
 			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
 			while (sync_count<6) { // 3 high and 3 low.
 				f_byte_write |= (1<<6); // Set the data bit high.
@@ -965,7 +965,7 @@ task CommLink()
 		} else if ((error_num!=0)&&(wasCorrupted==false)) {
 			error_num = 0; // Not a consecutive error.
 		} else if (error_num==0) {
-			wasCorrupted = false;
+			wasCorrupted = false; // This executes even if first condition was true (it checks again?)
 		}
 
 		for (int line=0; line<NXT_LINE_NUM; line++) {
@@ -1118,6 +1118,9 @@ task Display()
 						break;
 					case false :
 						nxtDisplayCenteredTextLine(0, "BLUE ALLIANCE");
+						break;
+					default :
+						nxtDisplayCenteredTextLine(0, "BOOL ERROR! DEBUG!");
 						break;
 				}
 				switch (isResync) {

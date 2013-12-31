@@ -47,7 +47,8 @@ int main(void)
 		IO_STATE_PARITY	= 3
 	};
 	IOstate isIOstate = IO_STATE_RESET;
-	short resetAckCounter = 0; // Goes up to... ? TODO
+	short resetAckCounter = 0; // Goes up to... ? TODO!
+	short resetConfirmCounter = 0;
 	enum LineState {
 		LINE_POS_XY		= 0,
 		LINE_ROT_LIGHT	= 1,
@@ -113,38 +114,47 @@ int main(void)
 			// Set `byte_write`.
 			switch (isIOstate) {
 				case IO_STATE_RESET :
-					// We don't care about the "6 cycles" deal. Once RESET
-					// is triggered, the NXT only has to bring its data line
-					// low for two clock ticks and the next time the clock
-					// transitions to high, data transmission will start.
-					if (byte_read == 0x01) {
-						resetAckCounter = 0;
-						switch (clock_NXT_current) {
-							case true :
-								byte_write = 0xFF; // 0b11111111
-								break;
-							case false :
-								byte_write = 0x00; // 0b00000000
-								break;
+					if (resetConfirmCounter > 63) { // MAGIC_NUM: This is actually magical. We can only pray that it works.
+						alert();
+						// Proceed with resync.
+						if (byte_read == 0x01) {
+							resetAckCounter = 0;
+							switch (clock_NXT_current) {
+								case true :
+									byte_write = 0xFF; // 0b11111111
+									break;
+								case false :
+									byte_write = 0x00; // 0b00000000
+									break;
+							}
+						} else {
+							byte_write = 0x00; // 0b00000000
+							switch (resetAckCounter) {
+								case 0 :
+									resetAckCounter++;
+									break;
+								case 1 :
+									isIOstate = IO_STATE_HEADER;
+									resetAckCounter = 0;
+									break;
+								default :
+									resetAckCounter = 0;
+									break;
+							}
 						}
 					} else {
-						byte_write = 0x00; // 0b00000000
-						switch (resetAckCounter) {
-							case 0 :
-								resetAckCounter++;
-								break;
-							case 1 :
-								isIOstate = IO_STATE_HEADER;
-								resetAckCounter = 0;
-								break;
-							default :
-								resetAckCounter = 0;
-								break;
+						clear();
+						// Pause resync and write all 1s.
+						byte_write = 0xFF; // Write all 1s as default.
+						if (byte_read == 0x01) {
+							resetConfirmCounter++;
+						} else {
+							resetConfirmCounter = 0;
 						}
 					}
 					break;
 				case IO_STATE_HEADER :
-					clear();
+					resetConfirmCounter = 0; // Otherwise the else will evaluate (if this is in the switch). TODO: Fix.
 					header_read = bool(byte_read);
 					byte_write = 0;
 					for (int line=0; line<NXT_LINE_NUM; line++) {
@@ -394,12 +404,12 @@ int main(void)
 		//}
 		
 		
-		// TODO: Get rid of the below. Debugging fun stuff.
-		if (isIOstate==IO_STATE_RESET) {
+		//// TODO: Get rid of the below. Debugging fun stuff.
+		//if (isIOstate==IO_STATE_RESET) {
 			//alert();
-		} else {
+		//} else {
 			//clear();
-		}
+		//}
 	}
 }
 

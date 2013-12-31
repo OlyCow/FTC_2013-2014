@@ -163,7 +163,7 @@ bool f_cubeDetected[8] = {0,0,0,0,0,0,0,0}; // 0 = leftmost, 7 = rightmost.
 bool f_isFlagBumped = false;
 bool f_isHangBumped = false;
 bool f_isBumped[CARDINAL_DIR_NUM] = {false, false, false, false};
-bool f_isRedAlliance = true; // Might as well pick a side now. ;)
+bool f_isRedAlliance = false; // Changing this var is helpful for testing the MCU connection.
 
 // Comm link debugging vars:
 const ubyte mask_read = 0b00111111; // We read from the last 6 bits.
@@ -877,7 +877,6 @@ task CommLink()
 		// Write header.
 		f_byte_write &= ~(1<<6); // Clear the data bit.
 
-		// Originally this: f_byte_write |= (header_write<<6); // Set the data bit.
 		// TODO: use ubyte instead of bool and just use last bit?
 		// A bool can be true but not have the last bit be on.
 		if (header_write==true) {
@@ -887,62 +886,55 @@ task CommLink()
 
 		// Read in all 6 data lines.
 		for (int line=0; line<NXT_LINE_NUM; line++) {
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<line); // Shift a bit over to be the mask.
-
-			// No fancy shifting needed here (header_read is a bool).
+			current_index_mask = 1<<line;
+			// No fancy shifting needed here (header_read is a bool):
 			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
 		}
 
 		// Data:
+		// Clear parity bits.
 		for (int line=0; line<NXT_LINE_NUM; line++) {
-			check_read_ack[line] = false; // Clear parity bits.
+			check_read_ack[line] = false;
 		}
 		for (int bit=0; bit<32; bit++) {
+			int frame = bit/8; // Intentional int division.
+			int sub_bit = bit%8;
+
 			// Set MOSI.
 			f_byte_write &= ~(1<<6); // Clear the data bit.
-			current_index_mask = 0; // Clear mask.
-			current_index_mask |= (1<<(bit%8)); // Set the data bit; `i%8` because data is in bytes.
+			current_index_mask = 1<<(sub_bit); // Set the data bit; `i%8` because data is in bytes.
 
 			// Intentional int division (returns intended byte) (see next statement).
 			// Using a temp var because `true!=1` (can be any positive int); statement
 			// also clears byte_temp because the mask was cleared (and now AND'd).
-			byte_temp = (frame_write[bit/8])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
+			byte_temp = (frame_write[frame])&current_index_mask; // TODO: Use current_index_mask instead of temp var?
 
 			// TODO: combine the two shifts below into one shift.
-			byte_temp = byte_temp>>(bit%8); // Shift data bit over to bit 0.
+			byte_temp = byte_temp>>(sub_bit); // Shift data bit over to bit 0.
 			f_byte_write |= (byte_temp<<6); // Set the data bit.
 
-			//// TODO: Do we need this next line anymore (can I delete it)?
-			//check_write = (byte_temp<<(bit/8))^check_write; // This is cleared when we send it.
 			// TODO: switch over to ubyte again :P
 			check_write = (((bool)byte_temp) != ((bool)check_write));
 			processCommTick();
 
 			// Read in all 6 data lines (MISO).
 			for (int line=0; line<NXT_LINE_NUM; line++) {
-				// TODO: Optimize by (maybe?) making assigning this cyclically.
-				// Would only work for the inner-most loop, since this variable
-				// is reused outside of the loop (for every "for" statement).
-				// Also see note in check bit part about eliminating "for" loop.
-				current_index_mask = 0; // Clear mask.
-				current_index_mask |= (1<<(bit%8)); // Set mask. TODO: Assign this to mask directly (w/out clear)?
-				frame_read[line][bit/8] &= ~(1<<(bit%8)); // Clear bit to read. `bit/8`=current byte, `bit%8`=current bit.
-				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want. Clears byte_temp 'cause mask was.
-
-				//// TODO: Are there other ways of doing this? Remember the ack is cleared previously.
-				//check_read_ack[line] = check_read_ack[line]^((byte_temp>>(bit%8))<<(bit/8));
-				// TODO: Make sure the below works (double-check).
-				check_read_ack[line] = (((bool)check_read_ack[line]) != ((bool)byte_temp));
-
+				for (int i=0; i<4; i++) { // MAGIC_NUM (but it's obvious: 32/8=4).
+					frame_read[line][i] = 0;
+				}
+				current_index_mask = 1<<line;
+				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want.
 				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
-				byte_temp = byte_temp>>(bit%8); // Shift the bit into bit 0.
-				frame_read[line][bit/8] |= (byte_temp<<(bit%8)); // Shift bit into appropriate place in frame. `i/8`=current byte, `i%8`=current bit.
+				byte_temp = byte_temp>>line; // Shift the bit into bit 0.
+				frame_read[line][frame] |= (byte_temp<<sub_bit); // Shift bit into appropriate place in frame.
+
+				// Because `byte_temp` only has one bit now.
+				check_read_ack[line] = (((bool)check_read_ack[line]) != ((bool)byte_temp));
 			}
 		}
 
 		// Check bits.
-		// TODO: None of the following is guarunteed to work :P
+		// TODO: None of the following is guaranteed to work :P
 		f_byte_write &= ~(1<<6); // Clear the data bit.
 		if (check_write==true) {
 			f_byte_write |= 0b01000000;
@@ -952,8 +944,7 @@ task CommLink()
 
 		// Read check bits.
 		for (int line=0; line<NXT_LINE_NUM; line++) {
-			current_index_mask = 0; // Clear the mask.
-			current_index_mask |= (1<<line); // Select the bit we want to find.
+			current_index_mask = 1<<line; // Select the bit we want to find.
 			check_read[line] = (bool)(f_byte_read&current_index_mask);
 			if (check_read[line]!=check_read_ack[line]) {
 				isBadData[line] = true;
@@ -963,6 +954,7 @@ task CommLink()
 				isBadData[line] = false;
 			}
 		}
+		// `check_read_ack[]` is reset before use each loop.
 
 		if (error_num>max_error_num) {
 			isResync = true; // This happens at the beginning of the next iteration.
@@ -974,76 +966,74 @@ task CommLink()
 			wasCorrupted = false;
 		}
 
-		// TODO: Assign data to whatever the I/O lines are set to.
-		// TODO: Check this section of code for integrity.
 		for (int line=0; line<NXT_LINE_NUM; line++) {
 			if (isBadData[line]==true) {
 				continue;
 			}
 			if (header_read[line]==false) {
-				switch (f_commLinkMode) {
+				switch (f_commLinkMode[line]) {
 					case COMM_LINK_POS_XY :
 						// TODO: Figure out CPU hogging, you pig.
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_pos_x = frame_read[line][0];
+						f_pos_x = frame_read[line][3];
 						f_pos_x = f_pos_x<<1; // There's one more bit of data we need to access.
-						f_pos_x += ((frame_read[line][1]&0b10000000)>>7); // TODO: Optimmize: masking unnecessary?
-						f_angle_x = frame_read[line][1];
+						f_pos_x += ((frame_read[line][2]&0b10000000)>>7); // TODO: Optimize: masking unnecessary?
+						f_angle_x = frame_read[line][2];
 						f_angle_x &= 0b01111111;
-						f_pos_y = frame_read[line][2];
+						f_pos_y = frame_read[line][1];
 						f_pos_y = f_pos_y<<1; // There's one more bit of data we need to access.
-						f_pos_y += ((frame_read[line][3]&0b10000000)>>7); // TODO: Optimmize: masking unnecessary?
-						f_angle_y = frame_read[line][3];
+						f_pos_y += ((frame_read[line][0]&0b10000000)>>7); // TODO: Optimize: masking unnecessary?
+						f_angle_y = frame_read[line][0];
 						f_angle_y &= 0b01111111;
 						//Task_ReleaseCPU();
 						break;
 					case COMM_LINK_ROT_LIGHT :
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_angle_z = frame_read[line][1];
-						f_angle_z += ((frame_read[line][0]&0b00000001)<<8);
-						f_pos_z = ((frame_read[line][0]&0b01111110)>>1);
-						f_isRedAlliance = (bool)(frame_read[line][0]&0b10000000); // TODO: only assign this at the beginning of the match.
+						f_angle_z = frame_read[line][2];
+						f_angle_z += ((frame_read[line][3]&0b00000001)<<8);
+						f_pos_z = ((frame_read[line][3]&0b01111110)>>1);
+						f_isRedAlliance = (bool)(frame_read[line][3]&0b10000000); // TODO: only assign this at the beginning of the match.
 						for (int i=0; i<4; i++) {
-							f_lineSensor[0][i] = (bool)(frame_read[line][2]&(1<<i));
-							f_lineSensor[1][i] = (bool)(frame_read[line][2]&(1<<(i+4)));
+							f_lineSensor[0][i] = (bool)(frame_read[line][1]&(1<<i));
+							f_lineSensor[1][i] = (bool)(frame_read[line][1]&(1<<(i+4)));
 						}
 						for (int i=0; i<8; i++) {
-							f_cubeDetected[i] = (bool)(frame_read[line][3]&(1<<i));
+							f_cubeDetected[i] = (bool)(frame_read[line][0]&(1<<i));
 						}
 						//Task_ReleaseCPU();
 						break;
 					case COMM_LINK_RANGE_AB :
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_closeRange[CARDINAL_DIR_N] = (frame_read[line][0]>>1)&0b01111111;
-						f_longRange[CARDINAL_DIR_N] = frame_read[line][1];
-						f_longRange[CARDINAL_DIR_N] += ((frame_read[line][0]<<8)&0b00000001);
-						f_closeRange[CARDINAL_DIR_E] = (frame_read[line][2]>>1)&0b01111111;
-						f_longRange[CARDINAL_DIR_E] = frame_read[line][3];
-						f_longRange[CARDINAL_DIR_E] += ((frame_read[line][2]<<8)&0b00000001);
+						f_closeRange[CARDINAL_DIR_N] = (frame_read[line][3]>>1)&0b01111111;
+						f_longRange[CARDINAL_DIR_N] = frame_read[line][2];
+						f_longRange[CARDINAL_DIR_N] += ((frame_read[line][3]<<8)&0b00000001);
+						f_closeRange[CARDINAL_DIR_E] = (frame_read[line][1]>>1)&0b01111111;
+						f_longRange[CARDINAL_DIR_E] = frame_read[line][0];
+						f_longRange[CARDINAL_DIR_E] += ((frame_read[line][1]<<8)&0b00000001);
 						//Task_ReleaseCPU();
 						break;
 					case COMM_LINK_RANGE_CD :
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_closeRange[CARDINAL_DIR_S] = (frame_read[line][0]>>1)&0b01111111;
-						f_longRange[CARDINAL_DIR_S] = frame_read[line][1];
-						f_longRange[CARDINAL_DIR_S] += ((frame_read[line][0]<<8)&0b00000001);
-						f_closeRange[CARDINAL_DIR_W] = (frame_read[line][2]>>1)&0b01111111;
-						f_longRange[CARDINAL_DIR_W] = frame_read[line][3];
-						f_longRange[CARDINAL_DIR_W] += ((frame_read[line][2]<<8)&0b00000001);
+						f_closeRange[CARDINAL_DIR_S] = (frame_read[line][3]>>1)&0b01111111;
+						f_longRange[CARDINAL_DIR_S] = frame_read[line][2];
+						f_longRange[CARDINAL_DIR_S] += ((frame_read[line][3]<<8)&0b00000001);
+						f_closeRange[CARDINAL_DIR_W] = (frame_read[line][1]>>1)&0b01111111;
+						f_longRange[CARDINAL_DIR_W] = frame_read[line][0];
+						f_longRange[CARDINAL_DIR_W] += ((frame_read[line][1]<<8)&0b00000001);
 						//Task_ReleaseCPU();
 						break;
 					case COMM_LINK_TELEOP :
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
-						f_cubeNum = (frame_read[line][0]>>4)&0b00000111;
+						f_cubeNum = (frame_read[line][3]>>4)&0b00000111;
 						//Task_ReleaseCPU();
 						break;
 					case COMM_LINK_BUMPERS :
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
 						// TODO: Make these terrible masks better or something. IT HURTS
-						f_isFlagBumped = (bool)((frame_read[line][0]>>7)&0b00000001);
-						f_isHangBumped = (bool)((frame_read[line][0]>>6)&0b00000001);
+						f_isFlagBumped = (bool)((frame_read[line][3]>>7)&0b00000001);
+						f_isHangBumped = (bool)((frame_read[line][3]>>6)&0b00000001);
 						for (int i=CARDINAL_DIR_N; i<(int)CARDINAL_DIR_NUM; i++) {
-							f_isBumped[i] = (bool)(frame_read[line][0]&(1<<i));
+							f_isBumped[i] = (bool)(frame_read[line][3]&(1<<i));
 						}
 						//Task_ReleaseCPU();
 						break;
@@ -1079,8 +1069,8 @@ task Display()
 		DISP_NUM
 	};
 
-	DisplayMode isMode = DISP_FCS;
 	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
+	DisplayMode isMode = DISP_COMM_STATUS;
 
 	// We don't need to wait for start. ;)
 
@@ -1140,12 +1130,12 @@ task Display()
 				nxtDisplayTextLine(2, "lost packets: %d", error_num);
 			case DISP_COMM_DEBUG :
 				nxtDisplayCenteredTextLine(0, "W %#4X  R %#4X", f_byte_write, f_byte_read);
-				nxtDisplayTextLine(2, "F %2X-%2X-%2X-%2X", frame_read[5][0], frame_read[5][1], frame_read[5][2], frame_read[5][3]);
-				nxtDisplayTextLine(3, "E %2X-%2X-%2X-%2X", frame_read[4][0], frame_read[4][1], frame_read[4][2], frame_read[4][3]);
-				nxtDisplayTextLine(4, "D %2X-%2X-%2X-%2X", frame_read[3][0], frame_read[3][1], frame_read[3][2], frame_read[3][3]);
-				nxtDisplayTextLine(5, "C %2X-%2X-%2X-%2X", frame_read[2][0], frame_read[2][1], frame_read[2][2], frame_read[2][3]);
-				nxtDisplayTextLine(6, "B %2X-%2X-%2X-%2X", frame_read[1][0], frame_read[1][1], frame_read[1][2], frame_read[1][3]);
-				nxtDisplayTextLine(7, "A %2X-%2X-%2X-%2X", frame_read[0][0], frame_read[0][1], frame_read[0][2], frame_read[0][3]);
+				nxtDisplayTextLine(2, "F %2X-%2X-%2X-%2X", frame_read[5][3], frame_read[5][2], frame_read[5][1], frame_read[5][0]);
+				nxtDisplayTextLine(3, "E %2X-%2X-%2X-%2X", frame_read[4][3], frame_read[4][2], frame_read[4][1], frame_read[4][0]);
+				nxtDisplayTextLine(4, "D %2X-%2X-%2X-%2X", frame_read[3][3], frame_read[3][2], frame_read[3][1], frame_read[3][0]);
+				nxtDisplayTextLine(5, "C %2X-%2X-%2X-%2X", frame_read[2][3], frame_read[2][2], frame_read[2][1], frame_read[2][0]);
+				nxtDisplayTextLine(6, "B %2X-%2X-%2X-%2X", frame_read[1][3], frame_read[1][2], frame_read[1][1], frame_read[1][0]);
+				nxtDisplayTextLine(7, "A %2X-%2X-%2X-%2X", frame_read[0][3], frame_read[0][2], frame_read[0][1], frame_read[0][0]);
 				break;
 			case DISP_SENSORS :
 				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);

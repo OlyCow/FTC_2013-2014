@@ -3,9 +3,6 @@
 
 
 
-#define HIGH (1)
-#define LOW (0)
-
 #include "JoystickDriver.c"
 
 #include "Drivers\common.h"
@@ -27,6 +24,7 @@
 #include "Headers\Math.h" // TODO! (some)
 #include "Headers\Vectors-2D.h"
 #include "Headers\Vectors-3D.h" // TODO! (unnecessary?)
+#include "Headers\Bit.h"
 
 #include "Headers\initialize.h"
 

@@ -888,7 +888,7 @@ task CommLink()
 		for (int line=0; line<NXT_LINE_NUM; line++) {
 			current_index_mask = 1<<line;
 			// No fancy shifting needed here (header_read is a bool):
-			header_read[line] = (bool)(f_byte_read&current_index_mask); // Theoretically, if >0 then true.
+			header_read[line] = Bit_FixBool((bool)(f_byte_read&current_index_mask)); // Theoretically, if >0 then true.
 		}
 
 		// Data:
@@ -916,8 +916,9 @@ task CommLink()
 			byte_temp = byte_temp>>(sub_bit); // Shift data bit over to bit 0.
 			f_byte_write |= (byte_temp<<6); // Set the data bit.
 
-			// TODO: switch over to ubyte again :P
-			check_write = (((bool)byte_temp) != ((bool)check_write));
+			check_write = (Bit_FixBool((bool)byte_temp) != check_write);
+			// TODO: For optimization, delete the following line. Right now it's to be safe.
+			check_write = Bit_FixBool(check_write);
 			processCommTick();
 
 			// Read in all 6 data lines (MISO).
@@ -929,12 +930,13 @@ task CommLink()
 				frame_read[line][frame] |= (byte_temp<<sub_bit); // Shift bit into appropriate place in frame.
 
 				// Because `byte_temp` only has one bit now.
-				check_read_ack[line] = (((bool)check_read_ack[line]) != ((bool)byte_temp));
+				check_read_ack[line] = (Bit_FixBool((bool)byte_temp) != check_read_ack[line]);
+				// TODO: For optimization, delete the following line. Right now it's to be safe.
+				check_read_ack[line] = Bit_FixBool(check_read_ack[line]);
 			}
 		}
 
 		// Check bits.
-		// TODO: None of the following is guaranteed to work :P
 		f_byte_write &= ~(1<<6); // Clear the data bit.
 		if (check_write==true) {
 			f_byte_write |= 0b01000000;
@@ -945,13 +947,7 @@ task CommLink()
 		// Read check bits.
 		for (int line=0; line<NXT_LINE_NUM; line++) {
 			current_index_mask = 1<<line; // Select the bit we want to find.
-			check_read[line] = (bool)(f_byte_read&current_index_mask);
-			// Apparently RobotC can't tell a "true" from a "16"...
-			if (check_read[line] == 0) {
-				check_read[line] = false;
-			} else {
-				check_read[line] = true;
-			}
+			check_read[line] = Bit_FixBool((bool)(f_byte_read&current_index_mask));
 			if (check_read[line] == check_read_ack[line]) {
 				isBadData[line] = false;
 			} else {
@@ -998,13 +994,13 @@ task CommLink()
 						f_angle_z = frame_read[line][2];
 						f_angle_z += ((frame_read[line][3]&0b00000001)<<8);
 						f_pos_z = ((frame_read[line][3]&0b01111110)>>1);
-						f_isRedAlliance = (bool)(frame_read[line][3]&0b10000000); // TODO: only assign this at the beginning of the match.
+						f_isRedAlliance = Bit_FixBool((bool)(frame_read[line][3]&0b10000000)); // TODO: only assign this at the beginning of the match.
 						for (int i=0; i<4; i++) {
-							f_lineSensor[0][i] = (bool)(frame_read[line][1]&(1<<i));
-							f_lineSensor[1][i] = (bool)(frame_read[line][1]&(1<<(i+4)));
+							f_lineSensor[0][i] = Bit_FixBool((bool)(frame_read[line][1]&(1<<i)));
+							f_lineSensor[1][i] = Bit_FixBool((bool)(frame_read[line][1]&(1<<(i+4))));
 						}
 						for (int i=0; i<8; i++) {
-							f_cubeDetected[i] = (bool)(frame_read[line][0]&(1<<i));
+							f_cubeDetected[i] = Bit_FixBool((bool)(frame_read[line][0]&(1<<i)));
 						}
 						//Task_ReleaseCPU();
 						break;
@@ -1036,10 +1032,10 @@ task CommLink()
 					case COMM_LINK_BUMPERS :
 						//Task_HogCPU(); // So that the main program doesn't try to access these vars.
 						// TODO: Make these terrible masks better or something. IT HURTS
-						f_isFlagBumped = (bool)((frame_read[line][3]>>7)&0b00000001);
-						f_isHangBumped = (bool)((frame_read[line][3]>>6)&0b00000001);
+						f_isFlagBumped = Bit_FixBool((bool)((frame_read[line][3]>>7)&0b00000001));
+						f_isHangBumped = Bit_FixBool((bool)((frame_read[line][3]>>6)&0b00000001));
 						for (int i=CARDINAL_DIR_N; i<(int)CARDINAL_DIR_NUM; i++) {
-							f_isBumped[i] = (bool)(frame_read[line][3]&(1<<i));
+							f_isBumped[i] = Bit_FixBool((bool)(frame_read[line][3]&(1<<i)));
 						}
 						//Task_ReleaseCPU();
 						break;

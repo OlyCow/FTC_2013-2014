@@ -895,6 +895,9 @@ task CommLink()
 		// Clear parity bits.
 		for (int line=0; line<NXT_LINE_NUM; line++) {
 			check_read_ack[line] = false;
+			for (int i=0; i<4; i++) {
+				frame_read[line][i] = 0; // TODO: MAKE ATOMIC! IMPORTANT! <<====
+			}
 		}
 		for (int bit=0; bit<32; bit++) {
 			int frame = bit/8; // Intentional int division.
@@ -919,9 +922,6 @@ task CommLink()
 
 			// Read in all 6 data lines (MISO).
 			for (int line=0; line<NXT_LINE_NUM; line++) {
-				for (int i=0; i<4; i++) { // MAGIC_NUM (but it's obvious: 32/8=4).
-					frame_read[line][i] = 0;
-				}
 				current_index_mask = 1<<line;
 				byte_temp = f_byte_read&current_index_mask; // Isolating the bit we want.
 				// TODO: combine the two shifts below into one shift. Actually, we might not even need byte_temp here.
@@ -946,12 +946,18 @@ task CommLink()
 		for (int line=0; line<NXT_LINE_NUM; line++) {
 			current_index_mask = 1<<line; // Select the bit we want to find.
 			check_read[line] = (bool)(f_byte_read&current_index_mask);
-			if (check_read[line]!=check_read_ack[line]) {
+			// Apparently RobotC can't tell a "true" from a "16"...
+			if (check_read[line] == 0) {
+				check_read[line] = false;
+			} else {
+				check_read[line] = true;
+			}
+			if (check_read[line] == check_read_ack[line]) {
+				isBadData[line] = false;
+			} else {
 				isBadData[line] = true;
 				error_num++;
 				wasCorrupted = true;
-			} else {
-				isBadData[line] = false;
 			}
 		}
 		// `check_read_ack[]` is reset before use each loop.
@@ -1070,7 +1076,7 @@ task Display()
 	};
 
 	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
-	DisplayMode isMode = DISP_COMM_STATUS;
+	DisplayMode isMode = DISP_FCS;
 
 	// We don't need to wait for start. ;)
 
@@ -1126,8 +1132,8 @@ task Display()
 						nxtDisplayTextLine(1, "Transmitting...");
 						break;
 				}
+				nxtDisplayTextLine(2, "lost pkts: %d", error_num);
 				break;
-				nxtDisplayTextLine(2, "lost packets: %d", error_num);
 			case DISP_COMM_DEBUG :
 				nxtDisplayCenteredTextLine(0, "W %#4X  R %#4X", f_byte_write, f_byte_read);
 				nxtDisplayTextLine(2, "F %2X-%2X-%2X-%2X", frame_read[5][3], frame_read[5][2], frame_read[5][1], frame_read[5][0]);

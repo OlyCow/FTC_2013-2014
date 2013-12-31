@@ -66,27 +66,27 @@ int main(void)
 		
 	// Data gathered from various pins to report back.
 	// Add more variables here as we need to.
-	uint16_t pos_x = 0;
-	uint16_t pos_y = 0;
-	uint8_t pos_z = 0;
-	uint8_t rot_x = 0;
-	uint8_t rot_y = 0;
-	uint16_t rot_z = 0;
+	uint16_t pos_x = 0xFFFF;
+	uint16_t pos_y = 0xFFFF;
+	uint8_t pos_z = 0xFF;
+	uint8_t rot_x = 0xFF;
+	uint8_t rot_y = 0xFF;
+	uint16_t rot_z = 0xFFFF;
 	bool isRedAlliance = true; // Might as well.
-	uint8_t line_sensor_bmp = 0;
-	uint8_t cube_detect_bmp = 0;
-	uint8_t close_range_A = 0;
-	uint8_t close_range_B = 0;
-	uint8_t close_range_C = 0;
-	uint8_t close_range_D = 0;
-	uint16_t long_range_A = 0;
-	uint16_t long_range_B = 0;
-	uint16_t long_range_C = 0;
-	uint16_t long_range_D = 0;
-	uint8_t cube_num = 0;
-	bool is_flag_bumped = false;
-	bool is_hang_bumped = false;
-	uint8_t bumpers_bmp = 0;
+	uint8_t line_sensor_bmp = 0xFF;
+	uint8_t cube_detect_bmp = 0xFF;
+	uint8_t close_range_A = 0xFF;
+	uint8_t close_range_B = 0xFF;
+	uint8_t close_range_C = 0xFF;
+	uint8_t close_range_D = 0xFF;
+	uint16_t long_range_A = 0xFFFF;
+	uint16_t long_range_B = 0xFFFF;
+	uint16_t long_range_C = 0xFFFF;
+	uint16_t long_range_D = 0xFFFF;
+	uint8_t cube_num = 4;
+	bool is_flag_bumped = true;
+	bool is_hang_bumped = true;
+	uint8_t bumpers_bmp = 0xFF;
 	
 	// Variables to process pin inputs.
 	bool cube_counter_current = false;
@@ -113,7 +113,6 @@ int main(void)
 			// Set `byte_write`.
 			switch (isIOstate) {
 				case IO_STATE_RESET :
-					alert();
 					// We don't care about the "6 cycles" deal. Once RESET
 					// is triggered, the NXT only has to bring its data line
 					// low for two clock ticks and the next time the clock
@@ -171,15 +170,14 @@ int main(void)
 							parity_write[line] = (parity_write[line] != false);
 						}
 					}
-					// Checking for `>=` in case count somehow jumps too high.
-					if (bit_count>=31) {
+					if (bit_count<31) {
+						bit_count++;
+					} else if (bit_count==31) {
 						isIOstate = IO_STATE_PARITY;
 						bit_count = 0;
-						for (short line=0; line<NXT_LINE_NUM; line++) {
-							parity_write[line] = false;
-						}
 					} else {
-						bit_count++;
+						isIOstate = IO_STATE_RESET;
+						bit_count = 0;
 					}
 					break;
 				case IO_STATE_PARITY :
@@ -193,6 +191,7 @@ int main(void)
 					for (int line=0; line<NXT_LINE_NUM; line++) {
 						if (parity_write[line]==true) {
 							byte_write |= (1<<line);
+							parity_write[line] = false; // Reset for next iteration.
 						}
 					}
 					// Don't need to reset `parity_read` because it gets read every time.

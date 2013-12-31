@@ -9,6 +9,7 @@
 
 #define Bit_Set(byte, pos, val)		((byte) |= ((val)<<(pos)))
 #define Bit_Clear(byte, pos)		((byte) &= ~((1)<<(pos)))
+bool Bit_FixBool(bool input);
 
 
 

@@ -163,7 +163,7 @@ bool f_cubeDetected[8] = {0,0,0,0,0,0,0,0}; // 0 = leftmost, 7 = rightmost.
 bool f_isFlagBumped = false;
 bool f_isHangBumped = false;
 bool f_isBumped[CARDINAL_DIR_NUM] = {false, false, false, false};
-bool f_isRedAlliance = false; // Changing this var is helpful for testing the MCU connection.
+bool f_isRedAlliance = true; // Changing this var is helpful for testing the MCU connection.
 
 // Comm link debugging vars:
 const ubyte mask_read = 0b00111111; // We read from the last 6 bits.

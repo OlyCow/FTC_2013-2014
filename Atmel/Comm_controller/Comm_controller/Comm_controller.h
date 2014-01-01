@@ -50,14 +50,12 @@
 #define NXT_LINE_B_PORT		PORTD
 #define NXT_LINE_A_PORT		PORTB
 
-// Clock counts for debounce to trigger.
-// 9999 = 10 ms
-#define DEBOUNCE_COUNTS		9999
-
 // NXT read codes. These are long because they're 32 bits.
 #define NXT_CODE_COMM_RESET		0xFFFFFFFF
 #define NXT_CODE_ROT_RESET		0x00000001
 #define NXT_CODE_CUBE_RESET		0x00000002
+
+const unsigned int debounce_delay  = 2*1000; // 2 milliseconds.
 
 void setupPins(void);
 void alert(void);

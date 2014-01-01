@@ -21,9 +21,7 @@ int main(void)
 	// When CS10=1 and CS11, CS12=0, clock prescaling = 1.
 	// TODO: Is this the best way to set 3 different bits?
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
-	
-	// Setting up a timer for the gyro and stuffs.
-	TCCR1A |= (1 << CS10);
+	uint64_t SYSTEM_TIME = 0; // In microseconds.
 	
 	// Variables for I/O with the NXT (prototype board).
 	bool clock_NXT_current = false;				// TODO: I don't think this initialization matters... Does it?
@@ -68,32 +66,33 @@ int main(void)
 		
 	// Data gathered from various pins to report back.
 	// Add more variables here as we need to.
-	uint16_t pos_x = 0xFFFF;
-	uint16_t pos_y = 0xFFFF;
-	uint8_t pos_z = 0xFF;
-	uint8_t rot_x = 0xFF;
-	uint8_t rot_y = 0xFF;
-	uint16_t rot_z = 0xFFFF;
-	bool isRedAlliance = true; // Might as well.
-	uint8_t line_sensor_bmp = 0xFF;
-	uint8_t cube_detect_bmp = 0xFF;
-	uint8_t close_range_A = 0xFF;
-	uint8_t close_range_B = 0xFF;
-	uint8_t close_range_C = 0xFF;
-	uint8_t close_range_D = 0xFF;
-	uint16_t long_range_A = 0xFFFF;
-	uint16_t long_range_B = 0xFFFF;
-	uint16_t long_range_C = 0xFFFF;
-	uint16_t long_range_D = 0xFFFF;
-	uint8_t cube_num = 4;
+	uint16_t pos_x = 0;
+	uint16_t pos_y = 0;
+	uint8_t pos_z = 0;
+	uint8_t rot_x = 0;
+	uint8_t rot_y = 0;
+	uint16_t rot_z = 0;
+	bool isRedAlliance = false; // Might as well.
+	uint8_t line_sensor_bmp = 0x22;
+	uint8_t cube_detect_bmp = 0x89;
+	uint8_t close_range_A = 0;
+	uint8_t close_range_B = 0;
+	uint8_t close_range_C = 0;
+	uint8_t close_range_D = 0;
+	uint16_t long_range_A = 0;
+	uint16_t long_range_B = 0;
+	uint16_t long_range_C = 0;
+	uint16_t long_range_D = 0;
+	uint8_t cube_num = 0;
 	bool is_flag_bumped = true;
 	bool is_hang_bumped = true;
-	uint8_t bumpers_bmp = 0xFF;
+	uint8_t bumpers_bmp = 0x71;
 	
 	// Variables to process pin inputs.
 	bool cube_counter_current = false;
 	bool cube_counter_prev = false;
 	bool isDebouncing = false;
+	short timer_cube_debounce = 0;
 	
 	// Variables to process MPU-6050 data.
 	
@@ -103,6 +102,10 @@ int main(void)
 	// TODO: Initialization data reading (alliance, config(?), etc.).
 	
 	while (true) {
+		// Update system timer.
+		SYSTEM_TIME += TCNT1;
+		TCNT1 = 0;
+		
 		// Process NXT (prototype board) I/O.
 		clock_NXT_current = bool(PIND & (1<<PD0));
 		if (clock_NXT_current != clock_NXT_prev) {
@@ -168,8 +171,10 @@ int main(void)
 					isIOstate = IO_STATE_DATA;
 					// We should clear the data vars as well here.
 					data_read = 0;
+					bit_count = 0;
 					break;
 				case IO_STATE_DATA :
+					alert();
 					data_read |= (byte_read << bit_count);
 					parity_read_check = (parity_read_check != bool(byte_read)); // bool equiv. of XOR
 					byte_write = 0;
@@ -187,13 +192,14 @@ int main(void)
 						bit_count++;
 					} else if (bit_count==31) {
 						isIOstate = IO_STATE_PARITY;
-						bit_count = 0;
+						// `bit_count` is reset at the end of `IO_STATE_HEADER`.
 					} else {
 						isIOstate = IO_STATE_RESET;
-						bit_count = 0;
+						// `bit_count` is reset at the end of `IO_STATE_HEADER`.
 					}
 					break;
 				case IO_STATE_PARITY :
+					clear();
 					parity_read = bool(byte_read);
 					if (parity_read!=parity_read_check) {
 						isBadData = true;
@@ -294,7 +300,8 @@ int main(void)
 		}
 		
 		// Now that we can breathe a little, load data into "registers"
-		// if the next state is going to be `IO_STATE_DATA`.
+		// if the next state is going to be `IO_STATE_DATA`. This should
+		// happen between `IO_STATE_HEADER` and `IO_STATE_DATA`.
 		if ((isIOstate==IO_STATE_DATA) && (bit_count==0)) {
 			for (short line=0; line<NXT_LINE_NUM; line++) {
 				data_write[line] = 0; // Clear this first.
@@ -351,17 +358,18 @@ int main(void)
 			switch (isDebouncing) {
 				case false :
 					isDebouncing = true;
-					TCNT1 = 0; // Clear this timer; start counting.
+					timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
 				case true :
-					if (TCNT1 >= DEBOUNCE_COUNTS) {
+					if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
 						// Under the correct conditions, increment cube count.
 						if (((~cube_counter_current)&cube_counter_prev) == true) {
 							if (cube_num<4) {
 								cube_num++; // Some really hackish error handling here :)
+								alert();
 							}
 						}
 						// Get ready for the next cycle.
-						TCNT1 = 0; // Clear clock.
+						timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
 						isDebouncing = false;
 						cube_counter_prev = cube_counter_current;
 					}
@@ -392,23 +400,6 @@ int main(void)
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, test_val, 1);
 		
 		//if (test_val[0] == 0) {
-			//alert();
-		//} else {
-			//clear();
-		//}
-		
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, &gyro_z_L, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, &gyro_z_H, 1);
-		//gyro_z = gyro_z_L+(((uint16_t)(gyro_z_H))<<8);
-		//if (gyro_z_L == 0) {
-			//alert();
-		//} else {
-			////clear();
-		//}
-		
-		
-		//// TODO: Get rid of the below. Debugging fun stuff.
-		//if (isIOstate==IO_STATE_RESET) {
 			//alert();
 		//} else {
 			//clear();

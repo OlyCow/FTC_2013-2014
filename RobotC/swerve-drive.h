@@ -180,7 +180,7 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 
-	HTGYROstartCal(sensor_protoboard);
+	//HTGYROstartCal(sensor_protoboard);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 }
 

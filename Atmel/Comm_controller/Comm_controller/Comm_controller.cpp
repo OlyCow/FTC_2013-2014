@@ -49,6 +49,7 @@ int main(void)
 	IOstate isIOstate = IO_STATE_RESET;
 	short resetAckCounter = 0; // Goes up to... ? TODO!
 	short resetConfirmCounter = 0;
+	short resetAlignCounter = 0;
 	enum LineState {
 		LINE_POS_XY		= 0,
 		LINE_ROT_LIGHT	= 1,
@@ -114,9 +115,10 @@ int main(void)
 			// Set `byte_write`.
 			switch (isIOstate) {
 				case IO_STATE_RESET :
-					if (resetConfirmCounter > 63) { // MAGIC_NUM: This is actually magical. We can only pray that it works.
+					if (resetConfirmCounter > 64) { // MAGIC_NUM: This is actually magical. We can only pray that it works.
 						alert();
 						// Proceed with resync.
+						resetAlignCounter++;
 						if (byte_read == 0x01) {
 							resetAckCounter = 0;
 							switch (clock_NXT_current) {
@@ -142,18 +144,24 @@ int main(void)
 									break;
 							}
 						}
+						if ((resetAlignCounter>16) && (isIOstate==IO_STATE_RESET)) { // MAGIC_NUM. Needs to be greater than 9 and less than 31.
+							isIOstate = IO_STATE_RESET;
+							resetConfirmCounter = 0;
+						}
 					} else {
 						clear();
 						// Pause resync and write all 1s.
 						byte_write = 0xFF; // Write all 1s as default.
 						if (byte_read == 0x01) {
 							resetConfirmCounter++;
+							resetAlignCounter = 0;
 						} else {
 							resetConfirmCounter = 0;
 						}
 					}
 					break;
 				case IO_STATE_HEADER :
+					clear();
 					resetConfirmCounter = 0; // Otherwise the else will evaluate (if this is in the switch). TODO: Fix.
 					header_read = bool(byte_read);
 					byte_write = 0;

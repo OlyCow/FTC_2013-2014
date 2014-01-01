@@ -829,7 +829,7 @@ task CommLink()
 			// First make sure we're in sync.
 			short sync_count = 0;
 			int fail_count = 0; // TODO: If this gets too high, alert the drivers.
-			while (sync_count<6) { // 3 high and 3 low.
+			while (sync_count<6) { // 3 high and 3 low. Has to be more than a frame? TODO
 				f_byte_write |= (1<<6); // Set the data bit high.
 				processCommTick();
 				f_byte_read |= 0b11000000; // Make sure the "write" bits aren't random.

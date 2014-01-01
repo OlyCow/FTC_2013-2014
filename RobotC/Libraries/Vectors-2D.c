@@ -11,7 +11,7 @@ void Vector2D_UpdatePos(vector2D &inputVector) {
 	inputVector.y = inputVector.r*sinDegrees(inputVector.theta);
 }
 void Vector2D_UpdateRot(vector2D &inputVector) {
-	inputVector.theta = atan2(inputVector.y, inputVector.x);
+	inputVector.theta = radiansToDegrees(atan2(inputVector.y, inputVector.x));
 	inputVector.r = sqrt((inputVector.y)*(inputVector.y)+(inputVector.x)*(inputVector.x));
 }
 void Vector2D_Add(vector2D vectorA, vector2D vectorB, vector2D &result) {
@@ -35,8 +35,10 @@ void Vector2D_Translate(vector2D &inputVector, float x, float y) {
 	Vector2D_UpdateRot(inputVector);
 }
 void Vector2D_Rotate(vector2D &inputVector, float theta, AngleUnit units) {
-	inputVector.x = inputVector.x*cosDegrees(theta)-inputVector.y*sinDegrees(theta);
-	inputVector.y = inputVector.y*sinDegrees(theta)+inputVector.y*cosDegrees(theta);
+	float x_temp = inputVector.x;
+	float y_temp = inputVector.y;
+	inputVector.x = x_temp*cosDegrees(theta)-y_temp*sinDegrees(theta);
+	inputVector.y = x_temp*sinDegrees(theta)+y_temp*cosDegrees(theta);
 	Vector2D_UpdateRot(inputVector);
 }
 

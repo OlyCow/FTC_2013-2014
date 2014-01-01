@@ -41,27 +41,32 @@ float HTGYROreadRot(tSensors link) {
 }
 
 // Calibrate gyro by calculating the average offset of 25
-// readings. Takes about 25*10=250ms, or 1/4th of a second.
+// readings. Takes about 50*5=250ms, or 1/4th of a second.
 // Returns the new offset value for the gyro.
 // `link`:	Port number of gyro.
 float HTGYROstartCal(tSensors link) {
-	long _avgdata = 0;
-	wait1Msec(500);
-
 	// Make sure the sensor is configured as type sensorRawValue.
 	if (SensorType[link] != sensorAnalogInactive) {
 		SetSensorType(link, sensorAnalogInactive);
 		wait1Msec(100);
 	}
 
-	// Take 25 readings and average them out.
-	for (int i=0; i<100; i++) {
+	long _avgdata = 0;
+	hogCPU();
+	wait1Msec(100); // Give the gyro time to initialize.
+	int temp_reading = SensorValue[link]; // Flush out bad readings.
+
+	// Take 50 readings and average them out.
+	// NOTE: When changing limits on `i`, make sure to change
+	// the number `_avgdata` is averaged by as well!
+	for (int i=0; i<50; i++) {
 		_avgdata += SensorValue[link];
-		wait1Msec(10);
+		wait1Msec(5);
 	}
+	releaseCPU();
 
 	// Store & return new offset value.
-	HTGYRO_offsets[link][0] = (((float)_avgdata)/((float)100.0));
+	HTGYRO_offsets[link][0] = (float)_avgdata/50.0;
 	return HTGYRO_offsets[link][0];
 }
 
@@ -90,15 +95,21 @@ float HTGYROreadRot(tMUXSensor muxsensor) {
 // `muxsensor`:	SMUX sensor port number.
 float HTGYROstartCal(tMUXSensor muxsensor) {
 	long _avgdata = 0;
+	hogCPU();
+	wait1Msec(100); // Give the gyro time to initialize.
+	int temp_reading = HTSMUXreadAnalogue(muxsensor); // Flush out bad readings.
 
-	// Take 5 readings and average them out.
-	for (int i = 0; i < 50; i++) {
+	// Take 50 readings and average them out.
+	// NOTE: When changing limits on `i`, make sure to change
+	// the number `_avgdata` is averaged by as well!
+	for (int i=0; i<50; i++) {
 		_avgdata += HTSMUXreadAnalogue(muxsensor);
-		wait1Msec(50);
+		wait1Msec(5);
 	}
+	releaseCPU();
 
 	// Store new offset value.
-	HTGYRO_offsets[SPORT(muxsensor)][MPORT(muxsensor)] = (_avgdata / 50.0);
+	HTGYRO_offsets[SPORT(muxsensor)][MPORT(muxsensor)] = (_avgdata/50.0);
 	// Return new offset value.
 	return HTGYRO_offsets[SPORT(muxsensor)][MPORT(muxsensor)];
 }

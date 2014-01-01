@@ -7,6 +7,7 @@
 #define	Task_Spawn(taskID)				(StartTask(taskID))
 #define	Task_PrioritySpawn(taskID, priority)	(StartTask(taskID, (priority))) //should rarely need this
 #define	Task_Suspend(taskID)			(suspendTask(taskID))
+#define Task_Resume(taskID)				(resumeTask(taskID))
 #define	Task_Kill(taskID)				(StopTask(taskID))
 #define	Task_KillAll()					(StopAllTasks())
 #define	Task_HogCPU()					(hogCPU())

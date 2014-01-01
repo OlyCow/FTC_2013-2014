@@ -1,13 +1,4 @@
 #################
-## Bricx Command Center
-#################
-## Files generated each time BricxCC starts.
-
-*.dsk
-*.bak
-*.sym
-
-#################
 ## C Files
 #################
 ## Files generated each time a C-compiler runs.
@@ -29,6 +20,15 @@
 *.exe
 *.out
 *.app
+
+#################
+## Atmel Studio
+#################
+## Atmel Studio specific temporary files
+## (non-Visual Studio).
+
+# User-specific files
+*.atsuo
 
 #################
 ## Visual Studio

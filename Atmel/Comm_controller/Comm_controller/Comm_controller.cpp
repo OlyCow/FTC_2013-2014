@@ -115,8 +115,8 @@ int main(void)
 			// Set `byte_write`.
 			switch (isIOstate) {
 				case IO_STATE_RESET :
+					data_read = 0; // Otherwise the MCU will attempt to reset even after syncing (isIOstate gets set back to RESET).
 					if (resetConfirmCounter > 64) { // MAGIC_NUM: This is actually magical. We can only pray that it works.
-						alert();
 						// Proceed with resync.
 						resetAlignCounter++;
 						if (byte_read == 0x01) {
@@ -136,8 +136,7 @@ int main(void)
 							} else {
 								isIOstate = IO_STATE_HEADER;
 								resetAckCounter = 0;
-								//clear();
-							}
+							} // else if resetAckCounter > 1, it will error out, hopefully. TODO
 						}
 						if ((resetAlignCounter>16) && (isIOstate==IO_STATE_RESET)) { // MAGIC_NUM. Needs to be greater than 9 and less than 31.
 							isIOstate = IO_STATE_RESET;

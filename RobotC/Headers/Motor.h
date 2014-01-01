@@ -4,20 +4,12 @@
 
 
 
-typedef enum Motor {
-	MOTOR_FR = 0,
-	MOTOR_FL = 1,
-	MOTOR_BL = 2,
-	MOTOR_BR = 3,
-	MOTOR_NUM,
-};
-
 typedef enum MotorType {
 	MOTORTYPE_NXT	= 0,
 	MOTORTYPE_12V	= 1,
 	MOTORTYPE_ALL	= 2,
 	MOTORTYPE_NUM,
-};
+} MotorType;
 
 
 
@@ -49,6 +41,7 @@ int		Motor_GetPIDInterval(tMotor motorName);
 
 
 
+// TODO: what is this stuff down here??
 //void Motor_SetPower(int power, tMotor motorName);
 //int  Motor_GetPower(tMotor motorName);
 //void Motor_SetEncoder(long encoderValue, tMotor motorName);
@@ -60,8 +53,8 @@ int		Motor_GetPIDInterval(tMotor motorName);
 //void Motor_SetState(TNxtRunState state, tMotor motorName); //DANGER! this function shouldn't even be defined :P
 //TNxtRunState Motor_GetState(tMotor motorName);
 
-//Types of functions:
-// Low-level; used for setting vars; don't use; etc.
+// TODO: group types of functions:
+// *low-level; used for setting vars; don't use; etc.
 
 
 

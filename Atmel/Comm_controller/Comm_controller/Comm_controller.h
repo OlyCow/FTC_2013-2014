@@ -55,7 +55,7 @@
 #define NXT_CODE_ROT_RESET		0x00000001
 #define NXT_CODE_CUBE_RESET		0x00000002
 
-const unsigned int debounce_delay  = 2*1000; // 2 milliseconds.
+const unsigned int debounce_delay  = 5*1000; // 5 milliseconds.
 
 void setupPins(void);
 void alert(void);

@@ -4,9 +4,13 @@
 int main(void)
 {
 	setupPins();
-	// TODO: UNCOMMENT THIS! OR PREPARE FOR UNLIMITED SORROW!
-	//TWI::setup();
-	//MPU::initialize();
+	TWI::setup();
+	MPU::initialize();
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	
 	//// TODO: Uncomment this stuff when we get the ATmega328s.
 	//// TODO: Move this interrupt registry stuff over to the
@@ -100,6 +104,7 @@ int main(void)
 	uint8_t test_val[1] = {0x55}; // 0b01010101
 		
 	// TODO: Initialization data reading (alliance, config(?), etc.).
+	alert();
 	
 	while (true) {
 		// Update system timer.
@@ -174,7 +179,6 @@ int main(void)
 					bit_count = 0;
 					break;
 				case IO_STATE_DATA :
-					alert();
 					data_read |= (byte_read << bit_count);
 					parity_read_check = (parity_read_check != bool(byte_read)); // bool equiv. of XOR
 					byte_write = 0;
@@ -199,7 +203,6 @@ int main(void)
 					}
 					break;
 				case IO_STATE_PARITY :
-					clear();
 					parity_read = bool(byte_read);
 					if (parity_read!=parity_read_check) {
 						isBadData = true;
@@ -365,7 +368,6 @@ int main(void)
 						if (((~cube_counter_current)&cube_counter_prev) == true) {
 							if (cube_num<4) {
 								cube_num++; // Some really hackish error handling here :)
-								alert();
 							}
 						}
 						// Get ready for the next cycle.
@@ -377,33 +379,51 @@ int main(void)
 			}
 		}
 		
-		// Process gyro data.		
-		// MPU6050_RA_SELF_TEST_Z & 0b00011111 == 19; FT_GZ == 7358.37
+		// Process gyro data.
 		
-		//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_CONFIG, test_val, 1);
-		//test_val[0] &= 0b00000111;
-		//// test_val[0] == xxxx x000
-		
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_H, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_L, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_YOUT_H, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_YOUT_L, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_XOUT_H, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_XOUT_L, test_val, 1);
-		
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, test_val, 1);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, test_val, 1);
-		
-		//if (test_val[0] == 0) {
-			//alert();
-		//} else {
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, test_val, 1);
+		////pos_x = test_val[0];
+		//if (test_val[0] == 0x00) {
 			//clear();
+		//} else {
+			//alert();
 		//}
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, test_val, 1);
+		//if (test_val[0] == 0x01) {
+			//clear();
+		//} else {
+			//alert();
+		//}
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_CONFIG, test_val, 1);
+		//if (test_val[0] == 0x00) {
+			//clear();
+		//} else {
+			//alert();
+		//}
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, test_val, 1);
+		//if (test_val[0] == 0x00) {
+			//clear();
+		//} else {
+			//alert();
+		//}
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, test_val, 1);
+		//if (test_val[0] == 0x00) {
+			//clear();
+		//} else {
+			//alert();
+		//}
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, test_val, 1);
+		//if (test_val[0] == 0x68) {
+			//clear();
+		//} else {
+			//alert();
+		//}
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_L, test_val, 1);
+		if (test_val[0] == 0x00) {
+			clear();
+		} else {
+			alert();
+		}
 	}
 }
 

@@ -39,8 +39,6 @@ task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's 
 task CommLink(); // Reads/writes to the prototype board as tightly as possible.
 task Display(); // A separate task for updating the NXT's LCD display.
 task TimedOperations(); // Anything depending on match time (release climbing, etc.).
-task SaveData(); // Saves wheel pod position-DEPRECATED
-task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
 //     As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
@@ -102,30 +100,13 @@ task Autonomous(); // Ooooh.
 // *: Button_LT overrides Button_RT.
 //-------------------------------------------------------------------------->>
 
-// For control flow:
-bool isAutonomous = false;
-
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
 
 // For PID:
-typedef enum Aligned {
-	ALIGNED_FAR		= 0,
-	ALIGNED_MEDIUM	= 1,
-	ALIGNED_CLOSE	= 2,
-};
-float term_P_pod[POD_NUM] = {0,0,0,0};
-float term_I_pod[POD_NUM] = {0,0,0,0};
-float term_D_pod[POD_NUM] = {0,0,0,0};
-float encoder_pod[POD_NUM] = {0,0,0,0};
-float pod_current[POD_NUM] = {0,0,0,0};
-float pod_raw[POD_NUM] = {0,0,0,0};
-float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
-float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 const int max_lift_height = 5200; // MAGIC_NUM. TODO: Find this value.
-Aligned isAligned[POD_NUM] = {ALIGNED_FAR, ALIGNED_FAR, ALIGNED_FAR, ALIGNED_FAR}; // If false, cut motor power so that wheel pod can get aligned.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -180,9 +161,6 @@ bool header_read[6] = {false, false, false, false, false, false};
 ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
-// I dunno why this is even here...
-bool isTank = false;
-
 
 
 task main()
@@ -201,24 +179,6 @@ task main()
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
-	// Not initializing these structs for now: once data starts coming in
-	// from the controllers, all the members of these will get updated.
-	vector2D rotation[POD_NUM];
-	vector2D translation; // Not a struct because all wheel pods share the same values.
-	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
-	float rotation_temp = 0.0; // So we only fetch data from joysticks once.
-	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
-	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
-	const int maxTurns = 1; // On each side. To prevent the wires from getting too twisted.
-
-	float heading = 0.0; // Because f_angle_z is an int.
-	float gyro_current = 0.0; // For trapezoidal approximation.
-	float gyro_prev = 0.0; // For trapezoidal approximation.
-
-	// Timers.
-	int timer_gyro = 0.0;
-
-	// Tank-mode power levels.
 	float power_L = 0.0;
 	float power_R = 0.0;
 
@@ -229,119 +189,19 @@ task main()
 	float power_climb = 0.0;
 
 	// TODO: Fix the eject and delete the corresponding code & vars.
-	const int eject_delay = 1000;
+	const int eject_delay = 600;
 
 	Joystick_WaitForStart();
-	Time_ClearTimer(timer_gyro);
 
 	while (true) {
 		Joystick_UpdateData();
 
-		//// TODO: Figure this out. Semaphores? Is it even necessary?
-		//Task_HogCPU();
-		//gyro_current = (float)HTGYROreadRot(sensor_protoboard);
-		//heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
-		heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
-		Time_ClearTimer(timer_gyro);
-		gyro_prev = gyro_current;
-		f_angle_z = round(heading);
-		//// TODO: Figure this out. Semaphores? Is it even necessary?
-		//Task_ReleaseCPU();
-
-		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
-			isTank = !isTank;
-		}
-		//// TODO: Figure this out. Semaphores? Is it even necessary?
-		//Task_HogCPU();
-		switch (isTank) {
-			case true :
-				// TODO: FIX ENCODER DRIFT OR WHATEVER THIS IS ARGHHHH
-				// MAGIC_NUM: Ian says these angles make the pods skid less.
-				g_ServoData[POD_FR].angle = 100;
-				g_ServoData[POD_FL].angle = 80;
-				g_ServoData[POD_BL].angle = 80;
-				g_ServoData[POD_BR].angle = 100;
-				power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
-				power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
-				g_MotorData[POD_FR].power = power_R;
-				g_MotorData[POD_FL].power = power_L;
-				g_MotorData[POD_BL].power = power_L;
-				g_MotorData[POD_BR].power = power_R;
-				break;
-
-			case false :
-				// TODO: When the robot design is finalized and comms is working and all
-				// that good stuff, take this out and only use the joystick button to reset
-				// the gyro. Also update the climbing and lift controls when we finalize
-				// those as well.
-				if (Joystick_ButtonPressed(BUTTON_B)==true) {
-					f_angle_z = 0;
-					heading = 0;
-				}
-				//if (Joystick_ButtonPressed(BUTTON_JOYR)==true) {
-				//	f_angle_z = 0;
-				//	heading = 0;
-				//}
-
-				// A rotation vector is added to translation vector, and the resultant vector
-				// is normalized. A differential analysis of the parametric equations of
-				// each wheel pod confirms that the above algorithm works perfectly, despite
-				// its apparent simplicity. Use of the Vector2D library makes some of this
-				// slightly less efficient (there are some unnecessary update calculations)
-				// but the benefit of increased readability is well worth it.
-				// The following code is essentially wizardry (practically speaking).
-				translation.x = Joystick_GenericInput(JOYSTICK_R, AXIS_X);
-				translation.y = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
-				if (isFineTuning==true) {
-					translation.x *= 0.35;
-					translation.y *= 0.35;
-				}
-				Vector2D_UpdateRot(translation);
-				Vector2D_Rotate(translation, -heading); // We want to correct it, not compound.
-				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
-				if (isFineTuning==true) {
-					rotation_temp *= 0.45;
-				}
-
-				for (int i=POD_FR; i<(int)POD_NUM; i++) {
-					rotation[i].r = rotation_temp;
-					rotation[i].theta = g_MotorData[i].angleOffset+90; // The vector is tangent to the circle (+90 deg).
-					Vector2D_UpdatePos(rotation[i]);
-					Vector2D_Add(rotation[i], translation, combined[i]);
-					if (combined[i].r>g_FullPower) {
-						shouldNormalize = true;
-					}
-					if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) {
-						combined[i].theta = combined_angle_prev[i];
-						// No need to update `combined_angle_prev[i]` because it stays the same.
-						Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
-					} else {
-						combined_angle_prev[i] = combined[i].theta;
-					}
-					g_ServoData[i].angle = combined[i].theta;
-				}
-
-				// Normalize our motors' power values if a motor's power went above g_FullPower.
-				if (shouldNormalize==true) {
-					float originalMaxPower = (float)g_FullPower; // If there was a false positive, this ensures nothing changes.
-					for (int i=POD_FR; i<(int)POD_NUM; i++) {
-						if (combined[i].r>originalMaxPower) {
-							originalMaxPower = combined[i].r;
-						}
-					}
-					for (int i=POD_FR; i<(int)POD_NUM; i++) {
-						combined[i].r = Math_Normalize(combined[i].r, originalMaxPower, g_FullPower);
-						Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
-					}
-					shouldNormalize = false; // Reset this for the next iteration.
-				}
-				for (int i=POD_FR; i<(int)POD_NUM; i++) {
-					g_MotorData[i].power = combined[i].r;
-				}
-				break; // case `isTank==false`
-		}
-		//// TODO: Figure this out. Semaphores? Is it even necessary?
-		//Task_ReleaseCPU();
+		power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
+		power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
+		Motor_SetPower(power_L, motor_FL);
+		Motor_SetPower(power_L, motor_BL);
+		Motor_SetPower(power_R, motor_FR);
+		Motor_SetPower(power_R, motor_BR);
 
 		// Set our "fine-tune" factor (amount motor power is divided by).
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
@@ -354,10 +214,6 @@ task main()
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
 			}
-		//} else if (isFineTuning==true) {
-		//	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		//		g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
-		//	}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
@@ -484,16 +340,6 @@ task main()
 			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 		}
 
-		// Start autonomous mode when `BUTTON_START` is pressed on both controllers,
-		// but only one controller's `BUTTON_BACK` needs to be pressed to end it.
-		if ((Joystick_ButtonReleased(BUTTON_BACK))&&(Joystick_ButtonReleased(BUTTON_BACK, CONTROLLER_2))==true) {
-			isAutonomous = false;
-			Task_Kill(Autonomous);
-		} else if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
-			isAutonomous = true;
-			Task_Spawn(Autonomous);
-		}
-
 		// If the flag is already waving, add 3 more waves.
 		if (Joystick_ButtonPressed(BUTTON_X, CONTROLLER_2)==true) {
 			switch (f_isWavingFlag) {
@@ -504,11 +350,6 @@ task main()
 					waveFlag();
 					break;
 			}
-		}
-
-		// Save the pod reset data.
-		if (Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2)==true) {
-			Task_Spawn(SaveData);
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
@@ -589,34 +430,6 @@ task PID()
 	Time_ClearTimer(timer_loop);
 	int t_delta = Time_GetTime(timer_loop);
 
-	// Variables for wheel pod PID calculations.
-	const int kI_delay = 5; // Iterations.
-	float error_sum_pod[POD_NUM][kI_delay];
-	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		for (int j=0; j<kI_delay; j++) {
-			error_sum_pod[i][j] = 0;
-		}
-	}
-	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // MAGIC_NUM: TODO: PID tuning.
-	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	//float kI[POD_NUM] = {0.001,	0.001,	0.001,	0.001};
-	//float kD[POD_NUM] = {130.0,	130.0,	130.0,	130.0};
-	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
-	float error_rate_pod[POD_NUM] = {0,0,0,0};
-
-	// Variables to adjust alignment & damping of wheel pods.
-	Aligned netAlignment = ALIGNED_FAR;
-	const int align_far_limit = 40; // degrees.
-	const int align_medium_limit = 5; // degrees.
-	const int align_medium_range = align_far_limit-align_medium_limit; // degrees.
-	float align_adjust = 0.0; // temporary variable.
-
-	// Misc. variables for pod PID.
-	const int turnLimit = 3; // On each side. To prevent the wires from getting too twisted.
-	int pod_pos_prev[POD_NUM] = {0,0,0,0};
-
 	// Variables for lift PID calculations.
 	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
 	float kP_lift_down	= 0.065;
@@ -627,23 +440,6 @@ task PID()
 	float error_rate_lift = 0.0;
 	float term_P_lift = 0.0;
 	float term_D_lift = 0.0;
-
-	TFileHandle IO_handle;
-	TFileIOResult IO_result;
-	const string filename_pods = "_reset_pods.txt";
-	int file_size = 0;
-
-	// If we can't find the file, we go to the backup file.
-	Task_HogCPU();
-	OpenRead(IO_handle, IO_result, filename_pods, file_size);
-	if (IO_result==ioRsltSuccess) {
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			ReadShort(IO_handle, IO_result, pod_pos_prev[i]);
-		}
-	}
-	Delete(filename_pods, IO_result);
-	Close(IO_handle, IO_result);
-	Task_ReleaseCPU();
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
@@ -656,122 +452,7 @@ task PID()
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
 
-		// Calculate the targets and error for each wheel pod.
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			encoder_pod[i] = Motor_GetEncoder(Motor_Convert((WheelPod)i));
-			pod_raw[i] = encoder_pod[i]/(-2.0); // Encoders are geared up by 2 (and "backwards").
-			pod_raw[i] = Math_Normalize(pod_raw[i], 1440.0, 360.0); // Encoders are 1440 CPR.
-			pod_raw[i] += pod_pos_prev[i];
-			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
-			pod_current[i] += 360; // Value is now >= 0 (between 0 ~ 720).
-			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between 0 ~ 360.
-
-			error_prev_pod[i] = error_pod[i];
-			error_pod[i] = g_ServoData[i].angle-pod_current[i];
-
-			// TODO: Simplify the below to something having to do with modulo 180.
-			// Make sure we turn at most 180 degrees:
-			if (error_pod[i]>180) {
-				error_pod[i] = error_pod[i]-360;
-			} else if (error_pod[i]<-180) {
-				error_pod[i] = error_pod[i]+360;
-			}
-
-			// TODO: Simplify the below to something having to do with modulo 90.
-			// Motor reversals are being explicitly assigned (instead of XOR-ing)
-			// because they aren't cleared each iteration and this is the first
-			// time this iteration we access them. (Later we can XOR them.)
-			// Make sure we turn at most 90 degrees:
-			if (error_pod[i]>90) {
-				error_pod[i] = error_pod[i]-180;
-				g_MotorData[i].isReversed = true;
-			} else if (error_pod[i]<-90) {
-				error_pod[i] = error_pod[i]+180;
-				g_MotorData[i].isReversed = true;
-			} else {
-				g_MotorData[i].isReversed = false;
-			}
-
-			// Make sure we don't hit the maximum turning limit:
-			if (error_pod[i]+pod_raw[i]>turnLimit*360) {
-				// TODO: Add even more limits so if the pods get off >90deg, bad things don't happen.
-				error_pod[i] = error_pod[i]-180;
-				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
-			} else if (error_pod[i]+pod_raw[i]<turnLimit*(-360)) {
-				// TODO: Add even more limits so if the pods get off >90deg, bad things don't happen.
-				error_pod[i] = error_pod[i]+180;
-				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
-			}
-
-			// TODO: Encoders might have a tiny deadband (depends on backlash).
-			Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
-
-			// Calculate various aspects of the errors, for the I- and D- terms.
-			// TODO: Optimize I-term calculation.
-			for (int j=0; j<kI_delay-1; j++) { // We can't assign kI_delay-1 yet as an index (doesn't exist).
-				error_sum_pod[i][j] = error_sum_pod[i][j+1];
-			}
-			error_sum_pod[i][kI_delay-1] = error_pod[i]*t_delta; // `-1` because array indices.
-			error_sum_total_pod[i] = 0;
-			for (int j=0; j<kI_delay; j++) {
-				error_sum_total_pod[i] += error_sum_pod[i][j];
-			}
-			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-
-			// Calculate total PID correction values.
-			term_P_pod[i] = kP[i]*error_pod[i];
-			term_I_pod[i] = kI[i]*error_sum_total_pod[i];
-			term_D_pod[i] = kD[i]*error_rate_pod[i];
-			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
-
-			// Classify alignment of each wheel pod.
-			if (abs(error_pod[i])>align_far_limit) {
-				isAligned[i] = ALIGNED_FAR;
-			} else if (abs(error_pod[i])>align_medium_limit) {
-				isAligned[i] = ALIGNED_MEDIUM;
-			} else {
-				isAligned[i] = ALIGNED_CLOSE;
-			}
-			if ((int)isAligned[i]<(int)netAlignment) {
-				netAlignment = isAligned[i];
-			}
-		}
-
-		// Damp motors depending on how far the farthest wheel pod is from its target.
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			switch (netAlignment) {
-				case ALIGNED_FAR:
-					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
-					break;
-				case ALIGNED_MEDIUM:
-					align_adjust = align_far_limit-abs(error_pod[i]);
-					align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-					align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
-					g_MotorData[i].fineTuneFactor *= align_adjust;
-					break;
-				case ALIGNED_CLOSE :
-					g_MotorData[i].fineTuneFactor *= 1;
-					break;
-				// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
-			}
-		}
-		// Now we can reset this (and we need to).
-		netAlignment = ALIGNED_CLOSE;
-
-		// Assign the power settings to the motors and servos.
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
-			if (g_MotorData[i].isReversed==true) {
-				g_MotorData[i].power *= -1;
-			}
-			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
-			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
-			// Negative servo assignment because servo is powered by a gear.
-			Servo_SetPower(Servo_Convert((WheelPod)i), -correction_pod[i]);
-		}
-
-		// Another PID loop, this time for the lift.
-		// Yes, it is a complete PID loop, despite being so much shorter. :)
+		// Yes, this is a complete PID loop, despite it being so short. :)
 		lift_pos = Motor_GetEncoder(motor_lift);
 		error_prev_lift = error_lift;
 		if (lift_target<0) { // Because we're safe.
@@ -1060,16 +741,11 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
-		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
-		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_COMM_DEBUG,
 		DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
-		//DISP_SERVOS,			// Show each servo's position.
-		//DISP_TASKS,				// Which tasks are running.
-		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM
 	};
 
@@ -1084,32 +760,7 @@ task Display()
 		switch (isMode) {
 			case DISP_FCS :
 				break;
-			case DISP_SWERVE_DEBUG :
-				// The value of `pod_current[i]` is (should be?) between 0~360.
-				nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
-				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
-				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
-				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
-				break;
-			case DISP_SWERVE_PID :
-				nxtDisplayTextLine(0, "FR err%+3d P:%+4d", error_pod[POD_FR], term_P_pod[POD_FR]);
-				nxtDisplayTextLine(1, "FL err%+3d P:%+4d", error_pod[POD_FL], term_P_pod[POD_FL]);
-				nxtDisplayTextLine(2, "BL err%+3d P:%+4d", error_pod[POD_BL], term_P_pod[POD_BL]);
-				nxtDisplayTextLine(3, "BR err%+3d P:%+4d", error_pod[POD_BR], term_P_pod[POD_BR]);
-				nxtDisplayTextLine(4, " I:%+4d D:%+4d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
-				nxtDisplayTextLine(5, " I:%+4d D:%+4d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
-				nxtDisplayTextLine(6, " I:%+4d D:%+4d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
-				nxtDisplayTextLine(7, " I:%+4d D:%+4d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
-				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(0, "FR %+5d  %d", encoder_pod[POD_FR], isAligned[POD_FR]);
-				nxtDisplayTextLine(1, "FL %+5d  %d", encoder_pod[POD_FL], isAligned[POD_FL]);
-				nxtDisplayTextLine(2, "BL %+5d  %d", encoder_pod[POD_BL], isAligned[POD_BL]);
-				nxtDisplayTextLine(3, "BR %+5d  %d", encoder_pod[POD_BR], isAligned[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;
@@ -1195,39 +846,4 @@ task TimedOperations()
 	}
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
-}
-
-
-
-task SaveData()
-{
-	TFileHandle IO_handle;
-	TFileIOResult IO_result;
-	const string filename_pods = "_reset_pods.txt";
-	int file_size = 72; // Should be 64 (4 shorts).
-	Task_HogCPU();
-	Delete(filename_pods, IO_result); // TODO: Add error handling.
-	OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
-	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
-	}
-	Close(IO_handle, IO_result);
-	Task_ReleaseCPU();
-}
-
-
-
-task Autonomous()
-{
-	isAutonomous = true;
-
-	while (true) {
-		if (isAutonomous==false) {
-			break;
-		}
-		// TODO: Do stuff. I have no idea how.
-	}
-
-	isAutonomous = false;
-	Task_Kill(Autonomous);
 }

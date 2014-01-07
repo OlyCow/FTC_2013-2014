@@ -95,19 +95,74 @@ ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0
 
 
 
+void Brake();
+void MoveForward(float power);
+void TurnLeft(float power);
+void TurnRight(float power);
+
 task main()
 {
 	initializeGlobalVariables();
 	initializeRobotVariables();
 
-	// Move forward
-	// check IR (x4)
-	// if IR is valid, dump
-	// Move backward
+	const float power_fine_tune = 80;
+
+	const int delay_IR[4] = {200, 400, 400, 200};
+	const int delay_retreat = 2400;
+	const int turn_perpendicular = 500;
+	const int delay_approach_ramp = 800;
+	const int turn_parallel = 500;
+	const int delay_onto_ramp = 1000;
+	const int servo_auton_dump = 255;
+
+	int IRdirA, IRdirB, IRdirC, IRdirD, IRdirE;
+
+	Joystick_WaitForStart();
+
+	MoveForward(power_fine_tune);
+	for (int i=0; i<5; i++) {
+		Time_Wait(delay_IR[i]);
+		HTIRS2readAllACStrength(sensor_IR, IRdirA, IRdirB, IRdirC, IRdirD, IRdirE);
+		if (IRdirC>g_IRthreshold) {
+			Servo_SetPosition(servo_auton, servo_auton_dump);
+		}
+	}
+	Servo_SetPosition(servo_auton, servo_auton_dump);
+	Brake();
+
+	MoveForward(-power_fine_tune);
+	Time_Wait(delay_retreat);
+	Brake();
+
 	// Turn
 	// Move forward
 	// Turn
 	// Move onto ramp
+}
+void Brake() {
+	Motor_SetPower(0, motor_FL);
+	Motor_SetPower(0, motor_BL);
+	Motor_SetPower(0, motor_FR);
+	Motor_SetPower(0, motor_BR);
+	Time_Wait(500);
+}
+void MoveForward(float power) {
+	Motor_SetPower(power, motor_FL);
+	Motor_SetPower(power, motor_BL);
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_BR);
+}
+void TurnLeft(float power) {
+	Motor_SetPower(-power, motor_FL);
+	Motor_SetPower(-power, motor_BL);
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_BR);
+}
+void TurnRight(float power) {
+	Motor_SetPower(power, motor_FL);
+	Motor_SetPower(power, motor_BL);
+	Motor_SetPower(-power, motor_FR);
+	Motor_SetPower(-power, motor_BR);
 }
 
 

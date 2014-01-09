@@ -18,13 +18,13 @@
 #pragma config(Servo,  srvo_S1_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_3,    servo_flip_L,         tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_5,    servo_flag,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_5,    servo_auton,          tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_shield,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
 
 #include "includes.h"
@@ -100,10 +100,13 @@ void MoveForward(float power);
 void TurnLeft(float power);
 void TurnRight(float power);
 
+task PID();
+
 task main()
 {
 	initializeGlobalVariables();
 	initializeRobotVariables();
+	Task_Spawn(PID);
 
 	const float power_fine_tune = 80;
 
@@ -113,7 +116,6 @@ task main()
 	const int delay_approach_ramp = 800;
 	const int turn_parallel = 500;
 	const int delay_onto_ramp = 1000;
-	const int servo_auton_dump = 255;
 
 	int IRdirA, IRdirB, IRdirC, IRdirD, IRdirE;
 
@@ -134,10 +136,21 @@ task main()
 	Time_Wait(delay_retreat);
 	Brake();
 
-	// Turn
-	// Move forward
-	// Turn
-	// Move onto ramp
+	TurnRight(power_fine_tune);
+	Time_Wait(turn_perpendicular);
+	Brake();
+
+	MoveForward(power_fine_tune);
+	Time_Wait(delay_approach_ramp);
+	Brake();
+
+	TurnLeft(power_fine_tune);
+	Time_Wait(turn_parallel);
+	Brake();
+
+	MoveForward(power_fine_tune);
+	Time_Wait(delay_onto_ramp);
+	Brake();
 }
 void Brake() {
 	Motor_SetPower(0, motor_FL);
@@ -147,22 +160,22 @@ void Brake() {
 	Time_Wait(500);
 }
 void MoveForward(float power) {
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
-}
-void TurnLeft(float power) {
 	Motor_SetPower(-power, motor_FL);
 	Motor_SetPower(-power, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
+	Motor_SetPower(-power, motor_FR);
+	Motor_SetPower(-power, motor_BR);
 }
-void TurnRight(float power) {
+void TurnLeft(float power) {
 	Motor_SetPower(power, motor_FL);
 	Motor_SetPower(power, motor_BL);
 	Motor_SetPower(-power, motor_FR);
 	Motor_SetPower(-power, motor_BR);
+}
+void TurnRight(float power) {
+	Motor_SetPower(-power, motor_FL);
+	Motor_SetPower(-power, motor_BL);
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_BR);
 }
 
 

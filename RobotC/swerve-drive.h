@@ -55,6 +55,8 @@ const int servo_flip_L_up = 10;
 const int servo_flip_L_down = 215;
 const int servo_flip_R_up = 245;
 const int servo_flip_R_down = 40;
+const int servo_auton_hold = 0;
+const int servo_auton_dump = 255;
 const int servo_flag_L = 0;
 const int servo_flag_R = 255;
 const int servo_flag_M = 128;
@@ -179,6 +181,7 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 
 	//HTGYROstartCal(sensor_protoboard);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);

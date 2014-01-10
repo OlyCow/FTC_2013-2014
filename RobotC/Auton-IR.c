@@ -97,6 +97,7 @@ ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0
 
 void Brake();
 void MoveForward(float power);
+void MoveBackward(float power);
 void TurnLeft(float power);
 void TurnRight(float power);
 
@@ -110,9 +111,10 @@ task main()
 
 	const float power_fine_tune = 80;
 
-	const int delay_IR[4] = {200, 400, 400, 200};
-	const int delay_retreat = 2400;
-	const int turn_perpendicular = 500;
+	const int delay_dump = 1000;
+	const int delay_IR[4] = {560, 280, 630, 300};
+	const int delay_finish = 200;
+	const int turn_swing = 500;
 	const int delay_approach_ramp = 800;
 	const int turn_parallel = 500;
 	const int delay_onto_ramp = 1000;
@@ -122,35 +124,40 @@ task main()
 	Joystick_WaitForStart();
 
 	MoveForward(power_fine_tune);
-	for (int i=0; i<5; i++) {
+	for (int i=0; i<4; i++) {
 		Time_Wait(delay_IR[i]);
 		HTIRS2readAllACStrength(sensor_IR, IRdirA, IRdirB, IRdirC, IRdirD, IRdirE);
 		if (IRdirC>g_IRthreshold) {
 			Servo_SetPosition(servo_auton, servo_auton_dump);
+			Brake();
+			Time_Wait(delay_dump);
+			MoveForward(power_fine_tune);
 		}
 	}
 	Servo_SetPosition(servo_auton, servo_auton_dump);
 	Brake();
-
-	MoveForward(-power_fine_tune);
-	Time_Wait(delay_retreat);
-	Brake();
-
-	TurnRight(power_fine_tune);
-	Time_Wait(turn_perpendicular);
-	Brake();
+	Time_Wait(delay_dump);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 
 	MoveForward(power_fine_tune);
-	Time_Wait(delay_approach_ramp);
+	Time_Wait(delay_finish);
 	Brake();
 
 	TurnLeft(power_fine_tune);
-	Time_Wait(turn_parallel);
+	Time_Wait(turn_swing);
 	Brake();
 
-	MoveForward(power_fine_tune);
-	Time_Wait(delay_onto_ramp);
-	Brake();
+	//MoveForward(power_fine_tune);
+	//Time_Wait(delay_approach_ramp);
+	//Brake();
+
+	//TurnLeft(power_fine_tune);
+	//Time_Wait(turn_parallel);
+	//Brake();
+
+	//MoveForward(power_fine_tune);
+	//Time_Wait(delay_onto_ramp);
+	//Brake();
 }
 void Brake() {
 	Motor_SetPower(0, motor_FL);
@@ -164,6 +171,12 @@ void MoveForward(float power) {
 	Motor_SetPower(-power, motor_BL);
 	Motor_SetPower(-power, motor_FR);
 	Motor_SetPower(-power, motor_BR);
+}
+void MoveBackward(float power) {
+	Motor_SetPower(power, motor_FL);
+	Motor_SetPower(power, motor_BL);
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_BR);
 }
 void TurnLeft(float power) {
 	Motor_SetPower(power, motor_FL);

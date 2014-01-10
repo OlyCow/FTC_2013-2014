@@ -29,7 +29,7 @@ typedef struct servoData {
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 
 // The threshold for IR values to count as detected.
-const int g_IRthreshold = 10; // arbitrary units from 0~1024.
+const int g_IRthreshold = 40; // arbitrary units from 0~1024.
 
 // TODO: This number is just a guess. Not verified at all.
 const int g_EncoderDeadband = 1; // degrees.
@@ -55,8 +55,8 @@ const int servo_flip_L_up = 10;
 const int servo_flip_L_down = 215;
 const int servo_flip_R_up = 245;
 const int servo_flip_R_down = 40;
-const int servo_auton_hold = 0;
-const int servo_auton_dump = 255;
+const int servo_auton_hold = 220;
+const int servo_auton_dump = 90;
 const int servo_flag_L = 0;
 const int servo_flag_R = 255;
 const int servo_flag_M = 128;

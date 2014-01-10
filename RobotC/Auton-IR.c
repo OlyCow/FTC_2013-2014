@@ -109,15 +109,17 @@ task main()
 	initializeRobotVariables();
 	Task_Spawn(PID);
 
+	bool isCubeDetected = false;
+
 	const float power_fine_tune = 80;
 
 	const int delay_dump = 1000;
-	const int delay_IR[4] = {560, 280, 630, 300};
-	const int delay_finish = 200;
-	const int turn_swing = 500;
-	const int delay_approach_ramp = 800;
-	const int turn_parallel = 500;
-	const int delay_onto_ramp = 1000;
+	const int delay_IR[4] = {530, 490, 700, 420};
+	const int delay_finish = 380;
+	const int turn_swing = 670;
+	const int delay_approach_ramp = 1400;
+	const int turn_parallel = 1100;
+	const int delay_onto_ramp = 2400;
 
 	int IRdirA, IRdirB, IRdirC, IRdirD, IRdirE;
 
@@ -126,13 +128,15 @@ task main()
 	MoveForward(power_fine_tune);
 	for (int i=0; i<4; i++) {
 		Time_Wait(delay_IR[i]);
+		Brake();
+		Time_Wait(400);
 		HTIRS2readAllACStrength(sensor_IR, IRdirA, IRdirB, IRdirC, IRdirD, IRdirE);
-		if (IRdirC>g_IRthreshold) {
+		if ((IRdirC>g_IRthreshold)&&(isCubeDetected==false)) {
 			Servo_SetPosition(servo_auton, servo_auton_dump);
-			Brake();
 			Time_Wait(delay_dump);
-			MoveForward(power_fine_tune);
+			isCubeDetected = true;
 		}
+		MoveForward(power_fine_tune);
 	}
 	Servo_SetPosition(servo_auton, servo_auton_dump);
 	Brake();
@@ -147,17 +151,17 @@ task main()
 	Time_Wait(turn_swing);
 	Brake();
 
-	//MoveForward(power_fine_tune);
-	//Time_Wait(delay_approach_ramp);
-	//Brake();
+	MoveForward(power_fine_tune);
+	Time_Wait(delay_approach_ramp);
+	Brake();
 
-	//TurnLeft(power_fine_tune);
-	//Time_Wait(turn_parallel);
-	//Brake();
+	TurnLeft(power_fine_tune);
+	Time_Wait(turn_parallel);
+	Brake();
 
-	//MoveForward(power_fine_tune);
-	//Time_Wait(delay_onto_ramp);
-	//Brake();
+	MoveForward(power_fine_tune);
+	Time_Wait(delay_onto_ramp);
+	Brake();
 }
 void Brake() {
 	Motor_SetPower(0, motor_FL);

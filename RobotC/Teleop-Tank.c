@@ -1,7 +1,5 @@
 #pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
@@ -18,13 +16,13 @@
 #pragma config(Servo,  srvo_S1_C1_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_3,    servo_flip_L,         tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_5,    servo_flag,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_5,    servo_auton,          tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_shield,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_flag,           tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
 
 #include "includes.h"
@@ -106,7 +104,7 @@ int lift_target = 0;
 
 // For PID:
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 5200; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 5400; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -196,8 +194,8 @@ task main()
 	while (true) {
 		Joystick_UpdateData();
 
-		power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
-		power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
+		power_L = -Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
+		power_R = -Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 		Motor_SetPower(power_L, motor_FL);
 		Motor_SetPower(power_L, motor_BL);
 		Motor_SetPower(power_R, motor_FR);
@@ -253,6 +251,14 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
 		// Setting the lift too high or too low is handled in the PID loop.
+
+		// If the lift is *currently* above shielding threshold, put the shield down.
+		// Otherwise lower it.
+		if (lift_pos>lift_shield_limit) {
+			Servo_SetPosition(servo_shield, servo_shield_down);
+		} else {
+			Servo_SetPosition(servo_shield, servo_shield_up);
+		}
 
 		// On conflicting input, 2 cubes are dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
@@ -408,6 +414,8 @@ task main()
 				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 				Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 				Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+				Servo_SetPosition(servo_shield, servo_shield_up);
+				Servo_SetPosition(servo_auton, servo_auton_closed);
 				if (bSoundActive==false) {
 					PlaySound(soundFastUpwardTones);
 				}
@@ -423,6 +431,8 @@ task main()
 
 
 
+float term_P_lift = 0.0;
+float term_D_lift = 0.0;
 task PID()
 {
 	// Timer variables.
@@ -438,15 +448,13 @@ task PID()
 	float error_lift = 0.0;
 	float error_prev_lift = 0.0;
 	float error_rate_lift = 0.0;
-	float term_P_lift = 0.0;
-	float term_D_lift = 0.0;
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
-		//// TODO: Make this actually work.
-		//Task_HogCPU();
+		// TODO: Make this actually work.
+		Task_HogCPU();
 
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
@@ -472,9 +480,9 @@ task PID()
 		power_lift=term_P_lift+term_D_lift;
 		Motor_SetPower(power_lift, motor_lift);
 
-		//// TODO: Make this actually work.
-		//// We want to release here because the lift loop uses the same timer.
-		//Task_ReleaseCPU();
+		// TODO: Make this actually work.
+		Task_ReleaseCPU();
+		Task_EndTimeslice();
 	}
 }
 
@@ -761,6 +769,8 @@ task Display()
 			case DISP_FCS :
 				break;
 			case DISP_ENCODERS :
+				nxtDisplayTextLine(1, "P: %f", term_P_lift);
+				nxtDisplayTextLine(2, "pwr: %f", power_lift);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;

@@ -104,7 +104,7 @@ int lift_target = 0;
 
 // For PID:
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 5400; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 6400; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -415,7 +415,7 @@ task main()
 				Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 				Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 				Servo_SetPosition(servo_shield, servo_shield_up);
-				Servo_SetPosition(servo_auton, servo_auton_closed);
+				Servo_SetPosition(servo_auton, servo_auton_hold);
 				if (bSoundActive==false) {
 					PlaySound(soundFastUpwardTones);
 				}

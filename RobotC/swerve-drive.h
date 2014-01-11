@@ -43,8 +43,8 @@ servoData g_ServoData[POD_NUM];
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup = 0;
-const int lift_pos_dump = 4800;
-const int lift_pos_top = 5000;
+const int lift_pos_dump = 5200;
+const int lift_pos_top = 7000;
 const int lift_shield_limit = 4700;
 
 const int servo_climb_L_open	= 115;
@@ -53,7 +53,7 @@ const int servo_climb_R_open	= 255;
 const int servo_climb_R_closed	= 140;
 const int servo_dump_open		= 30;
 const int servo_dump_closed		= 0;
-const int servo_auton_closed	= 255;
+const int servo_auton_hold		= 255;
 const int servo_auton_dumped	= 0;
 const int servo_shield_up		= 0;
 const int servo_shield_down		= 55;

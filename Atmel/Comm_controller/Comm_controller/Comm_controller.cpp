@@ -4,13 +4,15 @@
 int main(void)
 {
 	setupPins();
-	TWI::setup();
+	_delay_ms(100);
+	i2c_init();
+	//TWI::setup();
 	MPU::initialize();
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	
 	//// TODO: Uncomment this stuff when we get the ATmega328s.
 	//// TODO: Move this interrupt registry stuff over to the
@@ -104,7 +106,6 @@ int main(void)
 	uint8_t test_val[1] = {0x55}; // 0b01010101
 		
 	// TODO: Initialization data reading (alliance, config(?), etc.).
-	alert();
 	
 	while (true) {
 		// Update system timer.
@@ -382,17 +383,18 @@ int main(void)
 		// Process gyro data.
 		
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, test_val, 1);
-		////pos_x = test_val[0];
+		//pos_x = test_val[0];
 		//if (test_val[0] == 0x00) {
 			//clear();
 		//} else {
 			//alert();
 		//}
+		//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x00);
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, test_val, 1);
-		//if (test_val[0] == 0x01) {
-			//clear();
-		//} else {
+		//if (test_val[0] == 0x00) {
 			//alert();
+		//} else {
+			//clear();
 		//}
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_CONFIG, test_val, 1);
 		//if (test_val[0] == 0x00) {
@@ -418,12 +420,13 @@ int main(void)
 		//} else {
 			//alert();
 		//}
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_L, test_val, 1);
-		if (test_val[0] == 0x00) {
-			clear();
-		} else {
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, test_val, 1);
+		if (test_val[0] >= 0x02) {
 			alert();
+			} else {
+			clear();
 		}
+		rot_z = test_val[0];
 	}
 }
 

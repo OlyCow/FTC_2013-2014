@@ -11,28 +11,12 @@
 #endif
 #include <util/delay.h>
 #include <math.h>
-#include "../../Libraries/I2C.h"
+#include "../../Libraries/i2cmaster.h"
+//#include "../../Libraries/I2C.h"
 #include "../../Libraries/MPU6050.h"
 
 // Number of I/O lines.
 #define NXT_LINE_NUM		6
-
-//// TODO: Enum this?
-//// Each NXT line.
-//#define NXT_LINE_A			PB6
-//#define NXT_LINE_B			PB7
-//#define NXT_LINE_C			PD5
-//#define NXT_LINE_D			PD6
-//#define NXT_LINE_E			PD7
-//#define NXT_LINE_F			PB0
-//
-//// Ports of each NXT line.
-//#define NXT_LINE_A_PORT		PORTB
-//#define NXT_LINE_B_PORT		PORTB
-//#define NXT_LINE_C_PORT		PORTD
-//#define NXT_LINE_D_PORT		PORTD
-//#define NXT_LINE_E_PORT		PORTD
-//#define NXT_LINE_F_PORT		PORTB
 
 // Each NXT line.
 #define NXT_LINE_F			PB6
@@ -55,7 +39,7 @@
 #define NXT_CODE_ROT_RESET		0x00000001
 #define NXT_CODE_CUBE_RESET		0x00000002
 
-const unsigned int debounce_delay  = 2*1000; // 2 milliseconds.
+const unsigned int debounce_delay  = 5*1000; // 5 milliseconds.
 
 void setupPins(void);
 void alert(void);

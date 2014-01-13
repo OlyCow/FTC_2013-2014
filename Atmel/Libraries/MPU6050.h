@@ -5,7 +5,8 @@
 #define MPU6050_H
 
 #include <avr/io.h>
-#include "I2C.h"
+#include "i2cmaster.h"
+//#include "I2C.h"
 
 #define MPU6050_ADDRESS_AD0_LOW		0x68 // address pin low (GND), default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH	0x69 // address pin high (VCC)
@@ -108,9 +109,9 @@ namespace MPU
 	
 	void initialize(void);
 	
-	// SMPLRT_DIV register
-	uint8_t getRate();
-	void setRate(uint8_t rate);
+	//// SMPLRT_DIV register
+	//uint8_t getRate();
+	//void setRate(uint8_t rate);
 
 	//// CONFIG register
 	//uint8_t getExternalFrameSync();
@@ -373,8 +374,8 @@ namespace MPU
 	
 	void setSleepEnabled(bool isEnabled);
 
-	// WHO_AM_I register
-	bool who_am_I(void);
+	//// WHO_AM_I register
+	//bool who_am_I(void);
 }
 
 #endif // MPU6050_H

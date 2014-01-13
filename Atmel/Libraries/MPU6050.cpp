@@ -5,25 +5,31 @@
 
 void MPU::read(uint8_t address, uint8_t request, uint8_t data[], int size)
 {
-	TWI::start();
-	TWI::write_SLA_W(address);
-	TWI::write_data(request);
-	TWI::hold(); // Actually, repeated start. :)
-	TWI::write_SLA_R(address);
-	TWI::read_data(data, size);
-	TWI::stop();
+	uint8_t address_R = address
+	i2c_start()
 }
-//void MPU::write(uint8_t address, uint8_t request, uint8_t data[], int size)
-void MPU::write(uint8_t address, uint8_t request, uint8_t data)
-{
-	TWI::start();
-	TWI::write_SLA_W(address);
-	TWI::write_data(request);
-	TWI::hold();
-	TWI::write_SLA_W(address);
-	TWI::write_data(data);
-	TWI::stop();
-}
+
+//void MPU::read(uint8_t address, uint8_t request, uint8_t data[], int size)
+//{
+	//TWI::start();
+	//TWI::write_SLA_W(address);
+	//TWI::write_data(request);
+	//TWI::hold(); // Actually, repeated start. :)
+	//TWI::write_SLA_R(address);
+	//TWI::read_data(data, size);
+	//TWI::stop();
+//}
+////void MPU::write(uint8_t address, uint8_t request, uint8_t data[], int size)
+//void MPU::write(uint8_t address, uint8_t request, uint8_t data)
+//{
+	//TWI::start();
+	//TWI::write_SLA_W(address);
+	//TWI::write_data(request);
+	//TWI::hold();
+	//TWI::write_SLA_W(address);
+	//TWI::write_data(data);
+	//TWI::stop();
+//}
 
 void MPU::initialize(void)
 {

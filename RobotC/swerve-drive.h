@@ -29,7 +29,7 @@ typedef struct servoData {
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 
 // The threshold for IR values to count as detected.
-const int g_IRthreshold = 10; // arbitrary units from 0~1024.
+const int g_IRthreshold = 40; // arbitrary units from 0~1024.
 
 // TODO: This number is just a guess. Not verified at all.
 const int g_EncoderDeadband = 1; // degrees.
@@ -45,19 +45,25 @@ servoData g_ServoData[POD_NUM];
 const int lift_pos_pickup = 0;
 const int lift_pos_dump = 5400;
 const int lift_pos_top = 5800;
-const int servo_climb_L_open = 115;
-const int servo_climb_L_closed = 240;
-const int servo_climb_R_open = 255;
-const int servo_climb_R_closed = 140;
-const int servo_dump_open = 30;
-const int servo_dump_closed = 0;
-const int servo_flip_L_up = 10;
-const int servo_flip_L_down = 215;
-const int servo_flip_R_up = 245;
-const int servo_flip_R_down = 40;
-const int servo_flag_L = 0;
-const int servo_flag_R = 255;
-const int servo_flag_M = 128;
+const int lift_shield_limit = 4700;
+
+const int servo_climb_L_open	= 115;
+const int servo_climb_L_closed	= 240;
+const int servo_climb_R_open	= 255;
+const int servo_climb_R_closed	= 140;
+const int servo_dump_open		= 30;
+const int servo_dump_closed		= 0;
+const int servo_auton_hold		= 220;
+const int servo_auton_dumped	= 90;
+const int servo_shield_up		= 0;
+const int servo_shield_down		= 55;
+const int servo_flip_L_up		= 10;
+const int servo_flip_L_down		= 215;
+const int servo_flip_R_up		= 245;
+const int servo_flip_R_down		= 40;
+const int servo_flag_L			= 0;
+const int servo_flag_R			= 255;
+const int servo_flag_M			= 128;
 
 // `waveFlagTask` uses this to decide whether to start a new instance.
 bool f_isWavingFlag = false;
@@ -177,10 +183,13 @@ void initializeRobotVariables()
 	}
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
+	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Servo_SetPosition(servo_shield, servo_shield_up);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 
-	//HTGYROstartCal(sensor_protoboard);
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 }
 

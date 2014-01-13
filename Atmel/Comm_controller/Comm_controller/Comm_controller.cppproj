@@ -144,15 +144,14 @@
   <avrgcccpp.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcccpp.assembler.debugging.DebugLevel>
 </AvrGccCpp>
     </ToolchainSettings>
+    <UsesExternalMakeFile>False</UsesExternalMakeFile>
+    <BuildTarget>all</BuildTarget>
+    <CleanTarget>clean</CleanTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\Libraries\I2C.cpp">
+    <Compile Include="..\..\Libraries\i2cmaster.h">
       <SubType>compile</SubType>
-      <Link>I2C.cpp</Link>
-    </Compile>
-    <Compile Include="..\..\Libraries\I2C.h">
-      <SubType>compile</SubType>
-      <Link>I2C.h</Link>
+      <Link>i2cmaster.h</Link>
     </Compile>
     <Compile Include="..\..\Libraries\MPU6050.cpp">
       <SubType>compile</SubType>
@@ -161,6 +160,10 @@
     <Compile Include="..\..\Libraries\MPU6050.h">
       <SubType>compile</SubType>
       <Link>MPU6050.h</Link>
+    </Compile>
+    <Compile Include="..\..\Libraries\twimaster.cpp">
+      <SubType>compile</SubType>
+      <Link>twimaster.cpp</Link>
     </Compile>
     <Compile Include="Comm_controller.cpp">
       <SubType>compile</SubType>

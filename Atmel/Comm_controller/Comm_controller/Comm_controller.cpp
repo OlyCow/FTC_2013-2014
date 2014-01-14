@@ -24,8 +24,9 @@ int main(void)
 	//sei();
 	
 	// Setting up a timer for debouncing.
-	// When CS10=1 and CS11, CS12=0, clock prescaling = 1.
+	// When CS10=1, and CS11 & CS12=0, clock prescaling = 1.
 	// TODO: Is this the best way to set 3 different bits?
+	// TOOD: Encapsulate these into a class!
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
 	uint64_t SYSTEM_TIME = 0; // In microseconds.
 	
@@ -72,12 +73,12 @@ int main(void)
 		
 	// Data gathered from various pins to report back.
 	// Add more variables here as we need to.
-	uint16_t pos_x = 0;
-	uint16_t pos_y = 0;
-	uint8_t pos_z = 0;
-	uint8_t rot_x = 0;
-	uint8_t rot_y = 0;
-	uint16_t rot_z = 0;
+	uint16_t pos_x_comm = 0;
+	uint16_t pos_y_comm = 0;
+	uint8_t  pos_z_comm = 0;
+	uint8_t  rot_x_comm = 0;
+	uint8_t  rot_y_comm = 0;
+	uint16_t rot_z_comm = 0;
 	bool isRedAlliance = false; // Might as well.
 	uint8_t line_sensor_bmp = 0x22;
 	uint8_t cube_detect_bmp = 0x89;
@@ -101,16 +102,36 @@ int main(void)
 	short timer_cube_debounce = 0;
 	
 	// Variables to process MPU-6050 data.
-	
-	// TODO: get rid of the test_val (or not :P ).
-	uint8_t test_val[1] = {0x55}; // 0b01010101
+	double t_prev = 0.0;
+	double t_current = 0.0;
+	double dt = t_current - t_prev;
+	double rot_x = 0.0;
+	double rot_y = 0.0;
+	double rot_z = 0.0;
+	uint16_t vel_x_raw = 0;
+	uint16_t vel_y_raw = 0;
+	uint16_t vel_z_raw = 0;
+	uint8_t vel_x_L = 0;
+	uint8_t vel_x_H = 0;
+	uint8_t vel_y_L = 0;
+	uint8_t vel_y_H = 0;
+	uint8_t vel_z_L = 0;
+	uint8_t vel_z_H = 0;
 		
 	// TODO: Initialization data reading (alliance, config(?), etc.).
 	
 	while (true) {
 		// Update system timer.
+		// TOOD: Encapsulate these into a class!
 		SYSTEM_TIME += TCNT1;
 		TCNT1 = 0;
+		
+		// `dt` can be directly found (`TCNT1`), but I wanted to keep `dt`
+		// independent from the timer registers so I can encapsulate those
+		// in a class when I have some spare time.
+		t_prev = t_current; // This is the "old" `t_current`.
+		t_current = SYSTEM_TIME; // Now `t_current` is up-to-date.
+		dt = t_current-t_prev;
 		
 		// Process NXT (prototype board) I/O.
 		clock_NXT_current = bool(PIND & (1<<PD0));
@@ -301,132 +322,117 @@ int main(void)
 			} else {
 				NXT_LINE_F_PORT &= (~(1<<NXT_LINE_F));
 			}
-		}
+		} else {
 		
-		// Now that we can breathe a little, load data into "registers"
-		// if the next state is going to be `IO_STATE_DATA`. This should
-		// happen between `IO_STATE_HEADER` and `IO_STATE_DATA`.
-		if ((isIOstate==IO_STATE_DATA) && (bit_count==0)) {
-			for (short line=0; line<NXT_LINE_NUM; line++) {
-				data_write[line] = 0; // Clear this first.
-				switch (lineState[line]) {
-					case LINE_POS_XY :
-						data_write[line] |= (uint32_t(pos_x)<<23); // MAGIC_NUM
-						data_write[line] |= (uint32_t(rot_x)<<16); // MAGIC_NUM
-						data_write[line] |= (uint32_t(pos_y)<<7); // MAGIC_NUM
-						data_write[line] |= rot_y; // MAGIC_NUM
-						break;
-					case LINE_ROT_LIGHT :
-						if (isRedAlliance==true) {
-							data_write[line] |= (uint32_t(1)<<31); // MAGIC_NUM
+			// Now that we can breathe a little, load data into "registers"
+			// if the next state is going to be `IO_STATE_DATA`. This should
+			// happen between `IO_STATE_HEADER` and `IO_STATE_DATA`.
+			if ((isIOstate==IO_STATE_DATA) && (bit_count==0)) {
+				for (short line=0; line<NXT_LINE_NUM; line++) {
+					data_write[line] = 0; // Clear this first.
+					switch (lineState[line]) {
+						case LINE_POS_XY :
+							data_write[line] |= (uint32_t(pos_x_comm)<<23); // MAGIC_NUM
+							data_write[line] |= (uint32_t(rot_x_comm)<<16); // MAGIC_NUM
+							data_write[line] |= (uint32_t(pos_y_comm)<<7); // MAGIC_NUM
+							data_write[line] |= rot_y_comm; // MAGIC_NUM
+							break;
+						case LINE_ROT_LIGHT :
+							if (isRedAlliance==true) {
+								data_write[line] |= (uint32_t(1)<<31); // MAGIC_NUM
+							}
+							data_write[line] |= (uint32_t(pos_z_comm)<<25); // MAGIC_NUM
+							data_write[line] |= (uint32_t(rot_z_comm)<<16); // MAGIC_NUM
+							data_write[line] |= (uint32_t(line_sensor_bmp)<<8); // MAGIC_NUM
+							data_write[line] |= cube_detect_bmp; // MAGIC_NUM
+							break;
+						case LINE_RANGE_AB :
+							data_write[line] |= (uint32_t(close_range_A)<<25); // MAGIC_NUM
+							data_write[line] |= (uint32_t(long_range_A)<<16); // MAGIC_NUM
+							data_write[line] |= (uint32_t(close_range_B)<<9); // MAGIC_NUM
+							data_write[line] |= long_range_B; // MAGIC_NUM
+							break;
+						case LINE_RANGE_CD :
+							data_write[line] |= (uint32_t(close_range_C)<<25); // MAGIC_NUM
+							data_write[line] |= (uint32_t(long_range_C)<<16); // MAGIC_NUM
+							data_write[line] |= (uint32_t(close_range_D)<<9); // MAGIC_NUM
+							data_write[line] |= long_range_D; // MAGIC_NUM
+							break;
+						case LINE_TELEOP :
+							data_write[line] |= (uint32_t(cube_num)<<28); // MAGIC_NUM
+							break;
+						case LINE_BUMPERS :
+							if (is_flag_bumped==true) {
+								data_write[line] |= (uint32_t(1)<<31); // MAGIC_NUM
+							}
+							if (is_hang_bumped==true) {
+								data_write[line] |= (uint32_t(1)<<30); // MAGIC_NUM
+							}
+							data_write[line] |= (uint32_t(bumpers_bmp)<<24); // MAGIC_NUM
+							break;
+						default :
+							// Having a default condition here is paranoid, no?
+							break;
+					}
+				}
+			}
+		
+			// Process cube counting.
+			cube_counter_current = (PINB & (1<<PB1));
+			if (cube_counter_current!=cube_counter_prev) {
+				switch (isDebouncing) {
+					case false :
+						isDebouncing = true;
+						timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
+					case true :
+						if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
+							// Under the correct conditions, increment cube count.
+							if (((~cube_counter_current)&cube_counter_prev) == true) {
+								if (cube_num<4) {
+									cube_num++; // Some really hackish error handling here :)
+								}
+							}
+							// Get ready for the next cycle.
+							timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
+							isDebouncing = false;
+							cube_counter_prev = cube_counter_current;
 						}
-						data_write[line] |= (uint32_t(pos_z)<<25); // MAGIC_NUM
-						data_write[line] |= (uint32_t(rot_z)<<16); // MAGIC_NUM
-						data_write[line] |= (uint32_t(line_sensor_bmp)<<8); // MAGIC_NUM
-						data_write[line] |= cube_detect_bmp; // MAGIC_NUM
-						break;
-					case LINE_RANGE_AB :
-						data_write[line] |= (uint32_t(close_range_A)<<25); // MAGIC_NUM
-						data_write[line] |= (uint32_t(long_range_A)<<16); // MAGIC_NUM
-						data_write[line] |= (uint32_t(close_range_B)<<9); // MAGIC_NUM
-						data_write[line] |= long_range_B; // MAGIC_NUM
-						break;
-					case LINE_RANGE_CD :
-						data_write[line] |= (uint32_t(close_range_C)<<25); // MAGIC_NUM
-						data_write[line] |= (uint32_t(long_range_C)<<16); // MAGIC_NUM
-						data_write[line] |= (uint32_t(close_range_D)<<9); // MAGIC_NUM
-						data_write[line] |= long_range_D; // MAGIC_NUM
-						break;
-					case LINE_TELEOP :
-						data_write[line] |= (uint32_t(cube_num)<<28); // MAGIC_NUM
-						break;
-					case LINE_BUMPERS :
-						if (is_flag_bumped==true) {
-							data_write[line] |= (uint32_t(1)<<31); // MAGIC_NUM
-						}
-						if (is_hang_bumped==true) {
-							data_write[line] |= (uint32_t(1)<<30); // MAGIC_NUM
-						}
-						data_write[line] |= (uint32_t(bumpers_bmp)<<24); // MAGIC_NUM
-						break;
-					default :
-						// Having a default condition here is paranoid, no?
 						break;
 				}
 			}
-		}
 		
-		// Process cube counting.
-		cube_counter_current = (PINB & (1<<PB1));
-		if (cube_counter_current!=cube_counter_prev) {
-			switch (isDebouncing) {
-				case false :
-					isDebouncing = true;
-					timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
-				case true :
-					if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
-						// Under the correct conditions, increment cube count.
-						if (((~cube_counter_current)&cube_counter_prev) == true) {
-							if (cube_num<4) {
-								cube_num++; // Some really hackish error handling here :)
-							}
-						}
-						// Get ready for the next cycle.
-						timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
-						isDebouncing = false;
-						cube_counter_prev = cube_counter_current;
-					}
-					break;
+			// Process gyro data.
+			MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+			MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+			MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+			MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+			MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+			MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+			vel_x_raw = (vel_x_H<<8) + vel_x_L;
+			vel_y_raw = (vel_y_H<<8) + vel_y_L;
+			vel_z_raw = (vel_z_H<<8) + vel_z_L;
+			rot_x += (((vel_x_raw*500.0)/65536.0-250.0)*dt)/1000000.0;
+			rot_y += (((vel_y_raw*500.0)/65536.0-250.0)*dt)/1000000.0;
+			rot_z += (((vel_z_raw*500.0)/65536.0-250.0)*dt)/1000000.0;
+			if (rot_x != 0) {
+				int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
+				limit_buffer = fmin(limit_buffer, 60);
+				limit_buffer = fmax(limit_buffer, -60);
+				rot_x_comm = limit_buffer + 63;
+			}
+			if (rot_y != 0) {
+				int limit_buffer = static_cast<int>(round(fmod(rot_y, 360.0)));
+				limit_buffer = fmin(limit_buffer, 60);
+				limit_buffer = fmax(limit_buffer, -60);
+				rot_y_comm = limit_buffer + 63;
+			}
+			if (rot_z != 0) {
+				int limit_buffer = static_cast<int>(round(fmod(rot_z, 360.0)));
+				limit_buffer += 360;
+				limit_buffer = fmod(limit_buffer, 360);
+				rot_z_comm = limit_buffer;
 			}
 		}
-		
-		// Process gyro data.
-		
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, test_val, 1);
-		//pos_x = test_val[0];
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x00);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//alert();
-		//} else {
-			//clear();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_CONFIG, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, test_val, 1);
-		//if (test_val[0] == 0x68) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, test_val, 1);
-		if (test_val[0] >= 0x02) {
-			alert();
-			} else {
-			clear();
-		}
-		rot_z = test_val[0];
 	}
 }
 

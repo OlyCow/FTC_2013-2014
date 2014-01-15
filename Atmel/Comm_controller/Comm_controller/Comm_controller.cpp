@@ -70,6 +70,7 @@ int main(void)
 											LINE_TELEOP,
 											LINE_BUMPERS	};
 	bool data_ready = false;
+	double loop_time = 0.0;
 		
 	// Data gathered from various pins to report back.
 	// Add more variables here as we need to.
@@ -117,8 +118,21 @@ int main(void)
 	uint8_t vel_y_H = 0;
 	uint8_t vel_z_L = 0;
 	uint8_t vel_z_H = 0;
+	uint16_t vel_x_offset = 0;
+	uint16_t vel_y_offset = 0;
+	uint16_t vel_z_offset = 0;
 		
-	// TODO: Initialization data reading (alliance, config(?), etc.).
+	//// TODO: Initialization data reading (alliance, config(?), etc.).
+	//_delay_ms(100);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+	//vel_x_offset = (vel_x_H<<8) + vel_x_L;
+	//vel_y_offset = (vel_y_H<<8) + vel_y_L;
+	//vel_z_offset = (vel_z_H<<8) + vel_z_L;
 	
 	while (true) {
 		// Update system timer.
@@ -323,7 +337,6 @@ int main(void)
 				NXT_LINE_F_PORT &= (~(1<<NXT_LINE_F));
 			}
 		}
-		//} else {
 			
 		// There's no need for another "else" statement here because it doesn't matter whether
 		// or not the input has been processed yet. If the "if" statement was evaluated, then
@@ -408,17 +421,22 @@ int main(void)
 		
 		// Process gyro data.
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, vel_x_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_y_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-		//vel_x_raw = (vel_x_H<<8) + vel_x_L;
-		//vel_y_raw = (vel_y_H<<8) + vel_y_L;
-		//vel_z_raw = (vel_z_H<<8) + vel_z_L;
-		//rot_x += (((vel_x_raw*500.0)/65536.0-250.0)*dt)/1000000.0;
-		//rot_y += (((vel_y_raw*500.0)/65536.0-250.0)*dt)/1000000.0;
-		//rot_z += (((vel_z_raw*500.0)/65536.0-250.0)*dt)/1000000.0;
+		vel_x_raw = (vel_x_H<<8) + vel_x_L;
+		vel_y_raw = (vel_y_H<<8) + vel_y_L;
+		vel_z_raw = (vel_z_H<<8) + vel_z_L;
+		rot_x = vel_x_L;
+		rot_y = vel_y_L;
+		rot_z = vel_z_L;
+		//rot_x += ((((vel_x_raw-vel_x_offset)*500.0)/65536.0)*dt)/1000000.0;
+		//rot_y += ((((vel_y_raw-vel_y_offset)*500.0)/65536.0)*dt)/1000000.0;
+		//rot_z += ((((vel_z_raw-vel_z_offset)*500.0)/65536.0)*dt)/1000000.0;
 		//if (rot_x != 0) {
 			//int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
 			//limit_buffer = fmin(limit_buffer, 60);
@@ -437,6 +455,13 @@ int main(void)
 			//limit_buffer = fmod(limit_buffer, 360);
 			//rot_z_comm = limit_buffer;
 		//}
+		rot_x_comm = rot_x;
+		rot_y_comm = rot_y;
+		rot_z_comm = rot_z;
+		loop_time = (loop_time+dt)/2.0;
+		pos_x_comm = loop_time;
+		pos_x_comm = vel_x_offset;
+		pos_y_comm = vel_z_offset;
 	}
 }
 

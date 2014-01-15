@@ -81,6 +81,7 @@ void processCommTick()
 	f_byte_write &= ~(1<<7); // Clear the clock bit.
 	f_byte_write |= (isClockHigh<<7); // Set the clock bit to appropriate clock value.
 	HTSPBwriteIO(sensor_protoboard, f_byte_write);
+	Time_Wait(15);
 	f_byte_read = HTSPBreadIO(sensor_protoboard, mask_read);
 	isClockHigh = !isClockHigh; // Cannot use XOR (bools are weird).
 }

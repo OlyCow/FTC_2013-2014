@@ -8,11 +8,11 @@ int main(void)
 	i2c_init();
 	//TWI::setup();
 	MPU::initialize();
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	
 	//// TODO: Uncomment this stuff when we get the ATmega328s.
 	//// TODO: Move this interrupt registry stuff over to the
@@ -133,6 +133,13 @@ int main(void)
 	//vel_x_offset = (vel_x_H<<8) + vel_x_L;
 	//vel_y_offset = (vel_y_H<<8) + vel_y_L;
 	//vel_z_offset = (vel_z_H<<8) + vel_z_L;
+	
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_x_L);
+	if (vel_x_L == 0x68) {
+		alert();
+	} else {
+		clear();
+	}
 	
 	while (true) {
 		// Update system timer.

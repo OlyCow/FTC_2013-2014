@@ -1,4 +1,4 @@
-#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
 #pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)

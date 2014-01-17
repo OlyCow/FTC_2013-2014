@@ -23,6 +23,16 @@ int main(void)
 	//// When we're ready, enable interrupts.
 	//sei();
 	
+	// Set up our ADCs.
+	ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
+	ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
+	ADCSRA |= (1<<ADFR); // Set to free-running mode.
+	ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
+	ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
+	ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
+	// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
+	
+	
 	// Setting up a timer for debouncing.
 	// When CS10=1, and CS11 & CS12=0, clock prescaling = 1.
 	// TODO: Is this the best way to set 3 different bits?

@@ -523,7 +523,8 @@ void setupPins(void)
 	DDRC = ((0<<PC0) |
 			(1<<PC1) |
 			(1<<PC2) |
-			(1<<PC3) |
+			(0<<PC3) |
+			//(1<<PC3) |
 			(1<<PC4) |
 			(1<<PC5) |
 			(0<<PC6)); // No bit 7.
@@ -537,9 +538,8 @@ void setupPins(void)
 			(1<<PD7));
 	
 	// (PORTx registers) Initialize outputs to 0 (LOW), and enable internal
-	// pull-up resistors for the appropriate inputs (most notably the SDA &
-	// SCL pins). 1=pull-up resistor enabled. For details, see schematic for
-	// the DDRx registers' set-up.
+	// pull-ups for the appropriate inputs. 1=pull-up resistor enabled. For
+	// details, see the schematic for the DDRx registers' set-up.
 	// SPI shouldn't need pull-up resistors. Nor do multiplexer read pins.
 	PORTB = ((0<<PB0) |
 			 (1<<PB1) |

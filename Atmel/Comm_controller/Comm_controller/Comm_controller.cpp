@@ -27,7 +27,7 @@ int main(void)
 	ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
 	ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
 	ADCSRA |= (1<<ADFR); // Set to free-running mode.
-	ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
+	//ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
 	ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
 	ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
 	// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
@@ -438,7 +438,7 @@ int main(void)
 		}
 		
 		// Process light sensor (line-following) data.
-		pos_z_comm = ADCH;
+		pos_x_comm = ADCL + (ADCH<<8);
 		
 		//// Process gyro data.
 		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);

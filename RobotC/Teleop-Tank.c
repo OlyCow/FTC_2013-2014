@@ -6,8 +6,8 @@
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
 #pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
@@ -106,7 +106,7 @@ int lift_target = 0;
 
 // For PID:
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6400; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 6100; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -470,7 +470,7 @@ task PID()
 		// Yes, this is a complete PID loop, despite it being so short. :)
 		//lift_pos = Motor_GetEncoder(motor_lift);
 		// TODO: Replace this :P
-		lift_pos = Motor_GetEncoder(motor_FR);
+		lift_pos = -Motor_GetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
 		error_prev_lift = error_lift;
 		if (lift_target<0) { // Because we're safe.
 			lift_target = 0;

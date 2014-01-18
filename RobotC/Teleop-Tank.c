@@ -3,7 +3,7 @@
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
-#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
 #pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_1,     motor_sweeper, tmotorTetrix, openLoop)
@@ -241,8 +241,10 @@ task main()
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
 					lift_target = lift_pos_dump;
+					sweepDirection = SWEEP_OFF;
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
+					sweepDirection = SWEEP_IN;
 				}
 				if (Joystick_ButtonReleased(BUTTON_JOYR, CONTROLLER_2)==true) {
 					Motor_ResetEncoder(motor_lift);
@@ -361,6 +363,9 @@ task main()
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
+		if (lift_pos>100) {
+			sweepDirection = SWEEP_OFF;
+		}
 		switch (sweepDirection) {
 			case SWEEP_IN :
 				Motor_SetPower(g_FullPower, motor_sweeper);
@@ -463,7 +468,9 @@ task PID()
 		Time_ClearTimer(timer_loop);
 
 		// Yes, this is a complete PID loop, despite it being so short. :)
-		lift_pos = Motor_GetEncoder(motor_lift);
+		//lift_pos = Motor_GetEncoder(motor_lift);
+		// TODO: Replace this :P
+		lift_pos = Motor_GetEncoder(motor_FR);
 		error_prev_lift = error_lift;
 		if (lift_target<0) { // Because we're safe.
 			lift_target = 0;

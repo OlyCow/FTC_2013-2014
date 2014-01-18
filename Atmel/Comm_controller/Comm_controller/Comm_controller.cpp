@@ -5,14 +5,14 @@ int main(void)
 {
 	setupPins();
 	_delay_ms(100);
-	i2c_init();
-	//TWI::setup();
-	MPU::initialize();
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
+	//i2c_init();
+	////TWI::setup();
+	//MPU::initialize();
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
+	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	
 	//// TODO: Uncomment this stuff when we get the ATmega328s.
 	//// TODO: Move this interrupt registry stuff over to the
@@ -31,6 +31,7 @@ int main(void)
 	ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
 	ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
 	// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
+	ADMUX |= (1<<MUX0) | (1<<MUX1);
 	
 	
 	// Setting up a timer for debouncing.
@@ -144,12 +145,12 @@ int main(void)
 	//vel_y_offset = (vel_y_H<<8) + vel_y_L;
 	//vel_z_offset = (vel_z_H<<8) + vel_z_L;
 	
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_x_L);
-	if (vel_x_L == 0x68) {
-		alert();
-	} else {
-		clear();
-	}
+	////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_x_L);
+	////if (vel_x_L == 0x68) {
+		////alert();
+	////} else {
+		////clear();
+	////}
 	
 	while (true) {
 		// Update system timer.
@@ -436,49 +437,52 @@ int main(void)
 			}
 		}
 		
-		// Process gyro data.
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, vel_x_L);
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_y_L);
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-		vel_x_raw = (vel_x_H<<8) + vel_x_L;
-		vel_y_raw = (vel_y_H<<8) + vel_y_L;
-		vel_z_raw = (vel_z_H<<8) + vel_z_L;
-		rot_x = vel_x_L;
-		rot_y = vel_y_L;
-		rot_z = vel_z_L;
-		//rot_x += ((((vel_x_raw-vel_x_offset)*500.0)/65536.0)*dt)/1000000.0;
-		//rot_y += ((((vel_y_raw-vel_y_offset)*500.0)/65536.0)*dt)/1000000.0;
-		//rot_z += ((((vel_z_raw-vel_z_offset)*500.0)/65536.0)*dt)/1000000.0;
-		//if (rot_x != 0) {
-			//int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
-			//limit_buffer = fmin(limit_buffer, 60);
-			//limit_buffer = fmax(limit_buffer, -60);
-			//rot_x_comm = limit_buffer + 63;
-		//}
-		//if (rot_y != 0) {
-			//int limit_buffer = static_cast<int>(round(fmod(rot_y, 360.0)));
-			//limit_buffer = fmin(limit_buffer, 60);
-			//limit_buffer = fmax(limit_buffer, -60);
-			//rot_y_comm = limit_buffer + 63;
-		//}
-		//if (rot_z != 0) {
-			//int limit_buffer = static_cast<int>(round(fmod(rot_z, 360.0)));
-			//limit_buffer += 360;
-			//limit_buffer = fmod(limit_buffer, 360);
-			//rot_z_comm = limit_buffer;
-		//}
-		rot_x_comm = rot_x;
-		rot_y_comm = rot_y;
-		rot_z_comm = rot_z;
-		loop_time = (loop_time+dt)/2.0;
-		pos_x_comm = loop_time;
-		pos_x_comm = vel_x_offset;
-		pos_y_comm = vel_z_offset;
+		// Process light sensor (line-following) data.
+		pos_z_comm = ADCH;
+		
+		//// Process gyro data.
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, vel_x_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_y_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+		//vel_x_raw = (vel_x_H<<8) + vel_x_L;
+		//vel_y_raw = (vel_y_H<<8) + vel_y_L;
+		//vel_z_raw = (vel_z_H<<8) + vel_z_L;
+		//rot_x = vel_x_L;
+		//rot_y = vel_y_L;
+		//rot_z = vel_z_L;
+		////rot_x += ((((vel_x_raw-vel_x_offset)*500.0)/65536.0)*dt)/1000000.0;
+		////rot_y += ((((vel_y_raw-vel_y_offset)*500.0)/65536.0)*dt)/1000000.0;
+		////rot_z += ((((vel_z_raw-vel_z_offset)*500.0)/65536.0)*dt)/1000000.0;
+		////if (rot_x != 0) {
+			////int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
+			////limit_buffer = fmin(limit_buffer, 60);
+			////limit_buffer = fmax(limit_buffer, -60);
+			////rot_x_comm = limit_buffer + 63;
+		////}
+		////if (rot_y != 0) {
+			////int limit_buffer = static_cast<int>(round(fmod(rot_y, 360.0)));
+			////limit_buffer = fmin(limit_buffer, 60);
+			////limit_buffer = fmax(limit_buffer, -60);
+			////rot_y_comm = limit_buffer + 63;
+		////}
+		////if (rot_z != 0) {
+			////int limit_buffer = static_cast<int>(round(fmod(rot_z, 360.0)));
+			////limit_buffer += 360;
+			////limit_buffer = fmod(limit_buffer, 360);
+			////rot_z_comm = limit_buffer;
+		////}
+		//rot_x_comm = rot_x;
+		//rot_y_comm = rot_y;
+		//rot_z_comm = rot_z;
+		//loop_time = (loop_time+dt)/2.0;
+		//pos_x_comm = loop_time;
+		//pos_x_comm = vel_x_offset;
+		//pos_y_comm = vel_z_offset;
 	}
 }
 

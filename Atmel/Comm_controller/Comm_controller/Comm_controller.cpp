@@ -5,9 +5,9 @@ int main(void)
 {
 	setupPins();
 	_delay_ms(100);
-	i2c_init();
-	//TWI::setup();
-	MPU::initialize();
+	//i2c_init();
+	////TWI::setup();
+	//MPU::initialize();
 	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
 	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
 	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
@@ -23,9 +23,21 @@ int main(void)
 	//// When we're ready, enable interrupts.
 	//sei();
 	
+	// Set up our ADCs.
+	ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
+	ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
+	ADCSRA |= (1<<ADFR); // Set to free-running mode.
+	//ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
+	ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
+	ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
+	// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
+	ADMUX |= (1<<MUX0) | (1<<MUX1);
+	
+	
 	// Setting up a timer for debouncing.
-	// When CS10=1 and CS11, CS12=0, clock prescaling = 1.
+	// When CS10=1, and CS11 & CS12=0, clock prescaling = 1.
 	// TODO: Is this the best way to set 3 different bits?
+	// TOOD: Encapsulate these into a class!
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
 	uint64_t SYSTEM_TIME = 0; // In microseconds.
 	
@@ -69,15 +81,16 @@ int main(void)
 											LINE_TELEOP,
 											LINE_BUMPERS	};
 	bool data_ready = false;
+	double loop_time = 0.0;
 		
 	// Data gathered from various pins to report back.
 	// Add more variables here as we need to.
-	uint16_t pos_x = 0;
-	uint16_t pos_y = 0;
-	uint8_t pos_z = 0;
-	uint8_t rot_x = 0;
-	uint8_t rot_y = 0;
-	uint16_t rot_z = 0;
+	uint16_t pos_x_comm = 0;
+	uint16_t pos_y_comm = 0;
+	uint8_t  pos_z_comm = 0;
+	uint8_t  rot_x_comm = 0;
+	uint8_t  rot_y_comm = 0;
+	uint16_t rot_z_comm = 0;
 	bool isRedAlliance = false; // Might as well.
 	uint8_t line_sensor_bmp = 0x22;
 	uint8_t cube_detect_bmp = 0x89;
@@ -101,19 +114,59 @@ int main(void)
 	short timer_cube_debounce = 0;
 	
 	// Variables to process MPU-6050 data.
-	
-	// TODO: get rid of the test_val (or not :P ).
-	uint8_t test_val[1] = {0x55}; // 0b01010101
+	double t_prev = 0.0;
+	double t_current = 0.0;
+	double dt = t_current - t_prev;
+	double rot_x = 0.0;
+	double rot_y = 0.0;
+	double rot_z = 0.0;
+	uint16_t vel_x_raw = 0;
+	uint16_t vel_y_raw = 0;
+	uint16_t vel_z_raw = 0;
+	uint8_t vel_x_L = 0;
+	uint8_t vel_x_H = 0;
+	uint8_t vel_y_L = 0;
+	uint8_t vel_y_H = 0;
+	uint8_t vel_z_L = 0;
+	uint8_t vel_z_H = 0;
+	uint16_t vel_x_offset = 0;
+	uint16_t vel_y_offset = 0;
+	uint16_t vel_z_offset = 0;
 		
-	// TODO: Initialization data reading (alliance, config(?), etc.).
+	//// TODO: Initialization data reading (alliance, config(?), etc.).
+	//_delay_ms(100);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+	//vel_x_offset = (vel_x_H<<8) + vel_x_L;
+	//vel_y_offset = (vel_y_H<<8) + vel_y_L;
+	//vel_z_offset = (vel_z_H<<8) + vel_z_L;
+	
+	////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_x_L);
+	////if (vel_x_L == 0x68) {
+		////alert();
+	////} else {
+		////clear();
+	////}
 	
 	while (true) {
 		// Update system timer.
+		// TOOD: Encapsulate these into a class!
 		SYSTEM_TIME += TCNT1;
 		TCNT1 = 0;
 		
+		// `dt` can be directly found (`TCNT1`), but I wanted to keep `dt`
+		// independent from the timer registers so I can encapsulate those
+		// in a class when I have some spare time.
+		t_prev = t_current; // This is the "old" `t_current`.
+		t_current = SYSTEM_TIME; // Now `t_current` is up-to-date.
+		dt = t_current-t_prev;
+		
 		// Process NXT (prototype board) I/O.
-		clock_NXT_current = bool(PIND & (1<<PD0));
+		clock_NXT_current = ((PIND & (1<<PD0)) != 0);
 		if (clock_NXT_current != clock_NXT_prev) {
 			clock_NXT_prev = clock_NXT_current;
 			byte_read = false;
@@ -302,6 +355,10 @@ int main(void)
 				NXT_LINE_F_PORT &= (~(1<<NXT_LINE_F));
 			}
 		}
+			
+		// There's no need for another "else" statement here because it doesn't matter whether
+		// or not the input has been processed yet. If the "if" statement was evaluated, then
+		// the delay from the NXT probably will give us *more* time to process inputs from pins.
 		
 		// Now that we can breathe a little, load data into "registers"
 		// if the next state is going to be `IO_STATE_DATA`. This should
@@ -311,17 +368,17 @@ int main(void)
 				data_write[line] = 0; // Clear this first.
 				switch (lineState[line]) {
 					case LINE_POS_XY :
-						data_write[line] |= (uint32_t(pos_x)<<23); // MAGIC_NUM
-						data_write[line] |= (uint32_t(rot_x)<<16); // MAGIC_NUM
-						data_write[line] |= (uint32_t(pos_y)<<7); // MAGIC_NUM
-						data_write[line] |= rot_y; // MAGIC_NUM
+						data_write[line] |= (uint32_t(pos_x_comm)<<23); // MAGIC_NUM
+						data_write[line] |= (uint32_t(rot_x_comm)<<16); // MAGIC_NUM
+						data_write[line] |= (uint32_t(pos_y_comm)<<7); // MAGIC_NUM
+						data_write[line] |= rot_y_comm; // MAGIC_NUM
 						break;
 					case LINE_ROT_LIGHT :
 						if (isRedAlliance==true) {
 							data_write[line] |= (uint32_t(1)<<31); // MAGIC_NUM
 						}
-						data_write[line] |= (uint32_t(pos_z)<<25); // MAGIC_NUM
-						data_write[line] |= (uint32_t(rot_z)<<16); // MAGIC_NUM
+						data_write[line] |= (uint32_t(pos_z_comm)<<25); // MAGIC_NUM
+						data_write[line] |= (uint32_t(rot_z_comm)<<16); // MAGIC_NUM
 						data_write[line] |= (uint32_t(line_sensor_bmp)<<8); // MAGIC_NUM
 						data_write[line] |= cube_detect_bmp; // MAGIC_NUM
 						break;
@@ -380,53 +437,52 @@ int main(void)
 			}
 		}
 		
-		// Process gyro data.
+		// Process light sensor (line-following) data.
+		pos_x_comm = ADCL + (ADCH<<8);
 		
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, test_val, 1);
-		//pos_x = test_val[0];
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x00);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//alert();
-		//} else {
-			//clear();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_CONFIG, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, test_val, 1);
-		//if (test_val[0] == 0x00) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, test_val, 1);
-		//if (test_val[0] == 0x68) {
-			//clear();
-		//} else {
-			//alert();
-		//}
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, test_val, 1);
-		if (test_val[0] >= 0x02) {
-			alert();
-			} else {
-			clear();
-		}
-		rot_z = test_val[0];
+		//// Process gyro data.
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, vel_x_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_y_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+		//vel_x_raw = (vel_x_H<<8) + vel_x_L;
+		//vel_y_raw = (vel_y_H<<8) + vel_y_L;
+		//vel_z_raw = (vel_z_H<<8) + vel_z_L;
+		//rot_x = vel_x_L;
+		//rot_y = vel_y_L;
+		//rot_z = vel_z_L;
+		////rot_x += ((((vel_x_raw-vel_x_offset)*500.0)/65536.0)*dt)/1000000.0;
+		////rot_y += ((((vel_y_raw-vel_y_offset)*500.0)/65536.0)*dt)/1000000.0;
+		////rot_z += ((((vel_z_raw-vel_z_offset)*500.0)/65536.0)*dt)/1000000.0;
+		////if (rot_x != 0) {
+			////int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
+			////limit_buffer = fmin(limit_buffer, 60);
+			////limit_buffer = fmax(limit_buffer, -60);
+			////rot_x_comm = limit_buffer + 63;
+		////}
+		////if (rot_y != 0) {
+			////int limit_buffer = static_cast<int>(round(fmod(rot_y, 360.0)));
+			////limit_buffer = fmin(limit_buffer, 60);
+			////limit_buffer = fmax(limit_buffer, -60);
+			////rot_y_comm = limit_buffer + 63;
+		////}
+		////if (rot_z != 0) {
+			////int limit_buffer = static_cast<int>(round(fmod(rot_z, 360.0)));
+			////limit_buffer += 360;
+			////limit_buffer = fmod(limit_buffer, 360);
+			////rot_z_comm = limit_buffer;
+		////}
+		//rot_x_comm = rot_x;
+		//rot_y_comm = rot_y;
+		//rot_z_comm = rot_z;
+		//loop_time = (loop_time+dt)/2.0;
+		//pos_x_comm = loop_time;
+		//pos_x_comm = vel_x_offset;
+		//pos_y_comm = vel_z_offset;
 	}
 }
 
@@ -467,7 +523,8 @@ void setupPins(void)
 	DDRC = ((0<<PC0) |
 			(1<<PC1) |
 			(1<<PC2) |
-			(1<<PC3) |
+			(0<<PC3) |
+			//(1<<PC3) |
 			(1<<PC4) |
 			(1<<PC5) |
 			(0<<PC6)); // No bit 7.
@@ -481,9 +538,8 @@ void setupPins(void)
 			(1<<PD7));
 	
 	// (PORTx registers) Initialize outputs to 0 (LOW), and enable internal
-	// pull-up resistors for the appropriate inputs (most notably the SDA &
-	// SCL pins). 1=pull-up resistor enabled. For details, see schematic for
-	// the DDRx registers' set-up.
+	// pull-ups for the appropriate inputs. 1=pull-up resistor enabled. For
+	// details, see the schematic for the DDRx registers' set-up.
 	// SPI shouldn't need pull-up resistors. Nor do multiplexer read pins.
 	PORTB = ((0<<PB0) |
 			 (1<<PB1) |

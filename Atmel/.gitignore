@@ -1,0 +1,10 @@
+#################
+## Atmel Studio
+#################
+## Atmel Studio specific temporary files
+## (non-Visual Studio).
+
+# User-specific files
+*.atsuo
+
+## For some reason GitHub won't ignore the .atsuo files...

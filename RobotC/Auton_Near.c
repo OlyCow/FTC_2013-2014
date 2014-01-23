@@ -115,9 +115,9 @@ task main()
 	const int slowly = 45;
 	const int quickly = 80;
 
-	const int T_to_ramp = 1000;
-	const int T_turn_ramp = 1400;
-	const int T_on_ramp = 800;
+	const int T_to_ramp = 1050;
+	const int T_turn_ramp = 1500;
+	const int T_on_ramp = 900;
 	const int T_dump_cubes = 2000;
 	const int T_finalize = 1600;
 

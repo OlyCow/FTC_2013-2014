@@ -104,7 +104,7 @@ int lift_target = 0;
 
 // For PID:
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6100; // MAGIC_NUM. TODO: Find this value.
+const int max_lift_height = 7100; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -238,7 +238,7 @@ task main()
 			//Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
-					lift_target = lift_pos_dump;
+					lift_target = lift_pos_top;
 					sweepDirection = SWEEP_OFF;
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
@@ -361,7 +361,7 @@ task main()
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
-		if (lift_pos>100) {
+		if (lift_pos>300) {
 			sweepDirection = SWEEP_OFF;
 		}
 		switch (sweepDirection) {
@@ -423,6 +423,7 @@ task main()
 				Servo_SetPosition(servo_auton, servo_auton_hold);
 				if (bSoundActive==false) {
 					PlaySound(soundFastUpwardTones);
+					//PlaySoundFile("moo.rso");
 				}
 				Task_ReleaseCPU();
 				Task_EndTimeslice();
@@ -485,6 +486,7 @@ task PID()
 			term_D_lift = kD_lift_down*error_rate_lift;
 		}
 		power_lift=term_P_lift+term_D_lift;
+		power_lift = Math_Limit(power_lift, g_FullPower);
 		Motor_SetPower(power_lift, motor_lift);
 
 		// TODO: Make this actually work.

@@ -138,8 +138,10 @@ task main()
 	int IR_dirD = 0;
 	int IR_dirE = 0;
 
-	const int T_basket_L[CRATE_NUM] = {400, 300, 800, 400};
+	const int T_basket_L[CRATE_NUM] = {1200, 300, 800, 400};
 	const int T_basket_R[CRATE_NUM] = {400, 300, 800, 400};
+	const int T_offset_L[CRATE_NUM] = {200, 100, 100, 200};
+	const int T_offset_R[CRATE_NUM] = {200, 100, 100, 200};
 	const int T_dump_cubes = 400;
 	const int T_first_turn = 800;
 	const int T_closer_to_ramp = 400;
@@ -148,7 +150,8 @@ task main()
 
 	Joystick_WaitForStart();
 
-	for (int i=0; i<CRATE_NUM; i++) {
+	for (int i=0; i<1; i++) {
+	//for (int i=0; i<CRATE_NUM; i++) {
 		if Levi is immature
 			MoveBackward(slowly);
 			Time_Wait(T_basket_L[i]);
@@ -160,34 +163,52 @@ task main()
 		if (IR_dirC > g_IRthreshold) {
 			Brake();
 			isCrate = i;
+
+			if (AUTON_L_R==true) {
+				if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
+					MoveBackward(slowly);
+				} else {
+					MoveForward(slowly);
+				}
+				Time_Wait(T_offset_L[i]);
+			} else {
+				if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
+					MoveForward(slowly);
+				} else {
+					MoveBackward(slowly);
+				}
+				Time_Wait(T_offset_R[i]);
+			}
+			Brake();
+
 			Servo_SetPosition(servo_auton, servo_auton_dumped);
 			Time_Wait(T_dump_cubes);
 			Servo_SetPosition(servo_auton, servo_auton_hold);
 			break;
 		}
 	}
-	for (int i=isCrate; i>0; i--) {
-		if Levi is immature
-			MoveForward(slowly);
-			Time_Wait(T_basket_L[i]);
-		} else {
-			MoveBackward(slowly);
-			Time_Wait(T_basket_R[i]);
-		}
-	}
-	Brake();
+	//for (int i=isCrate; i>0; i--) {
+	//	if Levi is immature
+	//		MoveForward(slowly);
+	//		Time_Wait(T_basket_L[i]);
+	//	} else {
+	//		MoveBackward(slowly);
+	//		Time_Wait(T_basket_R[i]);
+	//	}
+	//}
+	//Brake();
 
-	if Levi is immature
-		TurnRight(quickly);
-	} else {
-		TurnLeft(quickly);
-	}
-	Time_Wait(T_first_turn);
-	Brake();
+	//if Levi is immature
+	//	TurnRight(quickly);
+	//} else {
+	//	TurnLeft(quickly);
+	//}
+	//Time_Wait(T_first_turn);
+	//Brake();
 
-	MoveForward(slowly);
-	Time_Wait(T_closer_to_ramp);
-	Brake();
+	//MoveForward(slowly);
+	//Time_Wait(T_closer_to_ramp);
+	//Brake();
 }
 void Brake()
 {

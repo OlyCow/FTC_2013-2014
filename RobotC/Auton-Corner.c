@@ -1,34 +1,37 @@
-#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
-#pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
+#pragma config(Hubs,  S1, HTMotor,  HTServo,  HTMotor,  HTMotor)
+#pragma config(Hubs,  S2, HTServo,  HTMotor,  none,     none)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
-#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
 #pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C1_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C1_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C1_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_3,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_5,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_4,    servo_shield,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_5,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, reversed)
+#pragma config(Servo,  srvo_S1_C2_1,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C2_2,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C2_3,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C2_4,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C2_5,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C2_6,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_1,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_4,    servo_shield,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_flag,           tServoStandard)
 
 #include "includes.h"
 #include "swerve-drive.h"
 
-#define AUTON_L_R true /* `true` is "left"; `false` is "right" */
+#define Levi		(AUTON_L_R	/* If this is before AUTON_L_R then the preprocessor only makes one pass... Right? */
+#define is			==			/* You'll understand. */
+#define immature	true) {		/* See where I'm going with this? */
+#define AUTON_L_R	true		/* `true` is "left"; `false` is "right" */
 
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
 task CommLink(); // Reads/writes to the prototype board as tightly as possible.
@@ -112,7 +115,8 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	const int slowly = 40;
+	const int slowly = 30;
+	const int quickly = 80;
 
 	typedef enum Crate {
 		CRATE_OUTER_L	= 0,
@@ -121,59 +125,69 @@ task main()
 		CRATE_OUTER_R	= 3,
 		CRATE_NUM
 	} Crate;
-	Crate isCrate = CRATE_OUTER_L;
+	Crate isCrate;
+	if Levi is immature
+		Crate isCrate = CRATE_OUTER_L;
+	} else {
+		Crate isCrate = CRATE_OUTER_R;
+	}
+
 	int IR_dirA = 0;
 	int IR_dirB = 0;
 	int IR_dirC = 0;
 	int IR_dirD = 0;
 	int IR_dirE = 0;
 
-	const int T_out_from_corner = 600;
-	const int T_turn_to_baskets_L = 500;
-	const int T_turn_to_baskets_R = 200;
-	const int T_basket_L[CRATE_NUM] = {200, 400, 800, 200};
-	const int T_basket_R[CRATE_NUM] = {200, 400, 800, 200};
-	const int T_face_basket = 300;
-	const int T_close_to_basket = 100;
+	const int T_basket_L[CRATE_NUM] = {400, 300, 800, 400};
+	const int T_basket_R[CRATE_NUM] = {400, 300, 800, 400};
 	const int T_dump_cubes = 400;
+	const int T_first_turn = 800;
+	const int T_closer_to_ramp = 400;
+	const int T_second_turn = 800;
+	const int T_onto_ramp = 1800;
 
 	Joystick_WaitForStart();
 
-	MoveForward(slowly);
-	Time_Wait(T_out_from_corner);
-	Brake();
-
-	TurnLeft(slowly);
-	if (AUTON_L_R == true) {
-		Time_Wait(T_turn_to_baskets_L);
-	} else {
-		Time_Wait(T_turn_to_baskets_R);
-	}
-	Brake();
-
 	for (int i=0; i<CRATE_NUM; i++) {
-		if (AUTON_L_R == true) {
+		if Levi is immature
+			MoveBackward(slowly);
+			Time_Wait(T_basket_L[i]);
+		} else {
+			MoveForward(slowly);
+			Time_Wait(T_basket_R[i]);
+		}
+		HTIRS2readAllACStrength(sensor_IR, IR_dirA, IR_dirB, IR_dirC, IR_dirD, IR_dirE);
+		if (IR_dirC > g_IRthreshold) {
+			Brake();
+			isCrate = i;
+			Servo_SetPosition(servo_auton, servo_auton_dumped);
+			Time_Wait(T_dump_cubes);
+			Servo_SetPosition(servo_auton, servo_auton_hold);
+			break;
+		}
+	}
+	for (int i=isCrate; i>0; i--) {
+		if Levi is immature
 			MoveForward(slowly);
 			Time_Wait(T_basket_L[i]);
 		} else {
 			MoveBackward(slowly);
 			Time_Wait(T_basket_R[i]);
 		}
-		HTIRS2readAllACStrength(sensor_IR, IR_dirA, IR_dirB, IR_dirC, IR_dirD, IR_dirE);
-		if (IR_dirC > g_IRthreshold) {
-			isCrate = CRATE_NUM;
-			lift_target = lift_pos_dump;
-			TurnRight(slowly);
-			Time_Wait(T_face_basket);
-			MoveForward(slowly);
-			Time_Wait(T_close_to_basket);
-			Brake();
-			Servo_SetPosition(servo_auton, servo_auton_dumped);
-			Time_Wait(T_dump_cubes);
-			Servo_SetPosition(servo_auton, servo_auton_hold);
-			lift_target = lift_pos_pickup;
-		}
 	}
+	Brake();
+
+	if Levi is immature
+		TurnRight(quickly);
+	} else {
+		TurnLeft(quickly);
+	}
+	Time_Wait(T_first_turn);
+	Brake();
+
+	MoveForward(slowly);
+	Time_Wait(T_closer_to_ramp);
+	Brake();
 }
 void Brake()
 {
@@ -181,6 +195,7 @@ void Brake()
 	Motor_SetPower(0, motor_BL);
 	Motor_SetPower(0, motor_FR);
 	Motor_SetPower(0, motor_BR);
+	Time_Wait(1000);
 }
 void MoveForward(int power)
 {

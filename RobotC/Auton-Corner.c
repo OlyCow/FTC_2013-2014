@@ -138,9 +138,9 @@ task main()
 	int IR_dirD = 0;
 	int IR_dirE = 0;
 
-	const int T_basket_L[CRATE_NUM] = {1200, 300, 800, 400};
+	const int T_basket_L[CRATE_NUM] = {1000, 300, 800, 400};
 	const int T_basket_R[CRATE_NUM] = {400, 300, 800, 400};
-	const int T_offset_L[CRATE_NUM] = {200, 100, 100, 200};
+	const int T_offset_L[CRATE_NUM] = {300, 100, 100, 200};
 	const int T_offset_R[CRATE_NUM] = {200, 100, 100, 200};
 	const int T_dump_cubes = 400;
 	const int T_first_turn = 800;
@@ -170,14 +170,14 @@ task main()
 				} else {
 					MoveForward(slowly);
 				}
-				Time_Wait(T_offset_L[i]);
+				Time_Wait(T_offset_L[isCrate]);
 			} else {
 				if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
 					MoveForward(slowly);
 				} else {
 					MoveBackward(slowly);
 				}
-				Time_Wait(T_offset_R[i]);
+				Time_Wait(T_offset_R[isCrate]);
 			}
 			Brake();
 
@@ -187,6 +187,24 @@ task main()
 			break;
 		}
 	}
+
+	//if (AUTON_L_R==true) {
+	//	if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
+	//		MoveForward(slowly);
+	//	} else {
+	//		MoveBackward(slowly);
+	//	}
+	//	Time_Wait(T_offset_L[isCrate]);
+	//} else {
+	//	if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
+	//		MoveBackward(slowly);
+	//	} else {
+	//		MoveForward(slowly);
+	//	}
+	//	Time_Wait(T_offset_R[isCrate]);
+	//}
+	//Brake();
+	//
 	//for (int i=isCrate; i>0; i--) {
 	//	if Levi is immature
 	//		MoveForward(slowly);

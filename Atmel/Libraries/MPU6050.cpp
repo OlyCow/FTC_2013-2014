@@ -3,12 +3,19 @@
 // For more documentation (and I mean *more*), see his website or repo.
 #include "MPU6050.h"
 
-void MPU::read(uint8_t address, uint8_t request, uint8_t data[], int size)
+void MPU::read(uint8_t address, uint8_t RA, uint8_t data)
+{
+	uint8_t buffer[1] = {0};
+	MPU::read_burst(address, RA, buffer, 1);
+	data = buffer[0];
+}
+
+void MPU::read_burst(uint8_t address, uint8_t RA, uint8_t data[], int size)
 {
 	uint8_t address_W = address<<1;
 	uint8_t address_R = address_W|1;
 	i2c_start(address_W);
-	i2c_write(request);
+	i2c_write(RA);
 	i2c_rep_start(address_R);
 	for (int i=0; i<size; i++) {
 		if (i+1<size) {
@@ -19,37 +26,24 @@ void MPU::read(uint8_t address, uint8_t request, uint8_t data[], int size)
 	}
 	i2c_stop();
 }
-//void MPU::read(uint8_t address, uint8_t request, uint8_t data[], int size)
-//{
-	//TWI::start();
-	//TWI::write_SLA_W(address);
-	//TWI::write_data(request);
-	//TWI::hold(); // Actually, repeated start. :)
-	//TWI::write_SLA_R(address);
-	//TWI::read_data(data, size);
-	//TWI::stop();
-//}
 
-//void MPU::write(uint8_t address, uint8_t request, uint8_t data[], int size)
-void MPU::write(uint8_t address, uint8_t request, uint8_t data)
+void MPU::write(uint8_t address, uint8_t RA, uint8_t data)
+{
+	uint8_t buffer[1] = {data};
+	MPU::write_burst(address, RA, buffer, 1);
+}
+
+void MPU::write_burst(uint8_t address, uint8_t request, uint8_t data[], int size)
 {
 	uint8_t address_W = address<<1;
 	uint8_t address_R = address_W|1;
 	i2c_start(address_W);
 	i2c_write(request);
-	i2c_write(data);
+	for (int i=0; i<size; i++) {
+		i2c_write(data[i]);
+	}
 	i2c_stop();
 }
-//void MPU::write(uint8_t address, uint8_t request, uint8_t data[], int size)
-//{
-	//TWI::start();
-	//TWI::write_SLA_W(address);
-	//TWI::write_data(request);
-	//TWI::hold();
-	//TWI::write_SLA_W(address);
-	//TWI::write_data(data);
-	//TWI::stop();
-//}
 
 void MPU::initialize(void)
 {
@@ -165,13 +159,14 @@ void MPU::setSleepEnabled(bool isEnabled)
 	}
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, sleep_bit);
 	// TODO: This function is unbelievably hackish. Unbelievably.
+	// Make it so that only the necessary bits are set and stuff.
 }
 
-//bool MPU::who_am_I(void)
-//{
-	//bool success = false;
-	//uint8_t answer[] = {0};
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, answer, 1);
-	//success = (answer[0]==MPU6050_DEFAULT_ADDRESS);
-	//return success;
-//}
+bool MPU::test(void)
+{
+	bool success = false;
+	uint8_t answer = 0;
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, answer);
+	success = (answer==MPU6050_DEFAULT_ADDRESS);
+	return success;
+}

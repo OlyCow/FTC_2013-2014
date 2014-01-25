@@ -8,10 +8,10 @@
 #pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Servo,  srvo_S1_C2_1,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C2_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C2_3,    servo_flip_L,         tServoStandard)
@@ -31,7 +31,7 @@
 #define Levi		(AUTON_L_R	/* If this is before AUTON_L_R then the preprocessor only makes one pass... Right? */
 #define is			==			/* You'll understand. */
 #define immature	true) {		/* See where I'm going with this? */
-#define AUTON_L_R	true		/* `true` is "left"; `false` is "right" */
+#define AUTON_L_R	false		/* `true` is "left"; `false` is "right" */
 
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
 task CommLink(); // Reads/writes to the prototype board as tightly as possible.
@@ -139,22 +139,24 @@ task main()
 	int IR_dirE = 0;
 
 	const int T_basket_L[CRATE_NUM] = {1000, 400, 1100, 500};
-	const int T_basket_R[CRATE_NUM] = {1000, 400, 1100, 500};
+	const int T_basket_R[CRATE_NUM] = {900, 500, 1100, 500};
 	const int T_offset_L[CRATE_NUM] = {300, 350, 100, 200};
-	const int T_offset_R[CRATE_NUM] = {200, 100, 100, 200};
+	const int T_offset_R[CRATE_NUM] = {300, 350, 300, 450};
 	const int T_basket_return_L[CRATE_NUM] = {600, 1000, 2000, 2500};
-	const int T_basket_return_R[CRATE_NUM] = {200, 100, 100, 200};
-	const int T_dump_cubes = 1000;
-	const int T_first_turn_L = 700;
-	const int T_first_turn_R = 300;
-	const int T_closer_to_ramp = 2300;
-	const int T_second_turn = 1000;
-	const int T_onto_ramp = 1800;
+	const int T_basket_return_R[CRATE_NUM] = {500, 1000, 2000, 2500};
+	const int T_dump_cubes = 1200;
+	const int T_first_turn_L = 600;
+	const int T_first_turn_R = 500;
+	const int T_closer_to_ramp_L = 2300;
+	const int T_closer_to_ramp_R = 2000;
+	const int T_second_turn_L = 1100;
+	const int T_second_turn_R = 1120;
+	const int T_onto_ramp_L = 2000;
+	const int T_onto_ramp_R = 2300;
 
 	Joystick_WaitForStart();
 
-	for (int i=0; i<4; i++) {
-	//for (int i=0; i<CRATE_NUM; i++) {
+	for (int i=0; i<CRATE_NUM; i++) {
 		if Levi is immature
 			MoveBackward(slowly);
 			Time_Wait(T_basket_L[i]);
@@ -167,19 +169,18 @@ task main()
 			Brake();
 			isCrate = i;
 
-			if (AUTON_L_R==true) {
-				if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
-					MoveBackward(slowly);
-				} else {
+			if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
+				MoveBackward(slowly);
+			} else {
+				if (AUTON_L_R==true) {
 					MoveForward(slowly);
+				} else {
+					MoveBackward(slowly);
 				}
+			}
+			if (AUTON_L_R==true) {
 				Time_Wait(T_offset_L[isCrate]);
 			} else {
-				if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
-					MoveForward(slowly);
-				} else {
-					MoveBackward(slowly);
-				}
 				Time_Wait(T_offset_R[isCrate]);
 			}
 			Brake();
@@ -201,28 +202,40 @@ task main()
 	}
 	Brake();
 
-	TurnLeft(quickly);
 	if Levi is immature
+		TurnLeft(quickly);
 		Time_Wait(T_first_turn_L);
 	} else {
+		TurnRight(quickly);
 		Time_Wait(T_first_turn_R);
 	}
 	Brake();
 
-	MoveForward(slowly);
-	Time_Wait(T_closer_to_ramp);
+	if Levi is immature
+		MoveForward(slowly);
+		Time_Wait(T_closer_to_ramp_L);
+	} else {
+		MoveBackward(slowly);
+		Time_Wait(T_closer_to_ramp_R);
+	}
 	Brake();
 
 	if Levi is immature
 		TurnLeft(quickly);
+		Time_Wait(T_second_turn_L);
 	} else {
 		TurnRight(quickly);
+		Time_Wait(T_second_turn_R);
 	}
-	Time_Wait(T_second_turn);
 	Brake();
 
-	MoveForward(quickly);
-	Time_Wait(T_onto_ramp);
+	if Levi is immature
+		MoveForward(quickly);
+		Time_Wait(T_onto_ramp_L);
+	} else {
+		MoveBackward(quickly);
+		Time_Wait(T_onto_ramp_R);
+	}
 	Brake();
 }
 void Brake()

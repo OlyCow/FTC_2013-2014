@@ -54,8 +54,9 @@ const int servo_climb_R_open	= 255;
 const int servo_climb_R_closed	= 140;
 const int servo_dump_open		= 30;
 const int servo_dump_closed		= 0;
-const int servo_auton_hold		= 220;
+const int servo_auton_hold		= 255;
 const int servo_auton_dumped	= 90;
+const int servo_auton_flicked	= 130;
 const int servo_flip_L_up		= 20;
 const int servo_flip_L_down		= 215;
 const int servo_flip_R_up		= 245;
@@ -173,7 +174,7 @@ void initializeRobotVariables()
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 	Servo_SetPosition(servo_auton, servo_auton_hold);

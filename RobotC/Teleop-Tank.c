@@ -305,6 +305,10 @@ task main()
 				sweepMode = SWEEP_SUSPENDED;
 				// In all other cases the sweeping mode shouldn't change.
 			}
+		} else {
+			if (sweepMode==SWEEP_SUSPENDED) {
+				sweepMode = SWEEP_IN;
+			}
 		}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
@@ -424,7 +428,7 @@ task PID()
 	// Variables for lift PID calculations.
 	// MAGIC_NUM: PID constants.
 	float kP_lift_up	= 0.28;
-	float kP_lift_down	= 0.06;
+	float kP_lift_down	= 0.07;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;

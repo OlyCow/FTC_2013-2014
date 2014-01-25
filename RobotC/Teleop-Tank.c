@@ -265,6 +265,7 @@ task main()
 		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
 			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
 				sweepMode = SWEEP_EJECT;
+				Time_ClearTimer(timer_eject);
 			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
 				sweepMode = SWEEP_IN;
 			} // No "else" here so that Button_B can do other stuff.
@@ -409,7 +410,8 @@ task PID()
 	int t_delta = Time_GetTime(timer_loop);
 
 	// Variables for lift PID calculations.
-	float kP_lift_up	= 0.28; // TODO: PID tuning. MAGIC_NUM.
+	// MAGIC_NUM: PID constants.
+	float kP_lift_up	= 0.28;
 	float kP_lift_down	= 0.06;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
@@ -820,7 +822,7 @@ task Display()
 task TimedOperations()
 {
 	Joystick_WaitForStart();
-	for (int i=0; i<100; i++) { // MAGIC_NUM: 100=120-20
+	for (int i=0; i<90; i++) { // MAGIC_NUM: 90=120-30
 		Time_Wait(1000);
 	}
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);

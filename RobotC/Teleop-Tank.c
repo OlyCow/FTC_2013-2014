@@ -101,6 +101,8 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
+bool isResettingLift = false;
+float power_flag = 0.0;
 
 // For PID:
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
@@ -182,7 +184,6 @@ task main()
 
 	// Misc. variables.
 	SweepMode sweepMode = SWEEP_OFF;
-	float power_flag = 0.0;
 	float power_climb = 0.0;
 	const int eject_delay = 1200;
 	int timer_eject = 0;
@@ -235,8 +236,7 @@ task main()
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-			//Nesting these is more efficient.
+			// Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
 					lift_target = lift_pos_top;
@@ -245,6 +245,14 @@ task main()
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 					sweepMode = SWEEP_IN;
+				}
+				if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
+					isResettingLift = true;
+					power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
+				} else {
+					isResettingLift = false; // This is important! Or it never stops resetting.
+					// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+					lift_target += Joystick_GenericInput(Joystick_L, AXIS_Y, CONTROLLER_2)*1.1;
 				}
 			}
 		}
@@ -315,13 +323,13 @@ task main()
 			// TODO: Climb "down" instead.
 			power_flag = g_FullPower;
 		} else if (Joystick_Direction(DIRECTION_L)==true) {
-			power_flag = g_FullPower*g_FineTuneFactor;
+			power_flag = g_FullPower/g_FineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_R)==true) {
-			power_flag = -g_FullPower*g_FineTuneFactor;
+			power_flag = -g_FullPower/g_FineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
-			power_flag = g_FullPower*g_FineTuneFactor;
+			power_flag = g_FullPower/g_FineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
-			power_flag = -g_FullPower*g_FineTuneFactor;
+			power_flag = -g_FullPower/g_FineTuneFactor;
 		} else {
 			power_flag = 0;
 		}
@@ -402,6 +410,7 @@ task main()
 
 float term_P_lift = 0.0;
 float term_D_lift = 0.0;
+
 task PID()
 {
 	// Timer variables.
@@ -432,24 +441,30 @@ task PID()
 		// Yes, this is a complete PID loop, despite it being so short. :)
 		//lift_pos = Motor_GetEncoder(motor_lift);
 		// TODO: Replace this :P
-		lift_pos = -Motor_GetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
-		error_prev_lift = error_lift;
-		if (lift_target<0) { // Because we're safe.
-			lift_target = 0;
-		} else if (lift_target>lift_max_height) {
-			lift_target = lift_max_height;
+		if (isResettingLift==false) {
+			lift_pos = -Motor_GetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
+			error_prev_lift = error_lift;
+			if (lift_target<0) { // Because we're safe.
+				lift_target = 0;
+			} else if (lift_target>lift_max_height) {
+				lift_target = lift_max_height;
+			}
+			error_lift = lift_target-lift_pos;
+			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+			if (error_lift>0) {
+				term_P_lift = kP_lift_up*error_lift;
+				term_D_lift = kD_lift_up*error_rate_lift;
+			} else if (error_lift<=0) {
+				term_P_lift = kP_lift_down*error_lift;
+				term_D_lift = kD_lift_down*error_rate_lift;
+			}
+			power_lift=term_P_lift+term_D_lift;
+			power_lift = Math_Limit(power_lift, g_FullPower);
+		} else {
+			lift_pos = 0;
+			Motor_ResetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
+			//Motor_ResetEncoder(motor_lift);
 		}
-		error_lift = lift_target-lift_pos;
-		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		if (error_lift>0) {
-			term_P_lift = kP_lift_up*error_lift;
-			term_D_lift = kD_lift_up*error_rate_lift;
-		} else if (error_lift<=0) {
-			term_P_lift = kP_lift_down*error_lift;
-			term_D_lift = kD_lift_down*error_rate_lift;
-		}
-		power_lift=term_P_lift+term_D_lift;
-		power_lift = Math_Limit(power_lift, g_FullPower);
 		Motor_SetPower(power_lift, motor_lift);
 
 		Task_ReleaseCPU();
@@ -740,10 +755,11 @@ task Display()
 			case DISP_FCS :
 				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(1, "P: %f", term_P_lift);
-				nxtDisplayTextLine(2, "pwr: %f", power_lift);
-				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
-				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
+				nxtDisplayTextLine(0, "Lift P: %f", term_P_lift);
+				nxtDisplayTextLine(1, "pwr: %f", power_lift);
+				nxtDisplayTextLine(2, "encdr: %5d", lift_pos);
+				nxtDisplayTextLine(3, "Flag: %+4d", power_flag);
+				nxtDisplayTextLine(7, "Gyro: %+6d", f_angle_z);
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {

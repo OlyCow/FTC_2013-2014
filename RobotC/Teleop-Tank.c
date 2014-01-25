@@ -246,14 +246,14 @@ task main()
 					lift_target = lift_pos_pickup;
 					sweepMode = SWEEP_IN;
 				}
-				if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
-					isResettingLift = true;
-					power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
-				} else {
-					isResettingLift = false; // This is important! Or it never stops resetting.
-					// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-					lift_target += Joystick_GenericInput(Joystick_L, AXIS_Y, CONTROLLER_2)*1.1;
-				}
+			}
+			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
+				isResettingLift = true;
+				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
+			} else {
+				isResettingLift = false; // This is important! Or it never stops resetting.
+				// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+				lift_target += Joystick_GenericInput(Joystick_L, AXIS_Y, CONTROLLER_2)*1.1;
 			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
@@ -323,13 +323,13 @@ task main()
 			// TODO: Climb "down" instead.
 			power_flag = g_FullPower;
 		} else if (Joystick_Direction(DIRECTION_L)==true) {
-			power_flag = g_FullPower/g_FineTuneFactor;
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_R)==true) {
-			power_flag = -g_FullPower/g_FineTuneFactor;
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
-			power_flag = g_FullPower/g_FineTuneFactor;
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
-			power_flag = -g_FullPower/g_FineTuneFactor;
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
 		} else {
 			power_flag = 0;
 		}
@@ -381,7 +381,10 @@ task main()
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
 		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
-			resetMotorsServos();
+			isResettingLift = true;
+			power_lift = 0.0;
+		} else {
+			isResettingLift = false;
 		}
 
 		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.

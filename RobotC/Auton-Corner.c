@@ -138,19 +138,22 @@ task main()
 	int IR_dirD = 0;
 	int IR_dirE = 0;
 
-	const int T_basket_L[CRATE_NUM] = {1000, 300, 800, 400};
-	const int T_basket_R[CRATE_NUM] = {400, 300, 800, 400};
-	const int T_offset_L[CRATE_NUM] = {300, 100, 100, 200};
+	const int T_basket_L[CRATE_NUM] = {1000, 400, 1100, 500};
+	const int T_basket_R[CRATE_NUM] = {1000, 400, 1100, 500};
+	const int T_offset_L[CRATE_NUM] = {300, 350, 100, 200};
 	const int T_offset_R[CRATE_NUM] = {200, 100, 100, 200};
-	const int T_dump_cubes = 400;
-	const int T_first_turn = 800;
-	const int T_closer_to_ramp = 400;
-	const int T_second_turn = 800;
+	const int T_basket_return_L[CRATE_NUM] = {600, 1000, 2000, 2500};
+	const int T_basket_return_R[CRATE_NUM] = {200, 100, 100, 200};
+	const int T_dump_cubes = 1000;
+	const int T_first_turn_L = 700;
+	const int T_first_turn_R = 300;
+	const int T_closer_to_ramp = 2300;
+	const int T_second_turn = 1000;
 	const int T_onto_ramp = 1800;
 
 	Joystick_WaitForStart();
 
-	for (int i=0; i<1; i++) {
+	for (int i=0; i<4; i++) {
 	//for (int i=0; i<CRATE_NUM; i++) {
 		if Levi is immature
 			MoveBackward(slowly);
@@ -187,46 +190,40 @@ task main()
 			break;
 		}
 	}
+	Brake(); // Redundant safety :)
 
-	//if (AUTON_L_R==true) {
-	//	if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
-	//		MoveForward(slowly);
-	//	} else {
-	//		MoveBackward(slowly);
-	//	}
-	//	Time_Wait(T_offset_L[isCrate]);
-	//} else {
-	//	if ((isCrate==CRATE_OUTER_L)||(isCrate==CRATE_INNER_L)) {
-	//		MoveBackward(slowly);
-	//	} else {
-	//		MoveForward(slowly);
-	//	}
-	//	Time_Wait(T_offset_R[isCrate]);
-	//}
-	//Brake();
-	//
-	//for (int i=isCrate; i>0; i--) {
-	//	if Levi is immature
-	//		MoveForward(slowly);
-	//		Time_Wait(T_basket_L[i]);
-	//	} else {
-	//		MoveBackward(slowly);
-	//		Time_Wait(T_basket_R[i]);
-	//	}
-	//}
-	//Brake();
+	if Levi is immature
+		MoveForward(slowly);
+		Time_Wait(T_basket_return_L[isCrate]);
+	} else {
+		MoveBackward(slowly);
+		Time_Wait(T_basket_return_R[isCrate]);
+	}
+	Brake();
 
-	//if Levi is immature
-	//	TurnRight(quickly);
-	//} else {
-	//	TurnLeft(quickly);
-	//}
-	//Time_Wait(T_first_turn);
-	//Brake();
+	TurnLeft(quickly);
+	if Levi is immature
+		Time_Wait(T_first_turn_L);
+	} else {
+		Time_Wait(T_first_turn_R);
+	}
+	Brake();
 
-	//MoveForward(slowly);
-	//Time_Wait(T_closer_to_ramp);
-	//Brake();
+	MoveForward(slowly);
+	Time_Wait(T_closer_to_ramp);
+	Brake();
+
+	if Levi is immature
+		TurnLeft(quickly);
+	} else {
+		TurnRight(quickly);
+	}
+	Time_Wait(T_second_turn);
+	Brake();
+
+	MoveForward(quickly);
+	Time_Wait(T_onto_ramp);
+	Brake();
 }
 void Brake()
 {

@@ -428,7 +428,7 @@ task PID()
 	// Variables for lift PID calculations.
 	// MAGIC_NUM: PID constants.
 	float kP_lift_up	= 0.28;
-	float kP_lift_down	= 0.07;
+	float kP_lift_down	= 0.11;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;

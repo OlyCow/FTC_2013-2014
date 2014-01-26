@@ -31,7 +31,7 @@
 #define Levi		(AUTON_L_R	/* If this is before AUTON_L_R then the preprocessor only makes one pass... Right? */
 #define is			==			/* You'll understand. */
 #define immature	true) {		/* See where I'm going with this? */
-#define AUTON_L_R	false		/* `true` is "left"; `false` is "right" */
+#define AUTON_L_R	true		/* `true` is "left"; `false` is "right" */
 
 task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
 task CommLink(); // Reads/writes to the prototype board as tightly as possible.
@@ -138,20 +138,20 @@ task main()
 	int IR_dirD = 0;
 	int IR_dirE = 0;
 
-	const int T_basket_L[CRATE_NUM] = {1000, 400, 1100, 500};
+	const int T_basket_L[CRATE_NUM] = {1000, 400, 900, 500};
 	const int T_basket_R[CRATE_NUM] = {900, 500, 1100, 500};
 	const int T_offset_L[CRATE_NUM] = {300, 350, 100, 200};
-	const int T_offset_R[CRATE_NUM] = {300, 350, 300, 450};
-	const int T_basket_return_L[CRATE_NUM] = {600, 1000, 2000, 2500};
-	const int T_basket_return_R[CRATE_NUM] = {500, 1000, 2000, 2500};
+	const int T_offset_R[CRATE_NUM] = {300, 350, 500, 550};
+	const int T_basket_return_L[CRATE_NUM] = {600, 1000, 1800, 2500};
+	const int T_basket_return_R[CRATE_NUM] = {600, 1100, 2000, 2500};
 	const int T_dump_cubes = 1200;
-	const int T_first_turn_L = 600;
+	const int T_first_turn_L = 700;
 	const int T_first_turn_R = 500;
 	const int T_closer_to_ramp_L = 2300;
-	const int T_closer_to_ramp_R = 2000;
+	const int T_closer_to_ramp_R = 1900;
 	const int T_second_turn_L = 1100;
-	const int T_second_turn_R = 1120;
-	const int T_onto_ramp_L = 2000;
+	const int T_second_turn_R = 1000;
+	const int T_onto_ramp_L = 2200;
 	const int T_onto_ramp_R = 2300;
 
 	Joystick_WaitForStart();

@@ -208,6 +208,10 @@ task main()
 
 		power_L = -Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
 		power_R = -Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
+		if ((Joystick_Button(BUTTON_LT)==true)||(Joystick_Button(BUTTON_RT)==true)) {
+			power_L *= 0.25;
+			power_R *= 0.25;
+		}
 		Motor_SetPower(power_L, motor_FL);
 		Motor_SetPower(power_L, motor_BL);
 		Motor_SetPower(power_R, motor_FR);
@@ -321,6 +325,9 @@ task main()
 			if (sweepMode==SWEEP_SUSPENDED) {
 				sweepMode = SWEEP_IN;
 			}
+		}
+		if (Joystick_Button(BUTTON_X, CONTROLLER_2)==true) {
+			sweepMode = SWEEP_IN;
 		}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();

@@ -1,29 +1,35 @@
-#pragma config(Hubs,  S1, HTMotor,  HTServo,  HTMotor,  HTMotor)
-#pragma config(Hubs,  S2, HTServo,  HTMotor,  none,     none)
+#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  none)
+#pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
 #pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C2_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_3,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_5,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_6,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_3,    servo_flip_R,         tServoStandard)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_lift_A,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_B,  tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C3_1,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_3,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_4,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S2_C1_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S2_C1_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo11,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo17,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo18,              tServoNone)
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -253,7 +259,7 @@ task main()
 			} else {
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-				lift_target += Joystick_GenericInput(Joystick_L, AXIS_Y, CONTROLLER_2)*1.1;
+				lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1;
 			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
@@ -381,7 +387,7 @@ task main()
 		// TODO: make the flag and climbing stuff actually work according to how
 		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag);
-		Motor_SetPower(power_climb, motor_climb);
+		//Motor_SetPower(power_climb, motor_climb);
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
 		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
@@ -446,10 +452,9 @@ task PID()
 		Time_ClearTimer(timer_loop);
 
 		// Yes, this is a complete PID loop, despite it being so short. :)
-		//lift_pos = Motor_GetEncoder(motor_lift);
 		// TODO: Replace this :P
 		if (isResettingLift==false) {
-			lift_pos = -Motor_GetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
+			lift_pos = Motor_GetEncoder(motor_lift_A); // TODO: Usage of `motor_lift_A` is not final.
 			error_prev_lift = error_lift;
 			if (lift_target<0) { // Because we're safe.
 				lift_target = 0;
@@ -469,10 +474,10 @@ task PID()
 			power_lift = Math_Limit(power_lift, g_FullPower);
 		} else {
 			lift_pos = 0;
-			Motor_ResetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
-			//Motor_ResetEncoder(motor_lift);
+			Motor_ResetEncoder(motor_lift_A); // TODO: Usage of `motor_lift_A` is not final.
 		}
-		Motor_SetPower(power_lift, motor_lift);
+		Motor_SetPower(power_lift, motor_lift_A);
+		Motor_SetPower(power_lift, motor_lift_B);
 
 		Task_ReleaseCPU();
 		Task_EndTimeslice(); // TODO: Is this command superfluous?

@@ -43,9 +43,9 @@ servoData g_ServoData[POD_NUM];
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup = 0;
-const int lift_pos_dump = 5800;
-const int lift_pos_top = 6800;
-const int lift_max_height = 7100;
+const int lift_pos_dump = 1200;
+const int lift_pos_top = 1900;
+const int lift_max_height = 2000;
 const int lift_sweeper_guard = 300;
 
 const int servo_climb_L_open	= 115;
@@ -54,9 +54,6 @@ const int servo_climb_R_open	= 255;
 const int servo_climb_R_closed	= 140;
 const int servo_dump_open		= 30;
 const int servo_dump_closed		= 0;
-const int servo_auton_hold		= 255;
-const int servo_auton_dumped	= 90;
-const int servo_auton_flicked	= 130;
 const int servo_flip_L_up		= 20;
 const int servo_flip_L_down		= 215;
 const int servo_flip_R_up		= 245;
@@ -153,7 +150,7 @@ WheelPod	Servo_Convert(TServoIndex servoName) {
 
 void initializeRobotVariables()
 {
-	Motor_ResetEncoder(motor_lift_front); // TODO:  Usage of `motor_lift_A` is not final.
+	Motor_ResetEncoder(motor_lift_front);
 
 	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[POD_FR].angleOffset = 45;
@@ -177,7 +174,6 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 }
@@ -202,7 +198,6 @@ void resetMotorsServos()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
 }
 
 void dumpCubes(int num)

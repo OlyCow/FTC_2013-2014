@@ -19,7 +19,7 @@
 #pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_1,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_2,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_5,    servo_flip_L,         tServoStandard)
@@ -123,9 +123,6 @@ typedef enum Aligned {
 	ALIGNED_MEDIUM	= 1,
 	ALIGNED_CLOSE	= 2,
 };
-float term_P_pod[POD_NUM] = {0,0,0,0};
-float term_I_pod[POD_NUM] = {0,0,0,0};
-float term_D_pod[POD_NUM] = {0,0,0,0};
 float encoder_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
@@ -298,16 +295,9 @@ task main()
 				// The following code is essentially wizardry (practically speaking).
 				translation.x = Joystick_GenericInput(JOYSTICK_R, AXIS_X);
 				translation.y = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
-				if (isFineTuning==true) {
-					translation.x *= 0.35;
-					translation.y *= 0.35;
-				}
+				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
 				Vector2D_UpdateRot(translation);
 				Vector2D_Rotate(translation, -heading); // We want to correct it, not compound.
-				rotation_temp = -Joystick_GenericInput(JOYSTICK_L, AXIS_X); // Intuitively, CCW = pos. rot.
-				if (isFineTuning==true) {
-					rotation_temp *= 0.45;
-				}
 
 				for (int i=POD_FR; i<(int)POD_NUM; i++) {
 					rotation[i].r = rotation_temp;
@@ -317,7 +307,9 @@ task main()
 					if (combined[i].r>g_FullPower) {
 						shouldNormalize = true;
 					}
-					if ((combined[i].theta==0)&&(combined[i].r==0)&&(pod_current[i]<maxTurns*360)&&(pod_current>-maxTurns*360)==true) {
+					if ((combined[i].theta==0)&&(combined[i].r==0)) {
+						// When joysticks are zeroed, don't reset the wheel pods.
+						// TODO: Make this have a timer (or be more intelligent).
 						combined[i].theta = combined_angle_prev[i];
 						// No need to update `combined_angle_prev[i]` because it stays the same.
 						Vector2D_UpdatePos(combined[i]); // This might be unnecessary.
@@ -570,34 +562,6 @@ task PID()
 	Time_ClearTimer(timer_loop);
 	int t_delta = Time_GetTime(timer_loop);
 
-	// Variables for wheel pod PID calculations.
-	const int kI_delay = 5; // Iterations.
-	float error_sum_pod[POD_NUM][kI_delay];
-	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		for (int j=0; j<kI_delay; j++) {
-			error_sum_pod[i][j] = 0;
-		}
-	}
-	float error_sum_total_pod[POD_NUM] = {0,0,0,0}; // {FR, FL, BL, BR}
-	float kP[POD_NUM] = {1.5,	1.5,	1.5,	1.5}; // MAGIC_NUM: TODO: PID tuning.
-	float kI[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	float kD[POD_NUM] = {0.0,	0.0,	0.0,	0.0};
-	//float kI[POD_NUM] = {0.001,	0.001,	0.001,	0.001};
-	//float kD[POD_NUM] = {130.0,	130.0,	130.0,	130.0};
-	float error_prev_pod[POD_NUM] = {0,0,0,0}; // Easier than using the `error_accumulated` array, and prevents the case where that array is size <=1.
-	float error_rate_pod[POD_NUM] = {0,0,0,0};
-
-	// Variables to adjust alignment & damping of wheel pods.
-	Aligned netAlignment = ALIGNED_FAR;
-	const int align_far_limit = 40; // degrees.
-	const int align_medium_limit = 5; // degrees.
-	const int align_medium_range = align_far_limit-align_medium_limit; // degrees.
-	float align_adjust = 0.0; // temporary variable.
-
-	// Misc. variables for pod PID.
-	const int turnLimit = 3; // On each side. To prevent the wires from getting too twisted.
-	int pod_pos_prev[POD_NUM] = {0,0,0,0};
-
 	// Variables for lift PID calculations.
 	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
 	float kP_lift_down	= 0.065;
@@ -608,23 +572,6 @@ task PID()
 	float error_rate_lift = 0.0;
 	float term_P_lift = 0.0;
 	float term_D_lift = 0.0;
-
-	TFileHandle IO_handle;
-	TFileIOResult IO_result;
-	const string filename_pods = "_reset_pods.txt";
-	int file_size = 0;
-
-	// If we can't find the file, we go to the backup file.
-	Task_HogCPU();
-	OpenRead(IO_handle, IO_result, filename_pods, file_size);
-	if (IO_result==ioRsltSuccess) {
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			ReadShort(IO_handle, IO_result, pod_pos_prev[i]);
-		}
-	}
-	Delete(filename_pods, IO_result);
-	Close(IO_handle, IO_result);
-	Task_ReleaseCPU();
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
@@ -642,12 +589,10 @@ task PID()
 			encoder_pod[i] = Motor_GetEncoder(Motor_Convert((WheelPod)i));
 			pod_raw[i] = encoder_pod[i]/(-2.0); // Encoders are geared up by 2 (and "backwards").
 			pod_raw[i] = Math_Normalize(pod_raw[i], 1440.0, 360.0); // Encoders are 1440 CPR.
-			pod_raw[i] += pod_pos_prev[i];
 			pod_current[i] = (float)(round(pod_raw[i])%360); // Value is now between -360 ~ 360.
 			pod_current[i] += 360; // Value is now >= 0 (between 0 ~ 720).
 			pod_current[i] = (float)(round(pod_current[i])%360); // Value is now between 0 ~ 360.
 
-			error_prev_pod[i] = error_pod[i];
 			error_pod[i] = g_ServoData[i].angle-pod_current[i];
 
 			// TODO: Simplify the below to something having to do with modulo 180.
@@ -673,37 +618,8 @@ task PID()
 				g_MotorData[i].isReversed = false;
 			}
 
-			// Make sure we don't hit the maximum turning limit:
-			if (error_pod[i]+pod_raw[i]>turnLimit*360) {
-				// TODO: Add even more limits so if the pods get off >90deg, bad things don't happen.
-				error_pod[i] = error_pod[i]-180;
-				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
-			} else if (error_pod[i]+pod_raw[i]<turnLimit*(-360)) {
-				// TODO: Add even more limits so if the pods get off >90deg, bad things don't happen.
-				error_pod[i] = error_pod[i]+180;
-				g_MotorData[i].isReversed = (!g_MotorData[i].isReversed);
-			}
-
 			// TODO: Encoders might have a tiny deadband (depends on backlash).
 			Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
-
-			// Calculate various aspects of the errors, for the I- and D- terms.
-			// TODO: Optimize I-term calculation.
-			for (int j=0; j<kI_delay-1; j++) { // We can't assign kI_delay-1 yet as an index (doesn't exist).
-				error_sum_pod[i][j] = error_sum_pod[i][j+1];
-			}
-			error_sum_pod[i][kI_delay-1] = error_pod[i]*t_delta; // `-1` because array indices.
-			error_sum_total_pod[i] = 0;
-			for (int j=0; j<kI_delay; j++) {
-				error_sum_total_pod[i] += error_sum_pod[i][j];
-			}
-			error_rate_pod[i] = (error_pod[i]-error_prev_pod[i])/t_delta;
-
-			// Calculate total PID correction values.
-			term_P_pod[i] = kP[i]*error_pod[i];
-			term_I_pod[i] = kI[i]*error_sum_total_pod[i];
-			term_D_pod[i] = kD[i]*error_rate_pod[i];
-			correction_pod[i] = Math_Limit((term_P_pod[i]+term_I_pod[i]+term_D_pod[i]), 128); // Because servos, not motors.
 
 			// Classify alignment of each wheel pod.
 			if (abs(error_pod[i])>align_far_limit) {

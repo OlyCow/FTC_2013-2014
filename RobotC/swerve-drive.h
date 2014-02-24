@@ -153,7 +153,7 @@ WheelPod	Servo_Convert(TServoIndex servoName) {
 
 void initializeRobotVariables()
 {
-	Motor_ResetEncoder(motor_lift_A); // TODO:  Usage of `motor_lift_A` is not final.
+	Motor_ResetEncoder(motor_lift_front); // TODO:  Usage of `motor_lift_A` is not final.
 
 	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[POD_FR].angleOffset = 45;
@@ -187,8 +187,8 @@ void resetMotorsServos()
 	Motor_SetPower(0, motor_FL);
 	Motor_SetPower(0, motor_BL);
 	Motor_SetPower(0, motor_BR);
-	Motor_SetPower(0, motor_lift_A);
-	Motor_SetPower(0, motor_lift_B);
+	Motor_SetPower(0, motor_lift_front);
+	Motor_SetPower(0, motor_lift_back);
 	Motor_SetPower(0, motor_sweeper);
 	Motor_SetPower(0, motor_flag);
 	Motor_SetPower(0, motor_assist_L);

@@ -1,46 +1,54 @@
-#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
-#pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
-#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
-#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
+#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTServo)
+#pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
-#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
-#pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C1_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C1_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C1_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_3,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_5,    servo_flag,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_6,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
+#pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
+#pragma config(Motor,  motorA,          motor_assist_R, tmotorNXT, PIDControl, encoder)
+#pragma config(Motor,  motorB,          motor_assist_L, tmotorNXT, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_lift_front, tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_3,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_4,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_2,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_5,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_6,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_1,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo17,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo18,              tServoNone)
 
 #include "includes.h"
 #include "swerve-drive.h"
 
-#define WILL_EXPLODE // Uncomment this line to prevent development code from compiling.
+//#define WILL_EXPLODE // Uncomment this line to prevent development code from compiling.
 #ifdef WILL_EXPLODE
 #warn "This code will explode!"
 #endif
 
-task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-task CommLink(); // Reads/writes to the prototype board as tightly as possible.
-task Display(); // A separate task for updating the NXT's LCD display.
+task PID(); // Sets winch servos' position, wheel pod motors' power, and lift motor's power. Others set in main.
+task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
+task Display(); // Updates the NXT's LCD display with useful info.
 task TimedOperations(); // Anything depending on match time (release climbing, etc.).
-task SaveData(); // Saves wheel pod position-DEPRECATED
-task Autonomous(); // Ooooh.
 
 //---------------- README!!! ------------------------------------------------>>
 //     As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
@@ -68,36 +76,36 @@ task Autonomous(); // Ooooh.
 //				Controller_1, Button_LT*:	Cut motor power (adjust pods).
 //				Controller_1, Button_RT*:	Fine-tune motors.
 //				Controller_1, Button_LB:	Dump 4 cubes.
-//				Controller_1, Button_RB:	Dump 2 cubes.
-//				Controller_1, Button_A:		Toggle sweeper.
+//				Controller_1, Button_RB:	Dump 1 cube.
+//				Controller_1, Button_A:		Toggle sweeper state.
 //				Controller_1, Button_B:		Reset gyro (eventually flag).
 //				Controller_1, Button_X:		Flag (eventually climb down).
 //				Controller_1, Button_Y:		Climb (eventually climb up).
 //				Controller_1, Direction_F:	Raise lift.
 //				Controller_1, Direction_B:	Lower lift.
-//				Controller_1, Direction_L:	Stop lift (stops Driver 2).
-//				Controller_1, Direction_R:	Stop lift (stops Driver 2).
-//				Controller_1, Button_Start:	Start auton (&&).
-//				Controller_1, Button_Back:	End auton (||).
+//				Controller_1, Direction_L:	Flag CCW fine-tune.
+//				Controller_1, Direction_R:	Flag CW fine-tune.
+//				Controller_1, Button_Start:	Toggle auton mode.
+//				Controller_1, Button_Back:	[UNUSED]
 //
 //				Controller_2, Joystick_L:	Lift height.
 //				Controller_2, Joystick_R:	Climbing.
 //				Controller_2, Button_LB:	Dump 4 cubes.
-//				Controller_2, Button_RB:	Dump 2 cubes.
-//				Controller_2, Button_LT:	[UNUSED]
-//				Controller_2, Button_RT:	[UNUSED]
-//				Controller_2, Button_A:		Save pod reset data.
-//				Controller_2, Button_B:		Reset lift (w/ Button_JL).
-//				Controller_2, Button_Joy_L:	Reset lift (w/ Button_B).
+//				Controller_2, Button_RB:	Dump 1 cube.
+//				Controller_2, Button_LT:	Release climbing.
+//				Controller_2, Button_RT:	Release climbing.
+//				Controller_2, Button_A:		Dump auton cube.
+//				Controller_2, Button_B:		Lift modifier key.
+//				Controller_2, Button_Joy_L:	[UNUSED]
 //				Controller_2, Button_Joy_R:	[UNUSED]
-//				Controller_2, Button_X:		Adds 3 flag waves.
-//				Controller_2, Button_Y:		Morse code signaling.
+//				Controller_2, Button_X:		[UNUSED]
+//				Controller_2, Button_Y:		Turns sweeper off.
 //				Controller_2, Direction_L:	Flag CCW.
 //				Controller_2, Direction_R:	Flag CW.
-//				Controller_2, Direction_F:	Sweep outwards.
+//				Controller_2, Direction_F:	Sweep outwards/off.
 //				Controller_2, Direction_B:	Sweep inwards.
-//				Controller_2, Button_Start:	Start auton (&&).
-//				Controller_2, Button_Back:	End auton (||).
+//				Controller_2, Button_Start:	Toggle auton mode.
+//				Controller_2, Button_Back:	Emergency shutdown.
 //
 // *: Button_LT overrides Button_RT.
 //-------------------------------------------------------------------------->>

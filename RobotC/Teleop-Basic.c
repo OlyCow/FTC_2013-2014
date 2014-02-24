@@ -110,9 +110,6 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // *: Button_LT overrides Button_RT.
 //-------------------------------------------------------------------------->>
 
-// For control flow:
-bool isAutonomous = false;
-
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
@@ -355,17 +352,15 @@ task main()
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
 		// while holding both triggers stops movement? The `if... else if...` structure
 		// is also a problem, since BUTTON_LT will take precedence over BUTTON_RT.
-		if (Joystick_ButtonReleased(BUTTON_RT)==true) {
-			isFineTuning = !isFineTuning;
+		if (Joystick_Button(BUTTON_RT)==true) {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 0.25;
+			}
 		}
 		if (Joystick_Button(BUTTON_LT)==true) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
 			}
-		//} else if (isFineTuning==true) {
-		//	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		//		g_MotorData[i].fineTuneFactor = 0.25; // MAGIC_NUM.
-		//	}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
 				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
@@ -388,75 +383,84 @@ task main()
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.2; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-			//Nesting these is more efficient.
+			// Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
-					lift_target = lift_pos_dump;
+					lift_target = lift_pos_top;
+					sweepMode = SWEEP_EJECT;
+					Time_ClearTimer(timer_eject);
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
-				}
-				if (Joystick_ButtonReleased(BUTTON_JOYR, CONTROLLER_2)==true) {
-					Motor_ResetEncoder(motor_lift);
-					Motor_SetPower(motor_lift, 0); // TODO: This safety should be improved.
+					sweepMode = SWEEP_IN;
 				}
 			}
+			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
+				isResettingLift = true;
+				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
+			} else {
+				isResettingLift = false; // This is important! Or it never stops resetting.
+				// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+				lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1;
+			}
 		}
+		// Setting the lift too high or too low is handled in the PID loop.
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
-		// Setting the lift too high or too low is handled in the PID loop.
 
-		// On conflicting input, 2 cubes are dumped instead of 4.
+		// If both buttons are pressed, 1 cube is dumped instead of 4.
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
 			dumpCubes(1); // MAGIC_NUM.
 		}
 
-		// TODO: Make sure driver 1 does indeed override driver 2.
+		// TODO: Make sure driver 1 does indeed override driver 2. Not very urgent.
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
 			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
-				sweepDirection = SWEEP_OUT;
+				sweepMode = SWEEP_EJECT;
+				Time_ClearTimer(timer_eject);
 			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
-				sweepDirection = SWEEP_IN;
+				sweepMode = SWEEP_IN;
 			} // No "else" here so that Button_B can do other stuff.
 		}
 		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
-			sweepDirection = SWEEP_OFF;
+			sweepMode = SWEEP_OFF;
 		}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
-			switch (sweepDirection) {
+			switch (sweepMode) {
 				case SWEEP_IN :
-					// TODO: Make this a task?
-					sweepDirection = SWEEP_OFF;
-					Motor_SetPower(-g_FullPower, motor_sweeper); // <- TODO: kludge, make better!
-					Motor_SetPower(-g_FullPower, motor_assist_L);
-					Motor_SetPower(-g_FullPower, motor_assist_R);
-					Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-					Servo_SetPosition(servo_flip_R, servo_flip_R_up);
-					Time_Wait(eject_delay);
-					Motor_SetPower(0, motor_sweeper);
-					Motor_SetPower(0, motor_assist_L);
-					Motor_SetPower(0, motor_assist_R);
+					sweepMode = SWEEP_EJECT;
+					Time_ClearTimer(timer_eject);
 					break;
-				case SWEEP_OUT :
-					sweepDirection = SWEEP_OFF;
+				case SWEEP_EJECT :
+				case SWEEP_SUSPENDED :
+					// Intentional fall-through.
+					sweepMode = SWEEP_OFF;
 					break;
 				case SWEEP_OFF :
-					sweepDirection = SWEEP_IN;
+					sweepMode = SWEEP_IN;
 					break;
+			}
+		}
+		if ((sweepMode==SWEEP_EJECT)&&(Time_GetTime(timer_eject)>eject_delay)) {
+			sweepMode = SWEEP_OFF;
+		}
+		if (lift_pos>lift_sweeper_guard) {
+			if (sweepMode == SWEEP_IN) {
+				sweepMode = SWEEP_SUSPENDED;
+				// In all other cases the sweeping mode shouldn't change.
+			}
+		} else {
+			if (sweepMode==SWEEP_SUSPENDED) {
+				sweepMode = SWEEP_IN;
 			}
 		}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
 
-		// TODO: All of the flag/climbing implementation depends on how Ian makes
-		// the flag-raising and climbing work.
-		if (Joystick_Button(BUTTON_B)==true) {
-			//power_flag = g_FullPower; // TODO: When we get comms working, uncomment this.
-		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
+		if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
 			power_flag = -g_FullPower;
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
 			power_flag = g_FullPower;
@@ -465,24 +469,27 @@ task main()
 		}
 
 		// TODO: Make climbing work. When we get comms working, fix the controls.
-		// Maybe even make the following two "if" statements into "if... else if".
+		// As usual, driver 1's controls take precedence over driver 2.
 		if (Joystick_Button(BUTTON_X)==true) {
-			power_flag = g_FullPower; // TODO: get rid of this when we get comms working.
-			// Climb "down" instead.
+			// TODO: Climb "down" instead.
+			power_flag = g_FullPower;
+		} else if (Joystick_Direction(DIRECTION_L)==true) {
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Direction(DIRECTION_R)==true) {
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
 		} else {
 			power_flag = 0;
 		}
 		if (Joystick_Button(BUTTON_Y)==true) {
-			power_climb = g_FullPower;
-			// Climb "up".
-		} else if (Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2)<=-50) {
-			power_climb = -g_FullPower;
-		} else if (Joystick_Joystick(JOYSTICK_R, AXIS_Y, CONTROLLER_2)>=50) {
-			power_climb = g_FullPower;
+			power_climb = g_FullPower; // Climb "up".
 		} else {
-			power_climb = 0;
+			// This gracefully handles the "else" condition (sets climbing power to 0.
+			power_climb = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
 		}
-		// TODO: Depending on how climbing works, control with driver 2's joystick_R.
 
 		if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
 			Servo_SetPosition(servo_climb_L, servo_climb_L_open);
@@ -492,35 +499,8 @@ task main()
 			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 		}
 
-		// Start autonomous mode when `BUTTON_START` is pressed on both controllers,
-		// but only one controller's `BUTTON_BACK` needs to be pressed to end it.
-		if ((Joystick_ButtonReleased(BUTTON_BACK))&&(Joystick_ButtonReleased(BUTTON_BACK, CONTROLLER_2))==true) {
-			isAutonomous = false;
-			Task_Kill(Autonomous);
-		} else if ((Joystick_ButtonReleased(BUTTON_START))&&(Joystick_ButtonReleased(BUTTON_START, CONTROLLER_2))==true) {
-			isAutonomous = true;
-			Task_Spawn(Autonomous);
-		}
-
-		// If the flag is already waving, add 3 more waves.
-		if (Joystick_ButtonPressed(BUTTON_X, CONTROLLER_2)==true) {
-			switch (f_isWavingFlag) {
-				case true :
-					f_waveNum += 3; // MAGIC_NUM.
-					break;
-				case false :
-					waveFlag();
-					break;
-			}
-		}
-
-		// Save the pod reset data.
-		if (Joystick_ButtonPressed(BUTTON_A, CONTROLLER_2)==true) {
-			Task_Spawn(SaveData);
-		}
-
 		// Set motor and servo values (lift motor is set in PID()):
-		switch (sweepDirection) {
+		switch (sweepMode) {
 			case SWEEP_IN :
 				Motor_SetPower(g_FullPower, motor_sweeper);
 				Motor_SetPower(g_FullPower, motor_assist_L);
@@ -528,14 +508,16 @@ task main()
 				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
 				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 				break;
-			case SWEEP_OUT :
+			case SWEEP_EJECT :
 				Motor_SetPower(-g_FullPower, motor_sweeper);
-				Motor_SetPower(0, motor_assist_L);
-				Motor_SetPower(0, motor_assist_R);
+				Motor_SetPower(-g_FullPower, motor_assist_L);
+				Motor_SetPower(-g_FullPower, motor_assist_R);
 				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
 				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 				break;
+			case SWEEP_SUSPENDED :
 			case SWEEP_OFF :
+				// Intentional fall-through.
 				Motor_SetPower(0, motor_sweeper);
 				Motor_SetPower(0, motor_assist_L);
 				Motor_SetPower(0, motor_assist_R);
@@ -546,41 +528,31 @@ task main()
 		// TODO: make the flag and climbing stuff actually work according to how
 		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag);
+		//Motor_SetPower(power_climb, motor_climb);
+
+		// While the "back" button is pressed on controller 2, go into shutdown mode.
+		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
+			isResettingLift = true;
+			power_lift = 0.0;
+		} else {
+			isResettingLift = false;
+		}
 
 		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
 		if (bDisconnected==true) {
 			int original_counter_limit = nNoMessageCounterLimit;
 			nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
-			Task_Suspend(PID);
+			Task_Suspend(PID);	// These two tasks won't get to execute anyway (CPU is hogged).
 			Task_Suspend(CommLink);
-			while (bDisconnected==true) {
+			do {
 				Task_HogCPU();
-				Motor_SetPower(0, motor_FR);
-				Motor_SetPower(0, motor_FL);
-				Motor_SetPower(0, motor_BL);
-				Motor_SetPower(0, motor_BR);
-				Motor_SetPower(0, motor_lift);
-				Motor_SetPower(0, motor_sweeper);
-				Motor_SetPower(0, motor_flag);
-				Motor_SetPower(0, motor_climb);
-				Motor_SetPower(0, motor_assist_L);
-				Motor_SetPower(0, motor_assist_R);
-				Servo_SetPower(servo_FR, 0);
-				Servo_SetPower(servo_FL, 0);
-				Servo_SetPower(servo_BL, 0);
-				Servo_SetPower(servo_BR, 0);
-				Servo_SetPosition(servo_dump, servo_dump_open);
-				Servo_SetPosition(servo_flag, servo_flag_M);
-				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
-				Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
-				Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+				resetMotorsServos();
 				if (bSoundActive==false) {
 					PlaySound(soundFastUpwardTones);
 				}
 				Task_ReleaseCPU();
 				Task_EndTimeslice();
-			}
+			} while (bDisconnected==true);
 			Task_Resume(PID);
 			Task_Resume(CommLink);
 			nNoMessageCounterLimit = original_counter_limit;

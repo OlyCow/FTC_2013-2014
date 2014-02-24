@@ -14,28 +14,28 @@
 #pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_4,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_1,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_5,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_6,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_2,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_5,    servo11,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_6,    servo12,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_4,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_5,    servo17,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_6,    servo18,              tServoNone)
+#pragma config(Servo,  srvo_S1_C3_3,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
+#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_1,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoNone)
+#pragma config(Servo,  srvo_S1_C4_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S1_C4_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_4,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo21,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo24,              tServoNone)
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -56,6 +56,6 @@ task main()
 		servo[servo_FR] = 127;
 		servo[servo_FL] = 127;
 		servo[servo_BL] = 127;
-		servo[servo_BR] = 0;
+		servo[servo_BR] = 127;
 	}
 }

@@ -113,6 +113,9 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
+bool isResettingLift = false;
+float power_flag = 0.0;
+bool isTank = false; // TODO: See if this is still necessary.
 
 // For PID:
 typedef enum Aligned {
@@ -127,9 +130,7 @@ float encoder_pod[POD_NUM] = {0,0,0,0};
 float pod_current[POD_NUM] = {0,0,0,0};
 float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
-float correction_pod[POD_NUM] = {0,0,0,0}; // Equals "term_P + term_I + term_D".
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 5200; // MAGIC_NUM. TODO: Find this value.
 Aligned isAligned[POD_NUM] = {ALIGNED_FAR, ALIGNED_FAR, ALIGNED_FAR, ALIGNED_FAR}; // If false, cut motor power so that wheel pod can get aligned.
 
 // For comms link:
@@ -185,18 +186,16 @@ bool header_read[6] = {false, false, false, false, false, false};
 ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
-// I dunno why this is even here...
-bool isTank = false;
-
 
 
 task main()
 {
-	typedef enum SweepDirection {
-		SWEEP_IN	= 0,
-		SWEEP_OUT	= 1,
-		SWEEP_OFF	= 2,
-	} SweepDirection;
+	typedef enum SweepMode {
+		SWEEP_IN		= 0,
+		SWEEP_EJECT		= 1,
+		SWEEP_SUSPENDED	= 2,
+		SWEEP_OFF		= 3,
+	} SweepMode;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
@@ -213,9 +212,9 @@ task main()
 	vector2D combined[POD_NUM]; // The averaged values: angle is pod direction, magnitude is power.
 	float rotation_temp = 0.0; // So we only fetch data from joysticks once.
 	float combined_angle_prev[POD_NUM] = {0,0,0,0}; // Prevents atan2(0,0)=0 from resetting the wheel pods to 0.
-	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pod power will be scaled down.
-	const int maxTurns = 1; // On each side. To prevent the wires from getting too twisted.
+	bool shouldNormalize = false; // Set if motor values go over 100. All wheel pods' power will be scaled down.
 
+	// Variables for heading/gyro processing.
 	float heading = 0.0; // Because f_angle_z is an int.
 	float gyro_current = 0.0; // For trapezoidal approximation.
 	float gyro_prev = 0.0; // For trapezoidal approximation.
@@ -228,13 +227,11 @@ task main()
 	float power_R = 0.0;
 
 	// Misc. variables.
-	bool isFineTuning = false;
-	SweepDirection sweepDirection = SWEEP_OFF;
-	float power_flag = 0.0;
+	SweepMode sweepMode = SWEEP_OFF;
 	float power_climb = 0.0;
-
-	// TODO: Fix the eject and delete the corresponding code & vars.
-	const int eject_delay = 1000;
+	const int eject_delay = 1200;
+	int timer_eject = 0;
+	Time_ClearTimer(timer_eject);
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_gyro);
@@ -242,16 +239,20 @@ task main()
 	while (true) {
 		Joystick_UpdateData();
 
-		//// TODO: Figure this out. Semaphores? Is it even necessary?
-		//Task_HogCPU();
-		//gyro_current = (float)HTGYROreadRot(sensor_protoboard);
-		//heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
-		heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
-		Time_ClearTimer(timer_gyro);
+		// TODO: Figure all of the below gyro stuff out.
+		gyro_current = 0;
 		gyro_prev = gyro_current;
-		f_angle_z = round(heading);
-		//// TODO: Figure this out. Semaphores? Is it even necessary?
-		//Task_ReleaseCPU();
+		heading = gyro_current;
+		////// TODO: Figure this out. Semaphores? Is it even necessary?
+		////Task_HogCPU();
+		////gyro_current = (float)HTGYROreadRot(sensor_protoboard);
+		////heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
+		//heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
+		//Time_ClearTimer(timer_gyro);
+		//gyro_prev = gyro_current;
+		//f_angle_z = round(heading);
+		////// TODO: Figure this out. Semaphores? Is it even necessary?
+		////Task_ReleaseCPU();
 
 		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
 			isTank = !isTank;
@@ -1175,39 +1176,4 @@ task TimedOperations()
 	}
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
-}
-
-
-
-task SaveData()
-{
-	TFileHandle IO_handle;
-	TFileIOResult IO_result;
-	const string filename_pods = "_reset_pods.txt";
-	int file_size = 72; // Should be 64 (4 shorts).
-	Task_HogCPU();
-	Delete(filename_pods, IO_result); // TODO: Add error handling.
-	OpenWrite(IO_handle, IO_result, filename_pods, file_size); // Size set (correctly?) earlier.
-	for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		WriteShort(IO_handle, IO_result, (short)round(pod_current[i]));
-	}
-	Close(IO_handle, IO_result);
-	Task_ReleaseCPU();
-}
-
-
-
-task Autonomous()
-{
-	isAutonomous = true;
-
-	while (true) {
-		if (isAutonomous==false) {
-			break;
-		}
-		// TODO: Do stuff. I have no idea how.
-	}
-
-	isAutonomous = false;
-	Task_Kill(Autonomous);
 }

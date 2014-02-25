@@ -577,9 +577,7 @@ task PID()
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
-		//// TODO: Make this actually work.
-		//Task_HogCPU();
-
+		Task_HogCPU();
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
@@ -667,30 +665,39 @@ task PID()
 			Servo_SetPower(Servo_Convert((WheelPod)i), -correction_pod[i]);
 		}
 
-		// Another PID loop, this time for the lift.
-		// Yes, it is a complete PID loop, despite being so much shorter. :)
-		lift_pos = Motor_GetEncoder(motor_lift);
-		error_prev_lift = error_lift;
-		if (lift_target<0) { // Because we're safe.
-			lift_target = 0;
-		} else if (lift_target>max_lift_height) {
-			lift_target = max_lift_height;
+		// A PID loop for setting the lift's power. Because the lift is so fast, we need to add safeties
+		// (slow down the lift within certain speeds) to prevent the lift from killing itself.
+		// Yes, this is a complete PID loop, despite it being so short. :)
+		// TODO: Replace this hacked together lift resetter (or not?).
+		if (isResettingLift==false) {
+			lift_pos = Motor_GetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
+			error_prev_lift = error_lift;
+			if (lift_target<0) { // Because we're safe.
+				lift_target = 0;
+			} else if (lift_target>lift_max_height) {
+				lift_target = lift_max_height;
+			}
+			error_lift = lift_target-lift_pos;
+			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+			if (error_lift>0) {
+				term_P_lift = kP_lift_up*error_lift;
+				term_D_lift = kD_lift_up*error_rate_lift;
+			} else if (error_lift<=0) {
+				term_P_lift = kP_lift_down*error_lift;
+				term_D_lift = kD_lift_down*error_rate_lift;
+			}
+			power_lift=term_P_lift+term_D_lift;
+			power_lift = Math_Limit(power_lift, g_FullPower);
+		} else {
+			lift_pos = 0;
+			Motor_ResetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
 		}
-		error_lift = lift_target-lift_pos;
-		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		if (error_lift>0) {
-			term_P_lift = kP_lift_up*error_lift;
-			term_D_lift = kD_lift_up*error_rate_lift;
-		} else if (error_lift<=0) {
-			term_P_lift = kP_lift_down*error_lift;
-			term_D_lift = kD_lift_down*error_rate_lift;
-		}
-		power_lift=term_P_lift+term_D_lift;
-		Motor_SetPower(power_lift, motor_lift);
+		//if (power_
+		Motor_SetPower(power_lift, motor_lift_front);
+		Motor_SetPower(power_lift, motor_lift_back);
 
-		//// TODO: Make this actually work.
-		//// We want to release here because the lift loop uses the same timer.
-		//Task_ReleaseCPU();
+		Task_ReleaseCPU();
+		Task_EndTimeslice(); // TODO: Is this command superfluous?
 	}
 }
 

@@ -129,6 +129,7 @@ float pod_raw[POD_NUM] = {0,0,0,0};
 float error_pod[POD_NUM] = {0,0,0,0}; // Difference between set-point and measured value.
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 Aligned isAligned[POD_NUM] = {ALIGNED_FAR, ALIGNED_FAR, ALIGNED_FAR, ALIGNED_FAR}; // If false, cut motor power so that wheel pod can get aligned.
+Aligned netAlignment = ALIGNED_FAR;
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -639,10 +640,10 @@ task PID()
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
 				case ALIGNED_MEDIUM:
-					align_adjust = align_far_limit-abs(error_pod[i]);
-					align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-					align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
-					g_MotorData[i].fineTuneFactor *= align_adjust;
+					//align_adjust = align_far_limit-abs(error_pod[i]);
+					//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+					//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+					//g_MotorData[i].fineTuneFactor *= align_adjust;
 					break;
 				case ALIGNED_CLOSE :
 					g_MotorData[i].fineTuneFactor *= 1;
@@ -661,8 +662,8 @@ task PID()
 			}
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
-			// Negative servo assignment because servo is powered by a gear.
-			Servo_SetPower(Servo_Convert((WheelPod)i), -correction_pod[i]);
+			//// Negative servo assignment because servo is powered by a gear.
+			//Servo_SetPower(Servo_Convert((WheelPod)i), -correction_pod[i]);
 		}
 
 		// A PID loop for setting the lift's power. Because the lift is so fast, we need to add safeties
@@ -692,7 +693,10 @@ task PID()
 			lift_pos = 0;
 			Motor_ResetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
 		}
-		//if (power_
+		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't kill itself.
+		if ((lift_pos>lift_buffer_top)||(lift_pos<lift_buffer_bottom)) {
+			power_lift /= 5; // MAGIC_NUM; might be too large... 4 or 3 maybe?
+		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back);
 
@@ -994,20 +998,20 @@ task Display()
 				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
 				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
 				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				//nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
+				//nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
+				//nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
+				//nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
 				break;
 			case DISP_SWERVE_PID :
-				nxtDisplayTextLine(0, "FR err%+3d P:%+4d", error_pod[POD_FR], term_P_pod[POD_FR]);
-				nxtDisplayTextLine(1, "FL err%+3d P:%+4d", error_pod[POD_FL], term_P_pod[POD_FL]);
-				nxtDisplayTextLine(2, "BL err%+3d P:%+4d", error_pod[POD_BL], term_P_pod[POD_BL]);
-				nxtDisplayTextLine(3, "BR err%+3d P:%+4d", error_pod[POD_BR], term_P_pod[POD_BR]);
-				nxtDisplayTextLine(4, " I:%+4d D:%+4d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
-				nxtDisplayTextLine(5, " I:%+4d D:%+4d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
-				nxtDisplayTextLine(6, " I:%+4d D:%+4d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
-				nxtDisplayTextLine(7, " I:%+4d D:%+4d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
+				//nxtDisplayTextLine(0, "FR err%+3d P:%+4d", error_pod[POD_FR], term_P_pod[POD_FR]);
+				//nxtDisplayTextLine(1, "FL err%+3d P:%+4d", error_pod[POD_FL], term_P_pod[POD_FL]);
+				//nxtDisplayTextLine(2, "BL err%+3d P:%+4d", error_pod[POD_BL], term_P_pod[POD_BL]);
+				//nxtDisplayTextLine(3, "BR err%+3d P:%+4d", error_pod[POD_BR], term_P_pod[POD_BR]);
+				//nxtDisplayTextLine(4, " I:%+4d D:%+4d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
+				//nxtDisplayTextLine(5, " I:%+4d D:%+4d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
+				//nxtDisplayTextLine(6, " I:%+4d D:%+4d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
+				//nxtDisplayTextLine(7, " I:%+4d D:%+4d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "FR %+5d  %d", encoder_pod[POD_FR], isAligned[POD_FR]);

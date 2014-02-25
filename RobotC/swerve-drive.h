@@ -42,11 +42,13 @@ servoData g_ServoData[POD_NUM];
 
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
-const int lift_pos_pickup = 0;
-const int lift_pos_dump = 1200;
-const int lift_pos_top = 1900;
-const int lift_max_height = 2000;
-const int lift_sweeper_guard = 300;
+const int lift_pos_pickup		= 0;
+const int lift_pos_dump			= 1200;
+const int lift_pos_top			= 1900;
+const int lift_max_height		= 2000;
+const int lift_sweeper_guard	= 300;
+const int lift_buffer_top		= 1600;
+const int lift_buffer_bottom	= 500;
 
 const int servo_climb_L_open	= 115;
 const int servo_climb_L_closed	= 240;
@@ -58,6 +60,11 @@ const int servo_flip_L_up		= 20;
 const int servo_flip_L_down		= 215;
 const int servo_flip_R_up		= 245;
 const int servo_flip_R_down		= 40;
+
+// These two are how far the wheel pod servos can be off (it's how
+// wheel pod alignment is classified).
+const int align_far_limit		= 30;
+const int align_medium_limit	= 15;
 
 // Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
 int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.

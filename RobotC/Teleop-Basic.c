@@ -2,19 +2,19 @@
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  motorB,          motor_assist_L, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_lift_front, tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  motorA,          motor_assist_R, tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  motorB,          motor_assist_L, tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back, tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_lift_front, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_3,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
 #pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
@@ -23,7 +23,7 @@
 #pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoNone)
 #pragma config(Servo,  srvo_S1_C4_5,    servo11,              tServoNone)
-#pragma config(Servo,  srvo_S1_C4_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S1_C4_6,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
@@ -568,8 +568,8 @@ task PID()
 	// Separate constants are needed for up vs. down motion of the lift because
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
-	float kP_lift_up	= 0.3;
-	float kP_lift_down	= 0.065;
+	float kP_lift_up	= 0.4;
+	float kP_lift_down	= 0.15;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -660,20 +660,20 @@ task PID()
 		// Now we can reset/clear this (and we need to for the next loop).
 		netAlignment = ALIGNED_CLOSE;
 
-		// Assign the power settings to the motors and servos.
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
-			if (g_MotorData[i].isReversed==true) {
-				g_MotorData[i].power *= -1;
-			}
-			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
-			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
+		//// Assign the power settings to the motors and servos.
+		//for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		//	g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
+		//	if (g_MotorData[i].isReversed==true) {
+		//		g_MotorData[i].power *= -1;
+		//	}
+		//	g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
+		//	Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
 
-			// A new variable is the target angle (it's different because we've optimized
-			// the position to make sure the servo doesn't ever move more than 90 degrees).
-			int final_angle = pod_current[i]+error_pod[i];
-			Servo_SetWinch(Servo_Convert((WheelPod)i), final_angle);
-		}
+		//	// A new variable is the target angle (it's different because we've optimized
+		//	// the position to make sure the servo doesn't ever move more than 90 degrees).
+		//	int final_angle = pod_current[i]+error_pod[i];
+		//	Servo_SetWinch(Servo_Convert((WheelPod)i), final_angle);
+		//}
 
 		// TODO: Replace this hacked together lift resetter (or not?).
 		// The following is a PID loop for setting the lift's power. Because the lift is so
@@ -707,7 +707,7 @@ task PID()
 		// kill itself when it hits the ends of its range (up and down).
 		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
 				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
-			power_lift /= 5; // MAGIC_NUM; might be too large... 4 or 3 maybe?
+			power_lift /= 5; // MAGIC_NUM: Not really sure what this number should be.
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.

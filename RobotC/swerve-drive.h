@@ -43,12 +43,12 @@ servoData g_ServoData[POD_NUM];
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup		= 0;
-const int lift_pos_dump			= 1200;
-const int lift_pos_top			= 1900;
-const int lift_max_height		= 2000;
-const int lift_sweeper_guard	= 300;
-const int lift_buffer_top		= 1600;
-const int lift_buffer_bottom	= 500;
+const int lift_pos_dump			= 1800;
+const int lift_pos_top			= 3200;
+const int lift_max_height		= 3300;
+const int lift_sweeper_guard	= 150;
+const int lift_buffer_top		= 2500;
+const int lift_buffer_bottom	= 800;
 
 const int servo_climb_L_open	= 115;
 const int servo_climb_L_closed	= 240;
@@ -56,10 +56,10 @@ const int servo_climb_R_open	= 255;
 const int servo_climb_R_closed	= 140;
 const int servo_dump_open		= 30;
 const int servo_dump_closed		= 0;
-const int servo_flip_L_up		= 20;
-const int servo_flip_L_down		= 215;
-const int servo_flip_R_up		= 245;
-const int servo_flip_R_down		= 40;
+const int servo_flip_L_up		= 213;
+const int servo_flip_L_down		= 31;
+const int servo_flip_R_up		= 42;
+const int servo_flip_R_down		= 224;
 
 // These two are how far the wheel pod servos can be off (it's how
 // wheel pod alignment is classified).

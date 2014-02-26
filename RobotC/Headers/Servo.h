@@ -4,6 +4,7 @@
 
 
 
+void Servo_SetWinch(TServoIndex servoName, int degrees);
 void Servo_SetPosition(TServoIndex servoName, short position);
 int  Servo_GetPosition(TServoIndex servoName);
 void Servo_SetPower(TServoIndex servoName, short power); //for continuous rotation servos

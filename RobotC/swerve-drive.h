@@ -157,7 +157,7 @@ WheelPod	Servo_Convert(TServoIndex servoName) {
 
 void initializeRobotVariables()
 {
-	Motor_ResetEncoder(motor_lift_front);
+	Motor_ResetEncoder(motor_lift_back);
 
 	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[POD_FR].angleOffset = 45;

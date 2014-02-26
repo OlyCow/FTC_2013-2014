@@ -6,6 +6,10 @@
 
 
 
+void Servo_SetWinch(TServoIndex servoName, int degrees) {
+	degrees = round(Math_Limit((float)degrees, (float)575)); // MAGIC_NUM: Leaves us about 10.2 units on either side of insta-death.
+	servo[servoName] = round((degrees+625)/1250.0*255.0);
+}
 void Servo_SetPosition(TServoIndex servoName, short position) {
 	servo[servoName] = position;
 }

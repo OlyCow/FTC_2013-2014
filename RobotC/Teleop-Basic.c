@@ -511,7 +511,9 @@ task main()
 				break;
 			case SWEEP_SUSPENDED :
 			case SWEEP_OFF :
-				// Intentional fall-through.
+				// Intentional fall-through. (The "suspended" state should behave exactly
+				// as when the sweeper is turned off; the only distinction should be that
+				// the state is "suspended" and will be turned on again automatically.)
 				Motor_SetPower(0, motor_sweeper);
 				Motor_SetPower(0, motor_assist_L);
 				Motor_SetPower(0, motor_assist_R);
@@ -519,12 +521,10 @@ task main()
 				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 				break;
 		}
-		// TODO: make the flag and climbing stuff actually work according to how
-		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag);
-		//Motor_SetPower(power_climb, motor_climb);
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
+		// TODO: Make this less of a kludge. This may even be unnecessary given the limit switch.
 		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
 			isResettingLift = true;
 			power_lift = 0.0;
@@ -563,8 +563,12 @@ task PID()
 	Time_ClearTimer(timer_loop);
 	int t_delta = Time_GetTime(timer_loop);
 
-	// Variables for lift PID calculations.
-	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
+	// TODO: PID tuning.
+	// MAGIC_NUM: Variables for lift PID calculations.
+	// Separate constants are needed for up vs. down motion of the lift because
+	// gravity significantly affects how the lift behaves (lowering the lift is
+	// almost twice as fast as raising the lift with the same amount of power).
+	float kP_lift_up	= 0.3;
 	float kP_lift_down	= 0.065;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
@@ -617,10 +621,12 @@ task PID()
 				g_MotorData[i].isReversed = false;
 			}
 
-			// TODO: Encoders might have a tiny deadband (depends on backlash).
-			Math_TrimDeadband(error_pod[i], g_EncoderDeadband); // Unnecessary?
+			// TODO: Is this trimming unnecessary?
+			// Encoders might have a tiny deadband (depends on backlash).
+			Math_TrimDeadband(error_pod[i], g_EncoderDeadband);
 
-			// Classify alignment of each wheel pod.
+			// Classify alignment of each wheel pod. The "net" alignment status is
+			// determined by the wheel pod that is the least aligned.
 			if (abs(error_pod[i])>align_far_limit) {
 				isAligned[i] = ALIGNED_FAR;
 			} else if (abs(error_pod[i])>align_medium_limit) {
@@ -639,11 +645,11 @@ task PID()
 				case ALIGNED_FAR:
 					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
 					break;
-				case ALIGNED_MEDIUM:
-					//align_adjust = align_far_limit-abs(error_pod[i]);
-					//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-					//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
-					//g_MotorData[i].fineTuneFactor *= align_adjust;
+				//case ALIGNED_MEDIUM:
+				//	align_adjust = align_far_limit-abs(error_pod[i]);
+				//	align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+				//	align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+				//	g_MotorData[i].fineTuneFactor *= align_adjust;
 					break;
 				case ALIGNED_CLOSE :
 					g_MotorData[i].fineTuneFactor *= 1;
@@ -651,7 +657,7 @@ task PID()
 				// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
 			}
 		}
-		// Now we can reset this (and we need to).
+		// Now we can reset/clear this (and we need to for the next loop).
 		netAlignment = ALIGNED_CLOSE;
 
 		// Assign the power settings to the motors and servos.
@@ -662,16 +668,21 @@ task PID()
 			}
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
-			//// Negative servo assignment because servo is powered by a gear.
-			//Servo_SetPower(Servo_Convert((WheelPod)i), -correction_pod[i]);
+
+			// A new variable is the target angle (it's different because we've optimized
+			// the position to make sure the servo doesn't ever move more than 90 degrees).
+			int final_angle = pod_current[i]+error_pod[i];
+			Servo_SetWinch(Servo_Convert((WheelPod)i), final_angle);
 		}
 
-		// A PID loop for setting the lift's power. Because the lift is so fast, we need to add safeties
-		// (slow down the lift within certain speeds) to prevent the lift from killing itself.
-		// Yes, this is a complete PID loop, despite it being so short. :)
 		// TODO: Replace this hacked together lift resetter (or not?).
-		if (isResettingLift==false) {
-			lift_pos = Motor_GetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
+		// The following is a PID loop for setting the lift's power. Because the lift is so
+		// fast, we are slowing it down intentionally to prevent the it from killing itself.
+		if (isResettingLift==true) {
+			lift_pos = 0;
+			Motor_ResetEncoder(motor_lift_back);
+		} else {
+			lift_pos = Motor_GetEncoder(motor_lift_back);
 			error_prev_lift = error_lift;
 			if (lift_target<0) { // Because we're safe.
 				lift_target = 0;
@@ -687,21 +698,22 @@ task PID()
 				term_P_lift = kP_lift_down*error_lift;
 				term_D_lift = kD_lift_down*error_rate_lift;
 			}
-			power_lift=term_P_lift+term_D_lift;
+			power_lift = term_P_lift+term_D_lift;
 			power_lift = Math_Limit(power_lift, g_FullPower);
-		} else {
-			lift_pos = 0;
-			Motor_ResetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
 		}
-		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't kill itself.
-		if ((lift_pos>lift_buffer_top)||(lift_pos<lift_buffer_bottom)) {
+
+		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
+		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
+		// kill itself when it hits the ends of its range (up and down).
+		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
+				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
 			power_lift /= 5; // MAGIC_NUM; might be too large... 4 or 3 maybe?
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
-		Motor_SetPower(power_lift, motor_lift_back);
+		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
 
 		Task_ReleaseCPU();
-		Task_EndTimeslice(); // TODO: Is this command superfluous?
+		Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)
 	}
 }
 

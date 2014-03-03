@@ -261,10 +261,10 @@ task main()
 			case true :
 				// TODO: FIX ENCODER DRIFT OR WHATEVER THIS IS ARGHHHH
 				// MAGIC_NUM: Ian says these angles make the pods skid less.
-				g_ServoData[POD_FR].angle = 100;
-				g_ServoData[POD_FL].angle = 80;
-				g_ServoData[POD_BL].angle = 80;
-				g_ServoData[POD_BR].angle = 100;
+				g_ServoData[POD_FR].angle = 90;
+				g_ServoData[POD_FL].angle = 90;
+				g_ServoData[POD_BL].angle = 90;
+				g_ServoData[POD_BR].angle = 90;
 				power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
 				power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
 				g_MotorData[POD_FR].power = power_R;
@@ -568,21 +568,22 @@ task PID()
 	// Separate constants are needed for up vs. down motion of the lift because
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
-	float kP_lift_up	= 0.4;
-	float kP_lift_down	= 0.15;
-	float kD_lift_up	= 0.0;
-	float kD_lift_down	= 0.0;
-	float error_lift = 0.0;
-	float error_prev_lift = 0.0;
-	float error_rate_lift = 0.0;
-	float term_P_lift = 0.0;
-	float term_D_lift = 0.0;
+	const float lift_guard_divisor	= 2.2;
+	const float kP_lift_up			= 0.28;
+	const float kP_lift_down		= 0.11;
+	const float kD_lift_up			= 0.0;
+	const float kD_lift_down		= 0.0;
+	float error_lift		= 0.0;
+	float error_prev_lift	= 0.0;
+	float error_rate_lift	= 0.0;
+	float term_P_lift		= 0.0;
+	float term_D_lift		= 0.0;
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
-		Task_HogCPU();
+		//Task_HogCPU();
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
@@ -639,41 +640,41 @@ task PID()
 			}
 		}
 
-		// Damp motors depending on how far the farthest wheel pod is from its target.
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			switch (netAlignment) {
-				case ALIGNED_FAR:
-					g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
-					break;
-				//case ALIGNED_MEDIUM:
-				//	align_adjust = align_far_limit-abs(error_pod[i]);
-				//	align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-				//	align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
-				//	g_MotorData[i].fineTuneFactor *= align_adjust;
-					break;
-				case ALIGNED_CLOSE :
-					g_MotorData[i].fineTuneFactor *= 1;
-					break;
-				// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
-			}
-		}
+		//// Damp motors depending on how far the farthest wheel pod is from its target.
+		//for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		//	switch (netAlignment) {
+		//		case ALIGNED_FAR:
+		//			g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
+		//			break;
+		//		//case ALIGNED_MEDIUM:
+		//		//	align_adjust = align_far_limit-abs(error_pod[i]);
+		//		//	align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+		//		//	align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+		//		//	g_MotorData[i].fineTuneFactor *= align_adjust;
+		//			break;
+		//		case ALIGNED_CLOSE :
+		//			g_MotorData[i].fineTuneFactor *= 1;
+		//			break;
+		//		// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
+		//	}
+		//}
 		// Now we can reset/clear this (and we need to for the next loop).
 		netAlignment = ALIGNED_CLOSE;
 
-		//// Assign the power settings to the motors and servos.
-		//for (int i=POD_FR; i<(int)POD_NUM; i++) {
-		//	g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
-		//	if (g_MotorData[i].isReversed==true) {
-		//		g_MotorData[i].power *= -1;
-		//	}
-		//	g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
-		//	Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
+		// Assign the power settings to the motors and servos.
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
+			if (g_MotorData[i].isReversed==true) {
+				g_MotorData[i].power *= -1;
+			}
+			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
+			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
 
-		//	// A new variable is the target angle (it's different because we've optimized
-		//	// the position to make sure the servo doesn't ever move more than 90 degrees).
-		//	int final_angle = pod_current[i]+error_pod[i];
-		//	Servo_SetWinch(Servo_Convert((WheelPod)i), final_angle);
-		//}
+			// A new variable is the target angle (it's different because we've optimized
+			// the position to make sure the servo doesn't ever move more than 90 degrees).
+			int final_angle = pod_current[i]+error_pod[i];
+			Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle); // Negated because the pod is powered by a gear.
+		}
 
 		// TODO: Replace this hacked together lift resetter (or not?).
 		// The following is a PID loop for setting the lift's power. Because the lift is so
@@ -707,13 +708,13 @@ task PID()
 		// kill itself when it hits the ends of its range (up and down).
 		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
 				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
-			power_lift /= 5; // MAGIC_NUM: Not really sure what this number should be.
+			power_lift /= lift_guard_divisor;
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
 
-		Task_ReleaseCPU();
-		Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)
+		//Task_ReleaseCPU();
+		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)
 	}
 }
 
@@ -1014,6 +1015,10 @@ task Display()
 				//nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
 				//nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
 				//nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
+				nxtDisplayTextLine(4, " pow%+4d", g_MotorData[POD_FR].power);
+				nxtDisplayTextLine(5, " pow%+4d", g_MotorData[POD_FL].power);
+				nxtDisplayTextLine(6, " pow%+4d", g_MotorData[POD_BL].power);
+				nxtDisplayTextLine(7, " pow%+4d", g_MotorData[POD_BR].power);
 				break;
 			case DISP_SWERVE_PID :
 				//nxtDisplayTextLine(0, "FR err%+3d P:%+4d", error_pod[POD_FR], term_P_pod[POD_FR]);

@@ -48,13 +48,13 @@ const int lift_pos_top			= 3200;
 const int lift_max_height		= 3300;
 const int lift_sweeper_guard	= 150;
 const int lift_buffer_top		= 2500;
-const int lift_buffer_bottom	= 800;
+const int lift_buffer_bottom	= 1200;
 
 const int servo_climb_L_open	= 115;
 const int servo_climb_L_closed	= 240;
 const int servo_climb_R_open	= 255;
 const int servo_climb_R_closed	= 140;
-const int servo_dump_open		= 30;
+const int servo_dump_open		= 28;
 const int servo_dump_closed		= 0;
 const int servo_flip_L_up		= 213;
 const int servo_flip_L_down		= 31;

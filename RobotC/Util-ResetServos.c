@@ -36,6 +36,7 @@
 #pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_6,    servo24,              tServoNone)
+
 #include "includes.h"
 #include "swerve-drive.h"
 
@@ -52,9 +53,10 @@ task main()
 	Display_Clear();
 
 	while (true) {
-		servo[servo_FR] = 127;
-		servo[servo_FL] = 127;
-		servo[servo_BL] = 127;
-		servo[servo_BR] = 127;
+		Servo_SetWinch(servo_FR, 0);
+		Servo_SetWinch(servo_FL, 0);
+		Servo_SetWinch(servo_BL, 0);
+		Servo_SetWinch(servo_BR, 0);
+		Time_Wait(100);
 	}
 }

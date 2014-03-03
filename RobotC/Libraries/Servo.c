@@ -7,8 +7,12 @@
 
 
 void Servo_SetWinch(TServoIndex servoName, int degrees) {
-	degrees = round(Math_Limit((float)degrees, (float)575)); // MAGIC_NUM: Leaves us about 10.2 units on either side of insta-death.
-	servo[servoName] = round((degrees+625)/1250.0*255.0);
+	// MAGIC_NUM and TODO: These numbers are experimentally determined (measured
+	// with paper, not even a protractor). RMSE ~= 10.237 deg; slope +/- 0.03 deg
+	degrees = Math_Limit(degrees, 1260); // MAGIC_NUM: Corresponds to about 100 bits.
+	degrees /= 11.82; // This was experimentally determined.
+	degrees = round(degrees) + 128; // Not 127!
+	servo[servoName] = degrees;
 }
 void Servo_SetPosition(TServoIndex servoName, short position) {
 	servo[servoName] = position;

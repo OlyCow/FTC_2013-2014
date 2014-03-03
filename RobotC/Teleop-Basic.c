@@ -116,6 +116,7 @@ int lift_target = 0;
 bool isResettingLift = false;
 float power_flag = 0.0;
 bool isTank = false; // TODO: See if this is still necessary.
+bool isLiftOverriden = false;
 
 // For PID:
 typedef enum Aligned {
@@ -370,12 +371,16 @@ task main()
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
 			lift_target += 160; // MAGIC_NUM
+			isLiftOverriden = true;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
 			lift_target -= 100; // MAGIC_NUM
+			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
 			lift_target += 80; // MAGIC_NUM
+			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
+			isLiftOverriden = true;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 			// Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
@@ -395,6 +400,7 @@ task main()
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
 				lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1;
+				isLiftOverriden = true;
 			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
@@ -690,6 +696,12 @@ task PID()
 			} else if (lift_target>lift_max_height) {
 				lift_target = lift_max_height;
 			}
+
+			if (isLiftOverriden==true) {
+				lift_target = lift_pos;
+				isLiftOverriden = false;
+			}
+
 			error_lift = lift_target-lift_pos;
 			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
 			if (error_lift>0) {

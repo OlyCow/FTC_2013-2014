@@ -117,6 +117,7 @@ bool isResettingLift = false;
 float power_flag = 0.0;
 bool isTank = false; // TODO: See if this is still necessary.
 bool isLiftOverriden = false;
+const int liftOverrideDifference = 800; // MAGIC_NUM: TODO: find appropriate value.
 
 // For PID:
 typedef enum Aligned {
@@ -697,7 +698,7 @@ task PID()
 				lift_target = lift_max_height;
 			}
 
-			if (isLiftOverriden==true) {
+			if (isLiftOverriden==true && abs(lift_target-lift_pos)>liftOverrideDifference) {
 				lift_target = lift_pos;
 				isLiftOverriden = false;
 			}

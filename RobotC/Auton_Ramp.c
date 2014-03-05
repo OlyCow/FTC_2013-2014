@@ -8,10 +8,10 @@
 #pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, reversed, encoder)
+#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Servo,  srvo_S1_C2_1,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C2_2,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C2_3,    servo_flip_L,         tServoStandard)
@@ -112,40 +112,38 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	const int slowly = 45;
+	const int slowly = 40;
 	const int quickly = 80;
 
-	const int T_to_ramp = 1050;
-	const int T_turn_ramp = 1500;
-	const int T_on_ramp = 900;
+	const int T_to_ramp = 1100;
+	const int T_turn_ramp = 500;
+	const int T_on_ramp = 1200;
 	const int T_dump_cubes = 2000;
-	const int T_finalize = 1600;
+	const int T_finalize = 600;
 
 	Joystick_WaitForStart();
-
-	lift_target = lift_pos_dump;
 
 	MoveForward(slowly);
 	Time_Wait(T_to_ramp);
 	Brake();
 
 	if (AUTON_L_R==true) {
-		TurnLeft(slowly);
+		TurnLeft(quickly);
 	} else {
-		TurnRight(slowly);
+		TurnRight(quickly);
 	}
 	Time_Wait(T_turn_ramp);
 	Brake();
 
-	MoveForward(quickly);
+	MoveForward(slowly);
 	Time_Wait(T_on_ramp);
 	Brake();
 
-	Servo_SetPosition(servo_auton, servo_auton_dumped);
+	Servo_SetPosition(servo_auton, servo_auton_flicked);
 	Time_Wait(T_dump_cubes);
 	Servo_SetPosition(servo_auton, servo_auton_hold);
 
-	MoveForward(slowly);
+	MoveForward(quickly);
 	Time_Wait(T_finalize);
 	Brake();
 }

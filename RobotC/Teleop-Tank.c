@@ -1,29 +1,41 @@
-#pragma config(Hubs,  S1, HTMotor,  HTServo,  HTMotor,  HTMotor)
-#pragma config(Hubs,  S2, HTServo,  HTMotor,  none,     none)
+#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTServo)
+#pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C2_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_3,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_5,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_6,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_R,        tServoStandard)
+#pragma config(Motor,  motorA,          motor_assist_R, tmotorNXT, PIDControl, encoder)
+#pragma config(Motor,  motorB,          motor_assist_L, tmotorNXT, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_lift_front, tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_3,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_4,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_2,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_5,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_6,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_1,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo11,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_6,    servo12,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo17,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo18,              tServoNone)
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -33,9 +45,9 @@
 #warn "This code will explode!"
 #endif
 
-task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-task CommLink(); // Reads/writes to the prototype board as tightly as possible.
-task Display(); // A separate task for updating the NXT's LCD display.
+task PID(); // Sets winch servos' position, wheel pod motors' power, and lift motor's power. Others set in main.
+task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
+task Display(); // Updates the NXT's LCD display with useful info.
 task TimedOperations(); // Anything depending on match time (release climbing, etc.).
 
 //---------------- README!!! ------------------------------------------------>>
@@ -101,6 +113,8 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
+bool isResettingLift = false;
+float power_flag = 0.0;
 
 // For PID:
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
@@ -182,7 +196,6 @@ task main()
 
 	// Misc. variables.
 	SweepMode sweepMode = SWEEP_OFF;
-	float power_flag = 0.0;
 	float power_climb = 0.0;
 	const int eject_delay = 1200;
 	int timer_eject = 0;
@@ -235,8 +248,7 @@ task main()
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
 			lift_target -= 50; // MAGIC_NUM
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
-			lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-			//Nesting these is more efficient.
+			// Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
 				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
 					lift_target = lift_pos_top;
@@ -246,6 +258,14 @@ task main()
 					lift_target = lift_pos_pickup;
 					sweepMode = SWEEP_IN;
 				}
+			}
+			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
+				isResettingLift = true;
+				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
+			} else {
+				isResettingLift = false; // This is important! Or it never stops resetting.
+				// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+				lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1;
 			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
@@ -297,6 +317,10 @@ task main()
 				sweepMode = SWEEP_SUSPENDED;
 				// In all other cases the sweeping mode shouldn't change.
 			}
+		} else {
+			if (sweepMode==SWEEP_SUSPENDED) {
+				sweepMode = SWEEP_IN;
+			}
 		}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_ReleaseCPU();
@@ -315,13 +339,13 @@ task main()
 			// TODO: Climb "down" instead.
 			power_flag = g_FullPower;
 		} else if (Joystick_Direction(DIRECTION_L)==true) {
-			power_flag = g_FullPower*g_FineTuneFactor;
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_R)==true) {
-			power_flag = -g_FullPower*g_FineTuneFactor;
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
-			power_flag = g_FullPower*g_FineTuneFactor;
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
-			power_flag = -g_FullPower*g_FineTuneFactor;
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
 		} else {
 			power_flag = 0;
 		}
@@ -369,11 +393,14 @@ task main()
 		// TODO: make the flag and climbing stuff actually work according to how
 		// our robot functions. This may take a while. :P
 		Motor_SetPower(power_flag, motor_flag);
-		Motor_SetPower(power_climb, motor_climb);
+		//Motor_SetPower(power_climb, motor_climb);
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
 		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
-			resetMotorsServos();
+			isResettingLift = true;
+			power_lift = 0.0;
+		} else {
+			isResettingLift = false;
 		}
 
 		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
@@ -402,6 +429,7 @@ task main()
 
 float term_P_lift = 0.0;
 float term_D_lift = 0.0;
+
 task PID()
 {
 	// Timer variables.
@@ -412,7 +440,7 @@ task PID()
 	// Variables for lift PID calculations.
 	// MAGIC_NUM: PID constants.
 	float kP_lift_up	= 0.28;
-	float kP_lift_down	= 0.06;
+	float kP_lift_down	= 0.11;
 	float kD_lift_up	= 0.0;
 	float kD_lift_down	= 0.0;
 	float error_lift = 0.0;
@@ -430,27 +458,32 @@ task PID()
 		Time_ClearTimer(timer_loop);
 
 		// Yes, this is a complete PID loop, despite it being so short. :)
-		//lift_pos = Motor_GetEncoder(motor_lift);
 		// TODO: Replace this :P
-		lift_pos = -Motor_GetEncoder(motor_FR); // TODO: ONLY BECAUSE WE'RE USING A DIFFERENT MOTOR
-		error_prev_lift = error_lift;
-		if (lift_target<0) { // Because we're safe.
-			lift_target = 0;
-		} else if (lift_target>lift_max_height) {
-			lift_target = lift_max_height;
+		if (isResettingLift==false) {
+			lift_pos = Motor_GetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
+			error_prev_lift = error_lift;
+			if (lift_target<0) { // Because we're safe.
+				lift_target = 0;
+			} else if (lift_target>lift_max_height) {
+				lift_target = lift_max_height;
+			}
+			error_lift = lift_target-lift_pos;
+			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+			if (error_lift>0) {
+				term_P_lift = kP_lift_up*error_lift;
+				term_D_lift = kD_lift_up*error_rate_lift;
+			} else if (error_lift<=0) {
+				term_P_lift = kP_lift_down*error_lift;
+				term_D_lift = kD_lift_down*error_rate_lift;
+			}
+			power_lift=term_P_lift+term_D_lift;
+			power_lift = Math_Limit(power_lift, g_FullPower);
+		} else {
+			lift_pos = 0;
+			Motor_ResetEncoder(motor_lift_front); // TODO: Usage of `motor_lift_A` is not final.
 		}
-		error_lift = lift_target-lift_pos;
-		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		if (error_lift>0) {
-			term_P_lift = kP_lift_up*error_lift;
-			term_D_lift = kD_lift_up*error_rate_lift;
-		} else if (error_lift<=0) {
-			term_P_lift = kP_lift_down*error_lift;
-			term_D_lift = kD_lift_down*error_rate_lift;
-		}
-		power_lift=term_P_lift+term_D_lift;
-		power_lift = Math_Limit(power_lift, g_FullPower);
-		Motor_SetPower(power_lift, motor_lift);
+		Motor_SetPower(power_lift, motor_lift_front);
+		Motor_SetPower(power_lift, motor_lift_back);
 
 		Task_ReleaseCPU();
 		Task_EndTimeslice(); // TODO: Is this command superfluous?
@@ -740,10 +773,11 @@ task Display()
 			case DISP_FCS :
 				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(1, "P: %f", term_P_lift);
-				nxtDisplayTextLine(2, "pwr: %f", power_lift);
-				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
-				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
+				nxtDisplayTextLine(0, "Lift P: %f", term_P_lift);
+				nxtDisplayTextLine(1, "pwr: %f", power_lift);
+				nxtDisplayTextLine(2, "encdr: %5d", lift_pos);
+				nxtDisplayTextLine(3, "Flag: %+4d", power_flag);
+				nxtDisplayTextLine(7, "Gyro: %+6d", f_angle_z);
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {

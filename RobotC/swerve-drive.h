@@ -42,24 +42,29 @@ servoData g_ServoData[POD_NUM];
 
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
-const int lift_pos_pickup = 0;
-const int lift_pos_dump = 5800;
-const int lift_pos_top = 6800;
-const int lift_max_height = 7100;
-const int lift_sweeper_guard = 300;
+const int lift_pos_pickup		= 0;
+const int lift_pos_dump			= 1800;
+const int lift_pos_top			= 3200;
+const int lift_max_height		= 3300;
+const int lift_sweeper_guard	= 150;
+const int lift_buffer_top		= 2500;
+const int lift_buffer_bottom	= 1200;
 
 const int servo_climb_L_open	= 115;
 const int servo_climb_L_closed	= 240;
 const int servo_climb_R_open	= 255;
 const int servo_climb_R_closed	= 140;
-const int servo_dump_open		= 30;
+const int servo_dump_open		= 28;
 const int servo_dump_closed		= 0;
-const int servo_auton_hold		= 220;
-const int servo_auton_dumped	= 90;
-const int servo_flip_L_up		= 10;
-const int servo_flip_L_down		= 215;
-const int servo_flip_R_up		= 245;
-const int servo_flip_R_down		= 40;
+const int servo_flip_L_up		= 213;
+const int servo_flip_L_down		= 31;
+const int servo_flip_R_up		= 42;
+const int servo_flip_R_down		= 224;
+
+// These two are how far the wheel pod servos can be off (it's how
+// wheel pod alignment is classified).
+const int align_far_limit		= 30;
+const int align_medium_limit	= 15;
 
 // Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
 int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.
@@ -152,7 +157,7 @@ WheelPod	Servo_Convert(TServoIndex servoName) {
 
 void initializeRobotVariables()
 {
-	Motor_ResetEncoder(motor_lift);
+	Motor_ResetEncoder(motor_lift_back);
 
 	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[POD_FR].angleOffset = 45;
@@ -173,10 +178,9 @@ void initializeRobotVariables()
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 }
@@ -186,10 +190,10 @@ void resetMotorsServos()
 	Motor_SetPower(0, motor_FL);
 	Motor_SetPower(0, motor_BL);
 	Motor_SetPower(0, motor_BR);
-	Motor_SetPower(0, motor_lift);
+	Motor_SetPower(0, motor_lift_front);
+	Motor_SetPower(0, motor_lift_back);
 	Motor_SetPower(0, motor_sweeper);
 	Motor_SetPower(0, motor_flag);
-	Motor_SetPower(0, motor_climb);
 	Motor_SetPower(0, motor_assist_L);
 	Motor_SetPower(0, motor_assist_R);
 	Servo_SetPower(servo_FR, 0);
@@ -201,7 +205,6 @@ void resetMotorsServos()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
 }
 
 void dumpCubes(int num)

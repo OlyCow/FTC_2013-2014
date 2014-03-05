@@ -399,9 +399,11 @@ task main()
 				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
 			} else {
 				isResettingLift = false; // This is important! Or it never stops resetting.
-				// MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-				lift_target += Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)*1.1;
-				isLiftOverriden = true;
+				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
+				if (joystick_input != 0) {
+					lift_target += joystick_input*1.3; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+					isLiftOverriden = true;
+				}
 			}
 		}
 		// Setting the lift too high or too low is handled in the PID loop.
@@ -581,10 +583,11 @@ task PID()
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;
-	float error_prev_lift	= 0.0;
-	float error_rate_lift	= 0.0;
+	float error_prev_lift	= 0.0;	// For calculating `error_rate_lift`.
+	float error_rate_lift	= 0.0;	// For the D-term of PID.
 	float term_P_lift		= 0.0;
 	float term_D_lift		= 0.0;
+	const int max_pod_turns	= 2;	// Because the 785HB servos aren't actually CR.
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
@@ -670,6 +673,17 @@ task PID()
 
 		// Assign the power settings to the motors and servos.
 		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+
+			// A new variable is the target angle (it's different because we've optimized
+			// the position to make sure the servo doesn't ever move more than 90 degrees).
+			int final_angle = pod_current[i]+error_pod[i];
+			if (abs(final_angle) > (360*max_pod_turns)) {
+				final_angle -= Math_Sign(final_angle)*180; // Should never be more than 90 deg off.
+				g_MotorData[i].isReversed = !(g_MotorData[i].isReversed);
+				// TODO: Whatever shall we do if it *does* get more than 90 deg off?
+			}
+			// Now we set the motor power to the pods, making sure that reversals are
+			// accounted for and power is limited to 100 (not really necessary).
 			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
 			if (g_MotorData[i].isReversed==true) {
 				g_MotorData[i].power *= -1;
@@ -677,10 +691,9 @@ task PID()
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
 
-			// A new variable is the target angle (it's different because we've optimized
-			// the position to make sure the servo doesn't ever move more than 90 degrees).
-			int final_angle = pod_current[i]+error_pod[i];
-			Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle); // Negated because the pod is powered by a gear.
+			// Set the servos on the pods. Angle value is negated because the pod is
+			// powered by a gear (not directly powered by the servo).
+			Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle);
 		}
 
 		// TODO: Replace this hacked together lift resetter (or not?).

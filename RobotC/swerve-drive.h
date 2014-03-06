@@ -43,17 +43,17 @@ servoData g_ServoData[POD_NUM];
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup		= 0;
-const int lift_pos_dump			= 1800;
-const int lift_pos_top			= 3200;
+const int lift_pos_dump			= 1800; // TODO
+const int lift_pos_top			= 3200;	// TODO
 const int lift_max_height		= 3300;
-const int lift_sweeper_guard	= 150;
+const int lift_sweeper_guard	= 150;	// TODO
 const int lift_buffer_top		= 2500;
 const int lift_buffer_bottom	= 1200;
 
-const int servo_climb_L_open	= 115;
-const int servo_climb_L_closed	= 240;
-const int servo_climb_R_open	= 255;
-const int servo_climb_R_closed	= 140;
+const int servo_climb_L_open	= 0;	// TODO
+const int servo_climb_L_closed	= 0;	// TODO
+const int servo_climb_R_open	= 0;	// TODO
+const int servo_climb_R_closed	= 0;	// TODO
 const int servo_dump_open		= 28;
 const int servo_dump_closed		= 0;
 const int servo_flip_L_up		= 213;
@@ -167,7 +167,7 @@ void initializeRobotVariables()
 
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
-		Servo_SetPower(Servo_Convert((WheelPod)i), 0); // prevents CR servos from freaking out during init.
+		Servo_SetWinch(Servo_Convert((WheelPod)i), 0); // This is legal because the servos aren't CR.
 
 		g_MotorData[i].isReversed = false;
 		g_MotorData[i].fineTuneFactor = 1;
@@ -205,6 +205,10 @@ void resetMotorsServos()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Servo_SetWinch(servo_FR, 0);
+	Servo_SetWinch(servo_FL, 0);
+	Servo_SetWinch(servo_BL, 0);
+	Servo_SetWinch(servo_BR, 0);
 }
 
 void dumpCubes(int num)
@@ -214,8 +218,8 @@ void dumpCubes(int num)
 }
 task dumpCubesTask()
 {
-	const int short_delay = 160; // MAGIC_NUM: TODO. (milliseconds)
-	const int long_delay = 1600; // MAGIC_NUM: TODO. (milliseconds)
+	const int short_delay = 160; // MAGIC_NUM. (milliseconds)
+	const int long_delay = 1400; // MAGIC_NUM: TODO. (milliseconds)
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	if (f_cubeDumpNum<4) {
 		Time_Wait(short_delay);

@@ -1,7 +1,7 @@
 // For communicating with the NXT (via the SuperPro board).
 #include "Comm_controller.h"
 
-int main(void)
+int main()
 {
 	setupPins();
 	_delay_ms(100);
@@ -492,14 +492,14 @@ int main(void)
 	//
 //}
 
-void setupPins(void)
+void setupPins()
 {
 	// Set up I/O port directions with the DDRx registers. 1=out, 0=in.
 	// These can be changed later in the program (and some sensors need
 	// to do this, e.g. ultrasonic sensors).
 	//----------------SCHEMATIC----------------
-	//  1-PC6: RESET			28-PC5: LED_A (SCL)
-	//  2-PD0: SCLK_NXT			27-PC4: LED_B (SDA)
+	//  1-PC6: RESET			28-PC5: LED_A
+	//  2-PD0: SCLK_NXT			27-PC4: LED_B
 	//  3-PD1: MISO_NXT			26-PC3: LIGHT_SEL_A
 	//  4-PD2: SS_SEL_A			25-PC2: LIGHT_SEL_B
 	//  5-PD3: SS_SEL_B			24-PC1: LIGHT_SEL_C
@@ -511,7 +511,7 @@ void setupPins(void)
 	// 11-PD5: MOSI_NXT_D		18-PB4: MISO_MCU
 	// 12-PD6: MOSI_NXT_C		17-PB3: MOSI_MCU
 	// 13-PD7: MOSI_NXT_B		16-PB2: SS_MCU_WRITE
-	// 14-PB0: MOSI_NXT_A		15-PB1: LIFT_RESET (cube counter)
+	// 14-PB0: MOSI_NXT_A		15-PB1: LIFT_RESET (LED alert)
 	DDRB = ((1<<PB0) |
 			(0<<PB1) |
 			(1<<PB2) |
@@ -566,11 +566,11 @@ void setupPins(void)
 			 (0<<PD7));
 }
 
-void alert(void)
+void alert()
 {
 	PORTB |= (1<<PB2);
 }
-void clear(void)
+void clear()
 {
 	PORTB &= ~(1<<PB2);
 }

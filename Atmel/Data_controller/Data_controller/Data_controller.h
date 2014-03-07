@@ -5,7 +5,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
-#include <util/twi>
+#include <util/twi.h>
 #ifndef F_CPU
 #define F_CPU 1000000UL
 #endif
@@ -17,6 +17,6 @@
 
 const unsigned int debounce_delay  = 25*1000; // 25 milliseconds.
 
-void setupPins(void);
+void setupPins();
 
 #endif // DATA_CONTROLLER_H

@@ -41,8 +41,8 @@
 
 const unsigned int debounce_delay  = 25*1000; // 25 milliseconds.
 
-void setupPins(void);
-void alert(void);
-void clear(void);
+void setupPins();
+void alert();
+void clear();
 
 #endif // COMM_CONTROLLER_H

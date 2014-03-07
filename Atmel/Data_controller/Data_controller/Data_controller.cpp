@@ -7,3 +7,8 @@ int main()
 		// TODO :P
     }
 }
+
+void setupPins()
+{
+	
+}

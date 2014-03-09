@@ -154,7 +154,7 @@ int main()
 	
 	while (true) {
 		// Update system timer.
-		// TOOD: Encapsulate these into a class!
+		// TODO: Encapsulate these into a class!
 		SYSTEM_TIME += TCNT1;
 		TCNT1 = 0;
 		

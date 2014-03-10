@@ -201,7 +201,7 @@ task main()
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	Task_Spawn(CommLink);
+	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
@@ -655,21 +655,25 @@ task PID()
 			// TODO: Remove the following line when we get around to fixing the states.
 			float align_adjust = 0.25; // Random MAGIC_NUM.
 			switch (netAlignment) {
-				case ALIGNED_FAR:
-					g_MotorData[i].fineTuneFactor = 0; // Zeroes motor power.
-					break;
-				case ALIGNED_MEDIUM:
-					//// TODO: Fix these lines up.
-					//align_adjust = align_far_limit-abs(error_pod[i]);
-					//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-					//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+				//case ALIGNED_FAR:
+				//	g_MotorData[i].fineTuneFactor = 0; // Zeroes motor power.
+				//	break;
+				//case ALIGNED_MEDIUM:
+				//	//// TODO: Fix these lines up.
+				//	//align_adjust = align_far_limit-abs(error_pod[i]);
+				//	//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+				//	//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
 
-					g_MotorData[i].fineTuneFactor *= align_adjust;
-					break;
+				//	g_MotorData[i].fineTuneFactor *= align_adjust;
+				//	break;
 				case ALIGNED_CLOSE :
 					g_MotorData[i].fineTuneFactor *= 1;
 					break;
 				// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
+
+				//default : // TODO: Get rid of this and re-enable the rest of the states.
+				//	g_MotorData[i].fineTuneFactor *= 0.5;
+				//	break;
 			}
 		}
 		// Now we can reset/clear this (and we need to for the next loop).

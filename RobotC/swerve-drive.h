@@ -183,6 +183,13 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
+
+	for (int i=0; i<5; i++) {
+		Time_Wait(1000); // Because the pods might need to move.
+	}
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
+	}
 }
 void resetMotorsServos()
 {

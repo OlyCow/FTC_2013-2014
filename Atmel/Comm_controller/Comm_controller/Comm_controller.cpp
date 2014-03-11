@@ -4,17 +4,17 @@
 int main()
 {
 	setupPins();
-	_delay_ms(100);
 	
-	// Set up our ADCs.
-	ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
-	ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
-	ADCSRA |= (1<<ADFR); // Set to free-running mode.
-	//ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
-	ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
-	ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
-	// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
-	ADMUX |= (1<<MUX0) | (1<<MUX1);
+	//// TODO: Get rid of this. Leaving this here as an example of ADC setup.
+	//// Set up our ADCs.
+	//ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
+	//ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
+	//ADCSRA |= (1<<ADFR); // Set to free-running mode.
+	////ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
+	//ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
+	//ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
+	//// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
+	//ADMUX |= (1<<MUX0) | (1<<MUX1);
 	
 	
 	// Setting up a timer for debouncing.
@@ -23,6 +23,11 @@ int main()
 	// TOOD: Encapsulate these into a class!
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
 	uint64_t SYSTEM_TIME = 0; // In microseconds.
+	
+	// Timer variables.
+	double t_prev = 0.0;
+	double t_current = 0.0;
+	double dt = t_current - t_prev;
 	
 	// Variables for I/O with the NXT (prototype board).
 	bool clock_NXT_current = false;				// TODO: I don't think this initialization matters... Does it?
@@ -90,16 +95,50 @@ int main()
 	bool is_hang_bumped = true;
 	uint8_t bumpers_bmp = 0x71;
 	
-	// Variables to process pin inputs.
-	bool cube_counter_current = false;
-	bool cube_counter_prev = false;
-	bool isDebouncing = false;
-	short timer_cube_debounce = 0;
+	//// TODO: Leaving this here as an example of debouncing.
+	//// Variables to process pin inputs.
+	//bool cube_counter_current = false;
+	//bool cube_counter_prev = false;
+	//bool isDebouncing = false;
+	//short timer_cube_debounce = 0;
 	
-	// Variables to process MPU-6050 data.
-	double t_prev = 0.0;
-	double t_current = 0.0;
-	double dt = t_current - t_prev;
+	// Initialize SPI.
+	SPCR = ((1<<SPE) |	// Enable SPI.
+			(1<<MSTR) |	// 0=slave, 1=master.
+			(0<<DORD) |	// 0=MSB transmitted first.
+			(0<<CPOL) |	// Setting both of these to 0 ="mode 0".
+			(0<<CPHA));
+	
+	// Make sure all the other MCUs are ready.
+	bool MCU_ready[8] = {false, true, true, true, true, true, true, true};
+	bool all_ready = false;
+	while (all_ready == false) {
+		// TODO: Replace the following code with a proper loop to step through with.
+		PORTD |= (1<<PD2);	// TODO: Figure out the correct combo of these.
+		PORTD |= (1<<PD3);
+		PORTD |= (1<<PD4);
+		PORTB &= ~(1<<PB2);
+		
+		uint8_t spi_W = STATUS_W_INIT;
+		uint8_t spi_R = 0;
+		
+		SPDR = spi_W;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		spi_R = SPDR;
+		if (spi_R == STATUS_R_INIT) {
+			spi_W = STATUS_W_ACK;
+		}
+		SPDR = spi_W;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		spi_R = SPDR;
+		if (spi_R == STATUS_R_ACK) {
+			MCU_ready[0] = true;
+		}
+		
+		for (short i=0; i<8; i++) {
+			all_ready = all_ready && (MCU_ready[i]);
+		}
+	}
 	
 	// TODO: config reading.
 	
@@ -238,12 +277,12 @@ int main()
 								isIOstate = IO_STATE_RESET;
 								break;
 							case NXT_CODE_ROT_RESET :
-								rot_x = 0;
-								rot_y = 0;
-								rot_z = 0;
-								// TODO: reset rotation.
-								// There's a couple other vars that will need to be
-								// reset as well once I get the gyro figured out.
+								//rot_x = 0;
+								//rot_y = 0;
+								//rot_z = 0;
+								//// TODO: reset rotation.
+								//// There's a couple other vars that will need to be
+								//// reset as well once I get the gyro figured out.
 								break;
 							case NXT_CODE_CUBE_RESET :
 								cube_num = 0;
@@ -364,32 +403,38 @@ int main()
 			}
 		}
 		
-		// Process cube counting.
-		cube_counter_current = (PINB & (1<<PB1));
-		if (cube_counter_current!=cube_counter_prev) {
-			switch (isDebouncing) {
-				case false :
-					isDebouncing = true;
-					timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
-				case true :
-					if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
-						// Under the correct conditions, increment cube count.
-						if (((~cube_counter_current)&cube_counter_prev) == true) {
-							if (cube_num<4) {
-								cube_num++; // Some really hackish error handling here :)
-							}
-						}
-						// Get ready for the next cycle.
-						timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
-						isDebouncing = false;
-						cube_counter_prev = cube_counter_current;
-					}
-					break;
-			}
-		}
+		// Get comms data.
 		
-		// Process light sensor (line-following) data.
-		pos_x_comm = ADCL + (ADCH<<8);
+		// Increment mux.
+		// Read value.
+		// Repeat above 7 more times.
+		
+		//// TODO: I'm leaving this here as an example on debouncing switches.
+		//// Process cube counting.
+		//cube_counter_current = (PINB & (1<<PB1));
+		//if (cube_counter_current!=cube_counter_prev) {
+			//switch (isDebouncing) {
+				//case false :
+					//isDebouncing = true;
+					//timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
+				//case true :
+					//if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
+						//// Under the correct conditions, increment cube count.
+						//if (((~cube_counter_current)&cube_counter_prev) == true) {
+							//if (cube_num<4) {
+								//cube_num++; // Some really hackish error handling here :)
+							//}
+						//}
+						//// Get ready for the next cycle.
+						//timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
+						//isDebouncing = false;
+						//cube_counter_prev = cube_counter_current;
+					//}
+					//break;
+			//}
+		//}		
+		//// TODO: Leaving this here as an example of hot to use the ADC(s).
+		//pos_x_comm = ADCL + (ADCH<<8);
 	}
 }
 
@@ -424,8 +469,7 @@ void setupPins()
 	DDRC = ((0<<PC0) |
 			(1<<PC1) |
 			(1<<PC2) |
-			(0<<PC3) |
-			//(1<<PC3) |
+			(1<<PC3) |
 			(1<<PC4) |
 			(1<<PC5) |
 			(0<<PC6)); // No bit 7.

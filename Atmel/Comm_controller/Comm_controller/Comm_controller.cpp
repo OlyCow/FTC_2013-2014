@@ -5,23 +5,6 @@ int main()
 {
 	setupPins();
 	_delay_ms(100);
-	//i2c_init();
-	////TWI::setup();
-	//MPU::initialize();
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
-	
-	//// TODO: Uncomment this stuff when we get the ATmega328s.
-	//// TODO: Move this interrupt registry stuff over to the
-	//// header file when they have been confirmed to work.
-	//PCMSK0 = (1<<PCINT1); 
-	//PCICR = (1<<PCIE0);
-	//
-	//// When we're ready, enable interrupts.
-	//sei();
 	
 	// Set up our ADCs.
 	ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
@@ -117,40 +100,8 @@ int main()
 	double t_prev = 0.0;
 	double t_current = 0.0;
 	double dt = t_current - t_prev;
-	double rot_x = 0.0;
-	double rot_y = 0.0;
-	double rot_z = 0.0;
-	uint16_t vel_x_raw = 0;
-	uint16_t vel_y_raw = 0;
-	uint16_t vel_z_raw = 0;
-	uint8_t vel_x_L = 0;
-	uint8_t vel_x_H = 0;
-	uint8_t vel_y_L = 0;
-	uint8_t vel_y_H = 0;
-	uint8_t vel_z_L = 0;
-	uint8_t vel_z_H = 0;
-	uint16_t vel_x_offset = 0;
-	uint16_t vel_y_offset = 0;
-	uint16_t vel_z_offset = 0;
-		
-	//// TODO: Initialization data reading (alliance, config(?), etc.).
-	//_delay_ms(100);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-	//vel_x_offset = (vel_x_H<<8) + vel_x_L;
-	//vel_y_offset = (vel_y_H<<8) + vel_y_L;
-	//vel_z_offset = (vel_z_H<<8) + vel_z_L;
 	
-	////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_x_L);
-	////if (vel_x_L == 0x68) {
-		////alert();
-	////} else {
-		////clear();
-	////}
+	// TODO: config reading.
 	
 	while (true) {
 		// Update system timer.
@@ -439,58 +390,8 @@ int main()
 		
 		// Process light sensor (line-following) data.
 		pos_x_comm = ADCL + (ADCH<<8);
-		
-		//// Process gyro data.
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, vel_x_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_y_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-		//vel_x_raw = (vel_x_H<<8) + vel_x_L;
-		//vel_y_raw = (vel_y_H<<8) + vel_y_L;
-		//vel_z_raw = (vel_z_H<<8) + vel_z_L;
-		//rot_x = vel_x_L;
-		//rot_y = vel_y_L;
-		//rot_z = vel_z_L;
-		////rot_x += ((((vel_x_raw-vel_x_offset)*500.0)/65536.0)*dt)/1000000.0;
-		////rot_y += ((((vel_y_raw-vel_y_offset)*500.0)/65536.0)*dt)/1000000.0;
-		////rot_z += ((((vel_z_raw-vel_z_offset)*500.0)/65536.0)*dt)/1000000.0;
-		////if (rot_x != 0) {
-			////int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
-			////limit_buffer = fmin(limit_buffer, 60);
-			////limit_buffer = fmax(limit_buffer, -60);
-			////rot_x_comm = limit_buffer + 63;
-		////}
-		////if (rot_y != 0) {
-			////int limit_buffer = static_cast<int>(round(fmod(rot_y, 360.0)));
-			////limit_buffer = fmin(limit_buffer, 60);
-			////limit_buffer = fmax(limit_buffer, -60);
-			////rot_y_comm = limit_buffer + 63;
-		////}
-		////if (rot_z != 0) {
-			////int limit_buffer = static_cast<int>(round(fmod(rot_z, 360.0)));
-			////limit_buffer += 360;
-			////limit_buffer = fmod(limit_buffer, 360);
-			////rot_z_comm = limit_buffer;
-		////}
-		//rot_x_comm = rot_x;
-		//rot_y_comm = rot_y;
-		//rot_z_comm = rot_z;
-		//loop_time = (loop_time+dt)/2.0;
-		//pos_x_comm = loop_time;
-		//pos_x_comm = vel_x_offset;
-		//pos_y_comm = vel_z_offset;
 	}
 }
-
-//// TODO: Enable this when we get the ATmega328s.
-//ISR(PCINT0_vect)
-//{
-	//
-//}
 
 void setupPins()
 {
@@ -564,13 +465,4 @@ void setupPins()
 			 (0<<PD5) |
 			 (0<<PD6) |
 			 (0<<PD7));
-}
-
-void alert()
-{
-	PORTB |= (1<<PB2);
-}
-void clear()
-{
-	PORTB &= ~(1<<PB2);
 }

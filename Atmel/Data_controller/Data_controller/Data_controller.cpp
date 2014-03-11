@@ -73,7 +73,17 @@ int main()
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
-	// TODO: Calibrate gyro.
+	// TODO: Make this calibration better (take an average?).
+	_delay_ms(100); // MAGIC_NUM: 
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+	vel_x_offset = (vel_x_H<<8) + vel_x_L;
+	vel_y_offset = (vel_y_H<<8) + vel_y_L;
+	vel_z_offset = (vel_z_H<<8) + vel_z_L;
 	
 	// Set up interrupts.
 	PCMSK0 |= (1<<PCINT2);

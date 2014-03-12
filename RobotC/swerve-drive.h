@@ -184,9 +184,10 @@ void initializeRobotVariables()
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 
-	for (int i=0; i<5; i++) {
-		Time_Wait(1000); // Because the pods might need to move.
-	}
+	//for (int i=0; i<5; i++) {
+	//	Time_Wait(1000); // Because the pods might need to move.
+	//}
+	// TODO: Re-enable the above when swerve drive works.
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
 	}

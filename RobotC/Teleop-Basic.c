@@ -115,7 +115,7 @@ float power_lift = 0.0;
 int lift_target = 0;
 bool isResettingLift = false;
 float power_flag = 0.0;
-bool isTank = false; // TODO: See if this is still necessary.
+bool isTank = true; // TODO: See if this is still necessary.
 bool isLiftOverriden = false;
 const int liftOverrideDifference = 800; // MAGIC_NUM: TODO: find appropriate value.
 
@@ -254,9 +254,10 @@ task main()
 		////// TODO: Figure this out. Semaphores? Is it even necessary?
 		////Task_ReleaseCPU();
 
-		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
-			isTank = !isTank;
-		}
+		//// TODO: Re-enable this once swerve drive starts working again.
+		//if (Joystick_ButtonPressed(BUTTON_Y)==true) {
+		//	isTank = !isTank;
+		//}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		switch (isTank) {
@@ -653,33 +654,33 @@ task PID()
 			}
 		}
 
-		// TODO: Fix this terrible mostrosity.
-		// Damp motors depending on how far the farthest wheel pod is from its target.
-		for (int i=POD_FR; i<(int)POD_NUM; i++) {
-			// TODO: Remove the following line when we get around to fixing the states.
-			float align_adjust = 0.8; // Random MAGIC_NUM.
-			switch (netAlignment) {
-				case ALIGNED_FAR:
-					g_MotorData[i].fineTuneFactor *= 0.5; // Zeroes motor power.
-					break;
-				case ALIGNED_MEDIUM:
-					//// TODO: Fix these lines up.
-					//align_adjust = align_far_limit-abs(error_pod[i]);
-					//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-					//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+		//// TODO: Fix this terrible mostrosity.
+		//// Damp motors depending on how far the farthest wheel pod is from its target.
+		//for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		//	// TODO: Remove the following line when we get around to fixing the states.
+		//	float align_adjust = 0.8; // Random MAGIC_NUM.
+		//	switch (netAlignment) {
+		//		case ALIGNED_FAR:
+		//			g_MotorData[i].fineTuneFactor *= 0.5; // Zeroes motor power.
+		//			break;
+		//		case ALIGNED_MEDIUM:
+		//			//// TODO: Fix these lines up.
+		//			//align_adjust = align_far_limit-abs(error_pod[i]);
+		//			//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+		//			//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
 
-					g_MotorData[i].fineTuneFactor *= align_adjust;
-					break;
-				case ALIGNED_CLOSE :
-					g_MotorData[i].fineTuneFactor *= 1;
-					break;
-				// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
+		//			g_MotorData[i].fineTuneFactor *= align_adjust;
+		//			break;
+		//		case ALIGNED_CLOSE :
+		//			g_MotorData[i].fineTuneFactor *= 1;
+		//			break;
+		//		// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
 
-				//default : // TODO: Get rid of this and re-enable the rest of the states.
-				//	g_MotorData[i].fineTuneFactor *= 0.5;
-				//	break;
-			}
-		}
+		//		//default : // TODO: Get rid of this and re-enable the rest of the states.
+		//		//	g_MotorData[i].fineTuneFactor *= 0.5;
+		//		//	break;
+		//	}
+		//}
 		// Now we can reset/clear this (and we need to for the next loop).
 		netAlignment = ALIGNED_CLOSE;
 
@@ -703,9 +704,10 @@ task PID()
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
 
-			// Set the servos on the pods. Angle value is negated because the pod is
-			// powered by a gear (not directly powered by the servo).
-			Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle);
+			//// Set the servos on the pods. Angle value is negated because the pod is
+			//// powered by a gear (not directly powered by the servo).
+			//Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle);
+			//// TODO: Re-enable the above once swerve drive works.
 		}
 
 		// TODO: Replace this hacked together lift resetter (or not?).

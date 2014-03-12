@@ -122,6 +122,3 @@ Desktop.ini
 
 # Mac
 .DS_Store
-
-# Maybe this will ignore it finally...
-*.atsuo

@@ -69,6 +69,7 @@ task Display(); // Updates the NXT's LCD display with useful info.
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
+float lift_pos = 0;
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -124,6 +125,15 @@ ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
 
+void RunPickup();
+void StopPickup();
+void MoveForward(float power);
+void MoveBackward(float power);
+void TurnLeft(float power);
+void TurnRight(float power);
+void TurnLeft(float power_L, float power_R);
+void TurnRight(float power_L, float power_R);
+void Brake();
 
 task main()
 {
@@ -135,14 +145,198 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	// Tank-mode power levels.
 	float power_L = 0.0;
 	float power_R = 0.0;
 
+	float gingerly	= 25;
+	float slowly	= 35;
+	float feelingly	= 70;
+	float quickly	= 80;
+	int forever = 100;
+
+	typedef enum Crate{
+		CRATE_OUTER_CLOSE	= 0,
+		CRATE_INNER_CLOSE	= 1,
+		CRATE_INNER_FAR		= 2,
+		CRATE_OUTER_FAR		= 3,
+		CRATE_NUM
+	};
+	Crate isCrate = CRATE_OUTER_FAR;
+	int	IR_A=0,
+		IR_B=0,
+		IR_C=0,
+		IR_D=0,
+		IR_E=0;
+	int IR_timer = 0;
+	int IR_delay[CRATE_NUM] = {1000, 1500, 2000, 2500};
+
+	// Times. (Dead reckoning.)
+	int delay_approach_block		= 1000;
+	int delay_pickup_block			= 2000;
+	int delay_avoid_crates			= 1000;
+	int delay_point_turn			= 1000;
+	int delay_crate_adjust[CRATE_NUM] = {300, 400, 200, 100};
+	int delay_align_crate_start		= 500;
+	int delay_approach_crate		= 300;
+	int delay_dump_blocks			= 1000;
+	int delay_crate_retreat			= 400;
+	int delay_realign_robot			= 600;
+	int delay_along_ramp[CRATE_NUM]	= {1200, 900, 600, 300};
+	int delay_turn_beside_ramp		= 300;
+	int delay_slant_near_ramp		= 600;
+	int delay_turn_normal_to_ramp	= 300;
+	int delay_move_normal_to_ramp	= 500;
+	int delay_turn_onto_ramp		= 800;
+	int delay_steamroll_ramp		= 1300;
+
 	Joystick_WaitForStart();
 
-	while (true) {
+	lift_target = lift_pos_pickup;
+	RunPickup();
+	MoveForward(gingerly);
+	Time_Wait(delay_approach_block);
+	Brake();
+	Time_Wait(delay_pickup_block);
+	StopPickup();
+
+	MoveBackward(slowly);
+	Time_Wait(delay_avoid_crates);
+	Brake();
+	TurnRight(feelingly, 0);
+	Time_Wait(delay_point_turn);
+	Brake();
+
+	ClearTimer(IR_timer);
+	MoveBackward(feelingly);
+	while (IR_C < g_IRthreshold) {
+		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
+		if (Time_GetTime(IR_timer) > IR_delay[CRATE_OUTER_FAR]) {
+			break;
+		}
 	}
+	lift_target = lift_pos_dump;
+	int IR_sensed = Time_GetTime(IR_timer);
+	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
+		if (IR_sensed < IR_delay[i]) {
+			isCrate = i;
+			break;
+		}
+	}
+	Time_Wait(delay_crate_adjust[isCrate]);
+	Brake();
+
+	TurnRight(feelingly);
+	Time_Wait(delay_align_crate_start);
+	Brake();
+	MoveBackward(slowly);
+	Time_Wait(delay_approach_crate);
+	Brake();
+	dumpCubes(4);
+	Time_Wait(delay_dump_blocks);
+
+	lift_target = lift_pos_pickup;
+	MoveForward(slowly);
+	Time_Wait(delay_crate_retreat);
+	Brake();
+	TurnRight(feelingly);
+	Time_Wait(delay_realign_robot);
+	Brake();
+
+	MoveForward(quickly);
+	Time_Wait(delay_along_ramp[isCrate]);
+	Brake();
+	TurnRight(feelingly);
+	Time_Wait(delay_turn_beside_ramp);
+	Brake();
+	MoveForward(slowly);
+	Time_Wait(delay_slant_near_ramp);
+	Brake();
+	TurnRight(feelingly);
+	Time_Wait(delay_turn_normal_to_ramp);
+	Brake();
+	MoveForward(slowly);
+	Time_Wait(delay_move_normal_to_ramp);
+	Brake();
+	TurnRight(feelingly);
+	Time_Wait(delay_turn_onto_ramp);
+	Brake();
+	MoveForward(g_FullPower);
+	Time_Wait(delay_steamroll_ramp);
+	Brake();
+
+	Motor_SetPower(g_FullPower, motor_flag);
+
+	// TODO: BELOW IS DEBUG ONLY! REMEBER TO DELETE IT
+	while (true) {
+		Time_Wait(forever);
+	}
+}
+
+void RunPickup()
+{
+	Motor_SetPower(g_FullPower, motor_sweeper);
+	Motor_SetPower(g_FullPower, motor_assist_L);
+	Motor_SetPower(g_FullPower, motor_assist_R);
+	Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+}
+void StopPickup()
+{
+	Motor_SetPower(0, motor_sweeper);
+	Motor_SetPower(0, motor_assist_L);
+	Motor_SetPower(0, motor_assist_R);
+	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+}
+void MoveForward(float power)
+{
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_FL);
+	Motor_SetPower(power, motor_BL);
+	Motor_SetPower(power, motor_BR);
+}
+void MoveBackward(float power)
+{
+	Motor_SetPower(-power, motor_FR);
+	Motor_SetPower(-power, motor_FL);
+	Motor_SetPower(-power, motor_BL);
+	Motor_SetPower(-power, motor_BR);
+}
+void TurnLeft(float power)
+{
+	Motor_SetPower(-power, motor_FL);
+	Motor_SetPower(-power, motor_BL);
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_BR);
+}
+void TurnRight(float power)
+{
+	Motor_SetPower(power, motor_FL);
+	Motor_SetPower(power, motor_BL);
+	Motor_SetPower(-power, motor_FR);
+	Motor_SetPower(-power, motor_BR);
+}
+void TurnLeft(float power_L, float power_R)
+{
+	Motor_SetPower(-power_L, motor_FL);
+	Motor_SetPower(-power_L, motor_BL);
+	Motor_SetPower(power_R, motor_FR);
+	Motor_SetPower(power_R, motor_BR);
+}
+void TurnRight(float power_L, float power_R)
+{
+	Motor_SetPower(power_L, motor_FL);
+	Motor_SetPower(power_L, motor_BL);
+	Motor_SetPower(-power_R, motor_FR);
+	Motor_SetPower(-power_R, motor_BR);
+}
+void Brake()
+{
+	Motor_SetPower(0, motor_FR);
+	Motor_SetPower(0, motor_FL);
+	Motor_SetPower(0, motor_BL);
+	Motor_SetPower(0, motor_BR);
+	Time_Wait(100);
 }
 
 
@@ -178,38 +372,28 @@ task PID()
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
 
-		// TODO: Replace this hacked together lift resetter (or not?).
 		// The following is a PID loop for setting the lift's power. Because the lift is so
 		// fast, we are slowing it down intentionally to prevent the it from killing itself.
-		if (isResettingLift==true) {
-			lift_pos = 0;
-			Motor_ResetEncoder(motor_lift_back);
-		} else {
-			lift_pos = Motor_GetEncoder(motor_lift_back);
-			error_prev_lift = error_lift;
-			if (lift_target<0) { // Because we're safe.
-				lift_target = 0;
-			} else if (lift_target>lift_max_height) {
-				lift_target = lift_max_height;
-			}
-
-			if (isLiftOverriden==true && abs(lift_target-lift_pos)>liftOverrideDifference) {
-				lift_target = lift_pos;
-				isLiftOverriden = false;
-			}
-
-			error_lift = lift_target-lift_pos;
-			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-			if (error_lift>0) {
-				term_P_lift = kP_lift_up*error_lift;
-				term_D_lift = kD_lift_up*error_rate_lift;
-			} else if (error_lift<=0) {
-				term_P_lift = kP_lift_down*error_lift;
-				term_D_lift = kD_lift_down*error_rate_lift;
-			}
-			power_lift = term_P_lift+term_D_lift;
-			power_lift = Math_Limit(power_lift, g_FullPower);
+		lift_pos = Motor_GetEncoder(motor_lift_back);
+		error_prev_lift = error_lift;
+		if (lift_target<0) { // Because we're safe.
+			lift_target = 0;
+		} else if (lift_target>lift_max_height) {
+			lift_target = lift_max_height;
 		}
+
+		error_lift = lift_target-lift_pos;
+		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+		if (error_lift>0) {
+			term_P_lift = kP_lift_up*error_lift;
+			term_D_lift = kD_lift_up*error_rate_lift;
+		} else if (error_lift<=0) {
+			term_P_lift = kP_lift_down*error_lift;
+			term_D_lift = kD_lift_down*error_rate_lift;
+		}
+		power_lift = term_P_lift+term_D_lift;
+		power_lift = Math_Limit(power_lift, g_FullPower);
+
 
 		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
 		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
@@ -511,20 +695,20 @@ task Display()
 				break;
 			case DISP_SWERVE_DEBUG :
 				// The value of `pod_current[i]` is (should be?) between 0~360.
-				nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
-				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
-				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
-				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
+				//nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
+				//nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
+				//nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
+				//nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
 				nxtDisplayTextLine(4, " pow%+4d", g_MotorData[POD_FR].power);
 				nxtDisplayTextLine(5, " pow%+4d", g_MotorData[POD_FL].power);
 				nxtDisplayTextLine(6, " pow%+4d", g_MotorData[POD_BL].power);
 				nxtDisplayTextLine(7, " pow%+4d", g_MotorData[POD_BR].power);
 				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(0, "FR %+5d  (%d)", encoder_pod[POD_FR], isAligned[POD_FR]);
-				nxtDisplayTextLine(1, "FL %+5d  (%d)", encoder_pod[POD_FL], isAligned[POD_FL]);
-				nxtDisplayTextLine(2, "BL %+5d  (%d)", encoder_pod[POD_BL], isAligned[POD_BL]);
-				nxtDisplayTextLine(3, "BR %+5d  (%d)", encoder_pod[POD_BR], isAligned[POD_BR]);
+				//nxtDisplayTextLine(0, "FR %+5d  (%d)", encoder_pod[POD_FR], isAligned[POD_FR]);
+				//nxtDisplayTextLine(1, "FL %+5d  (%d)", encoder_pod[POD_FL], isAligned[POD_FL]);
+				//nxtDisplayTextLine(2, "BL %+5d  (%d)", encoder_pod[POD_BL], isAligned[POD_BL]);
+				//nxtDisplayTextLine(3, "BR %+5d  (%d)", encoder_pod[POD_BR], isAligned[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;

@@ -50,10 +50,10 @@ const int lift_sweeper_guard	= 150;	// TODO
 const int lift_buffer_top		= 2500;
 const int lift_buffer_bottom	= 1200;
 
-const int servo_climb_L_open	= 0;	// TODO
+const int servo_climb_L_open	= 255;	// TODO
 const int servo_climb_L_closed	= 0;	// TODO
 const int servo_climb_R_open	= 0;	// TODO
-const int servo_climb_R_closed	= 0;	// TODO
+const int servo_climb_R_closed	= 255;	// TODO
 const int servo_dump_open		= 28;
 const int servo_dump_closed		= 0;
 const int servo_flip_L_up		= 213;

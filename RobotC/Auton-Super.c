@@ -32,10 +32,10 @@
 #pragma config(Servo,  srvo_S2_C1_6,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo21,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_6,    servo24,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_L,        tServoStandard)
 
 #include "includes.h"
 #include "swerve-drive.h"

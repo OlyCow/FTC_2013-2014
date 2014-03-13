@@ -2,16 +2,16 @@
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_R, tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  motorB,          motor_assist_L, tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_BR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back, tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  motorA,          motor_assist_R,   tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  motorB,          motor_assist_L,   tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_BR,         tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back,  tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_1,     motor_lift_front, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_2,    servo_climb_R,        tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
@@ -27,12 +27,12 @@
 #pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_4,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_5,    servo_flip_L,         tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_6,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_BL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_3,    servo21,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_climb_L,        tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_6,    servo24,              tServoNone)
@@ -115,7 +115,7 @@ float power_lift = 0.0;
 int lift_target = 0;
 bool isResettingLift = false;
 float power_flag = 0.0;
-bool isTank = false; // TODO: See if this is still necessary.
+bool isTank = true; // TODO: See if this is still necessary.
 bool isLiftOverriden = false;
 const int liftOverrideDifference = 800; // MAGIC_NUM: TODO: find appropriate value.
 
@@ -254,9 +254,10 @@ task main()
 		////// TODO: Figure this out. Semaphores? Is it even necessary?
 		////Task_ReleaseCPU();
 
-		if (Joystick_ButtonPressed(BUTTON_Y)==true) {
-			isTank = !isTank;
-		}
+		//// TODO: Re-enable this once swerve drive starts working again.
+		//if (Joystick_ButtonPressed(BUTTON_Y)==true) {
+		//	isTank = !isTank;
+		//}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		switch (isTank) {
@@ -389,14 +390,17 @@ task main()
 					lift_target = lift_pos_top;
 					sweepMode = SWEEP_EJECT;
 					Time_ClearTimer(timer_eject);
+					isLiftOverriden = false;
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 					sweepMode = SWEEP_IN;
+					isLiftOverriden = false;
 				}
 			}
 			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
 				isResettingLift = true;
 				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
+				isLiftOverriden = true;
 			} else {
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
@@ -650,22 +654,31 @@ task PID()
 			}
 		}
 
+		//// TODO: Fix this terrible mostrosity.
 		//// Damp motors depending on how far the farthest wheel pod is from its target.
 		//for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		//	// TODO: Remove the following line when we get around to fixing the states.
+		//	float align_adjust = 0.8; // Random MAGIC_NUM.
 		//	switch (netAlignment) {
 		//		case ALIGNED_FAR:
-		//			g_MotorData[i].fineTuneFactor *= 0; // Zeroes motor power.
+		//			g_MotorData[i].fineTuneFactor *= 0.5; // Zeroes motor power.
 		//			break;
-		//		//case ALIGNED_MEDIUM:
-		//		//	align_adjust = align_far_limit-abs(error_pod[i]);
-		//		//	align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
-		//		//	align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
-		//		//	g_MotorData[i].fineTuneFactor *= align_adjust;
+		//		case ALIGNED_MEDIUM:
+		//			//// TODO: Fix these lines up.
+		//			//align_adjust = align_far_limit-abs(error_pod[i]);
+		//			//align_adjust = Math_ResponseCurve(align_adjust, align_medium_range);
+		//			//align_adjust = Math_Normalize(align_adjust, align_medium_range, 1);
+
+		//			g_MotorData[i].fineTuneFactor *= align_adjust;
 		//			break;
 		//		case ALIGNED_CLOSE :
 		//			g_MotorData[i].fineTuneFactor *= 1;
 		//			break;
 		//		// TODO: Skipping the "ALIGNED_CLOSE" condition could increase performance.
+
+		//		//default : // TODO: Get rid of this and re-enable the rest of the states.
+		//		//	g_MotorData[i].fineTuneFactor *= 0.5;
+		//		//	break;
 		//	}
 		//}
 		// Now we can reset/clear this (and we need to for the next loop).
@@ -691,9 +704,10 @@ task PID()
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
 
-			// Set the servos on the pods. Angle value is negated because the pod is
-			// powered by a gear (not directly powered by the servo).
-			Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle);
+			//// Set the servos on the pods. Angle value is negated because the pod is
+			//// powered by a gear (not directly powered by the servo).
+			//Servo_SetWinch(Servo_Convert((WheelPod)i), -final_angle);
+			//// TODO: Re-enable the above once swerve drive works.
 		}
 
 		// TODO: Replace this hacked together lift resetter (or not?).
@@ -1008,7 +1022,6 @@ task Display()
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
 		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
-		DISP_SWERVE_PID,		// Error, P-term, I-term, D-term.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_COMM_DEBUG,
@@ -1037,30 +1050,16 @@ task Display()
 				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
 				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
 				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				//nxtDisplayTextLine(4, " chg%+4d pow%+4d", correction_pod[POD_FR], g_MotorData[POD_FR].power);
-				//nxtDisplayTextLine(5, " chg%+4d pow%+4d", correction_pod[POD_FL], g_MotorData[POD_FL].power);
-				//nxtDisplayTextLine(6, " chg%+4d pow%+4d", correction_pod[POD_BL], g_MotorData[POD_BL].power);
-				//nxtDisplayTextLine(7, " chg%+4d pow%+4d", correction_pod[POD_BR], g_MotorData[POD_BR].power);
 				nxtDisplayTextLine(4, " pow%+4d", g_MotorData[POD_FR].power);
 				nxtDisplayTextLine(5, " pow%+4d", g_MotorData[POD_FL].power);
 				nxtDisplayTextLine(6, " pow%+4d", g_MotorData[POD_BL].power);
 				nxtDisplayTextLine(7, " pow%+4d", g_MotorData[POD_BR].power);
 				break;
-			case DISP_SWERVE_PID :
-				//nxtDisplayTextLine(0, "FR err%+3d P:%+4d", error_pod[POD_FR], term_P_pod[POD_FR]);
-				//nxtDisplayTextLine(1, "FL err%+3d P:%+4d", error_pod[POD_FL], term_P_pod[POD_FL]);
-				//nxtDisplayTextLine(2, "BL err%+3d P:%+4d", error_pod[POD_BL], term_P_pod[POD_BL]);
-				//nxtDisplayTextLine(3, "BR err%+3d P:%+4d", error_pod[POD_BR], term_P_pod[POD_BR]);
-				//nxtDisplayTextLine(4, " I:%+4d D:%+4d", term_I_pod[POD_FR], term_D_pod[POD_FR]);
-				//nxtDisplayTextLine(5, " I:%+4d D:%+4d", term_I_pod[POD_FL], term_D_pod[POD_FL]);
-				//nxtDisplayTextLine(6, " I:%+4d D:%+4d", term_I_pod[POD_BL], term_D_pod[POD_BL]);
-				//nxtDisplayTextLine(7, " I:%+4d D:%+4d", term_I_pod[POD_BR], term_D_pod[POD_BR]);
-				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(0, "FR %+5d  %d", encoder_pod[POD_FR], isAligned[POD_FR]);
-				nxtDisplayTextLine(1, "FL %+5d  %d", encoder_pod[POD_FL], isAligned[POD_FL]);
-				nxtDisplayTextLine(2, "BL %+5d  %d", encoder_pod[POD_BL], isAligned[POD_BL]);
-				nxtDisplayTextLine(3, "BR %+5d  %d", encoder_pod[POD_BR], isAligned[POD_BR]);
+				nxtDisplayTextLine(0, "FR %+5d  (%d)", encoder_pod[POD_FR], isAligned[POD_FR]);
+				nxtDisplayTextLine(1, "FL %+5d  (%d)", encoder_pod[POD_FL], isAligned[POD_FL]);
+				nxtDisplayTextLine(2, "BL %+5d  (%d)", encoder_pod[POD_BL], isAligned[POD_BL]);
+				nxtDisplayTextLine(3, "BR %+5d  (%d)", encoder_pod[POD_BR], isAligned[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;

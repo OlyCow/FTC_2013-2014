@@ -1,46 +1,74 @@
-#pragma config(Hubs,  S1, HTMotor,  HTServo,  HTMotor,  HTMotor)
-#pragma config(Hubs,  S2, HTServo,  HTMotor,  none,     none)
+#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTServo)
+#pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  motorB,          motor_assist_R, tmotorNXT, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_flag,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_sweeper, tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_climb,   tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_BL,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FL,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S2_C2_1,     motor_BR,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S2_C2_2,     motor_FR,      tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Servo,  srvo_S1_C2_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_2,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_3,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_4,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_5,    servo_climb_L,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_6,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_3,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo12,              tServoNone)
+#pragma config(Motor,  motorA,          motor_assist_R,   tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  motorB,          motor_assist_L,   tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     motor_BR,         tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back,  tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_lift_front, tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_2,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
+#pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
+#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
+#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_1,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoNone)
+#pragma config(Servo,  srvo_S1_C4_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S1_C4_6,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_BL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_3,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_6,    servo24,              tServoNone)
 
 #include "includes.h"
 #include "swerve-drive.h"
 
-#define AUTON_L_R true /* `true` is "left"; `false` is "right" */
+//#define WILL_EXPLODE // Uncomment this line to prevent development code from compiling.
+#ifdef WILL_EXPLODE
+#warn "This code will explode!"
+#endif
 
-task PID(); // Sets CR-servos' power, wheel pod motors' power, and lift motor's power. Others set in main.
-task CommLink(); // Reads/writes to the prototype board as tightly as possible.
-task Display(); // A separate task for updating the NXT's LCD display.
+task PID(); // Sets winch servos' position, wheel pod motors' power, and lift motor's power. Others set in main.
+task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
+task Display(); // Updates the NXT's LCD display with useful info.
+
+//---------------- README!!! ------------------------------------------------>>
+//     As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
+// `BL`, and `BR` (going counterclockwise starting with `FR`).
+//
+//     The code is split into a couple tasks. I.) `main` is self-explanatory.
+// II.) The `PID` loop currently runs a very simple PID loop monitoring lift
+// position, and is hard-coded to never allow the lift to go below 0. It also
+// runs a more complex PID loop for the wheel pods' continuous rotation servos,
+// which limits them to a certain amount of turns in each direction so that the
+// motor wires don't get all twisted up. III.) `CommLink` is how data is trans-
+// ferred between the SuperPro prototype board and the AVR(s?) we have. This is
+// BLACK MAGIC, DO NOT TOUCH. In the future we will want to optimize it, and
+// possibly move it into its own library. IV.) `Display` is a cyclical display
+// that provides valuable debugging information. Press the arrow buttons to go
+// to a different screen.
+//-------------------------------------------------------------------------->>
 
 // For main task:
 float power_lift = 0.0;
 int lift_target = 0;
-
-// For PID:
-float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
-const int max_lift_height = 6400; // MAGIC_NUM. TODO: Find this value.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
@@ -97,14 +125,9 @@ ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0
 
 
 
-void Brake();
-void MoveForward(int power);
-void MoveBackward(int power);
-void TurnLeft(int power);
-void TurnRight(int power);
-
 task main()
 {
+
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
@@ -112,85 +135,18 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	const int slowly = 40;
-	const int quickly = 80;
-
-	const int T_to_ramp = 1100;
-	const int T_turn_ramp = 500;
-	const int T_on_ramp = 1200;
-	const int T_dump_cubes = 2000;
-	const int T_finalize = 600;
+	// Tank-mode power levels.
+	float power_L = 0.0;
+	float power_R = 0.0;
 
 	Joystick_WaitForStart();
 
-	MoveForward(slowly);
-	Time_Wait(T_to_ramp);
-	Brake();
-
-	if (AUTON_L_R==true) {
-		TurnLeft(quickly);
-	} else {
-		TurnRight(quickly);
+	while (true) {
 	}
-	Time_Wait(T_turn_ramp);
-	Brake();
-
-	MoveForward(slowly);
-	Time_Wait(T_on_ramp);
-	Brake();
-
-	Servo_SetPosition(servo_auton, servo_auton_flicked);
-	Time_Wait(T_dump_cubes);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
-
-	MoveForward(quickly);
-	Time_Wait(T_finalize);
-	Brake();
-}
-void Brake()
-{
-	Motor_SetPower(0, motor_FL);
-	Motor_SetPower(0, motor_BL);
-	Motor_SetPower(0, motor_FR);
-	Motor_SetPower(0, motor_BR);
-	Time_Wait(1000);
-}
-void MoveForward(int power)
-{
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
-}
-void MoveBackward(int power)
-{
-	int temp = -power;
-	Motor_SetPower(temp, motor_FL);
-	Motor_SetPower(temp, motor_BL);
-	Motor_SetPower(temp, motor_FR);
-	Motor_SetPower(temp, motor_BR);
-}
-void TurnLeft(int power)
-{
-	int temp = -power;
-	Motor_SetPower(temp, motor_FL);
-	Motor_SetPower(temp, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
-}
-void TurnRight(int power)
-{
-	int temp = -power;
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(temp, motor_FR);
-	Motor_SetPower(temp, motor_BR);
 }
 
 
 
-float term_P_lift = 0.0;
-float term_D_lift = 0.0;
 task PID()
 {
 	// Timer variables.
@@ -198,49 +154,72 @@ task PID()
 	Time_ClearTimer(timer_loop);
 	int t_delta = Time_GetTime(timer_loop);
 
-	// Variables for lift PID calculations.
-	float kP_lift_up	= 0.3; // TODO: PID tuning. MAGIC_NUM.
-	float kP_lift_down	= 0.065;
-	float kD_lift_up	= 0.0;
-	float kD_lift_down	= 0.0;
-	float error_lift = 0.0;
-	float error_prev_lift = 0.0;
-	float error_rate_lift = 0.0;
+	// TODO: PID tuning.
+	// MAGIC_NUM: Variables for lift PID calculations.
+	// Separate constants are needed for up vs. down motion of the lift because
+	// gravity significantly affects how the lift behaves (lowering the lift is
+	// almost twice as fast as raising the lift with the same amount of power).
+	const float lift_guard_divisor	= 2.2;
+	const float kP_lift_up			= 0.28;
+	const float kP_lift_down		= 0.11;
+	const float kD_lift_up			= 0.0;
+	const float kD_lift_down		= 0.0;
+	float error_lift		= 0.0;
+	float error_prev_lift	= 0.0;	// For calculating `error_rate_lift`.
+	float error_rate_lift	= 0.0;	// For the D-term of PID.
+	float term_P_lift		= 0.0;
+	float term_D_lift		= 0.0;
 
 	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
-		// TODO: Make this actually work.
-		Task_HogCPU();
-
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
 
-		// Yes, this is a complete PID loop, despite it being so short. :)
-		lift_pos = Motor_GetEncoder(motor_lift);
-		error_prev_lift = error_lift;
-		if (lift_target<0) { // Because we're safe.
-			lift_target = 0;
-		} else if (lift_target>max_lift_height) {
-			lift_target = max_lift_height;
-		}
-		error_lift = lift_target-lift_pos;
-		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		if (error_lift>0) {
-			term_P_lift = kP_lift_up*error_lift;
-			term_D_lift = kD_lift_up*error_rate_lift;
-		} else if (error_lift<=0) {
-			term_P_lift = kP_lift_down*error_lift;
-			term_D_lift = kD_lift_down*error_rate_lift;
-		}
-		power_lift=term_P_lift+term_D_lift;
-		Motor_SetPower(power_lift, motor_lift);
+		// TODO: Replace this hacked together lift resetter (or not?).
+		// The following is a PID loop for setting the lift's power. Because the lift is so
+		// fast, we are slowing it down intentionally to prevent the it from killing itself.
+		if (isResettingLift==true) {
+			lift_pos = 0;
+			Motor_ResetEncoder(motor_lift_back);
+		} else {
+			lift_pos = Motor_GetEncoder(motor_lift_back);
+			error_prev_lift = error_lift;
+			if (lift_target<0) { // Because we're safe.
+				lift_target = 0;
+			} else if (lift_target>lift_max_height) {
+				lift_target = lift_max_height;
+			}
 
-		// TODO: Make this actually work.
-		Task_ReleaseCPU();
-		Task_EndTimeslice();
+			if (isLiftOverriden==true && abs(lift_target-lift_pos)>liftOverrideDifference) {
+				lift_target = lift_pos;
+				isLiftOverriden = false;
+			}
+
+			error_lift = lift_target-lift_pos;
+			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+			if (error_lift>0) {
+				term_P_lift = kP_lift_up*error_lift;
+				term_D_lift = kD_lift_up*error_rate_lift;
+			} else if (error_lift<=0) {
+				term_P_lift = kP_lift_down*error_lift;
+				term_D_lift = kD_lift_down*error_rate_lift;
+			}
+			power_lift = term_P_lift+term_D_lift;
+			power_lift = Math_Limit(power_lift, g_FullPower);
+		}
+
+		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
+		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
+		// kill itself when it hits the ends of its range (up and down).
+		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
+				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
+			power_lift /= lift_guard_divisor;
+		}
+		Motor_SetPower(power_lift, motor_lift_front);
+		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
 	}
 }
 
@@ -507,10 +486,15 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
+		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
 		DISP_ENCODERS,			// Raw encoder values (7? 8?).
 		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_COMM_DEBUG,
 		DISP_SENSORS,			// Might need to split this into two screens.
+		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
+		//DISP_SERVOS,			// Show each servo's position.
+		//DISP_TASKS,				// Which tasks are running.
+		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM
 	};
 
@@ -525,9 +509,22 @@ task Display()
 		switch (isMode) {
 			case DISP_FCS :
 				break;
+			case DISP_SWERVE_DEBUG :
+				// The value of `pod_current[i]` is (should be?) between 0~360.
+				nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
+				nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
+				nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
+				nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
+				nxtDisplayTextLine(4, " pow%+4d", g_MotorData[POD_FR].power);
+				nxtDisplayTextLine(5, " pow%+4d", g_MotorData[POD_FL].power);
+				nxtDisplayTextLine(6, " pow%+4d", g_MotorData[POD_BL].power);
+				nxtDisplayTextLine(7, " pow%+4d", g_MotorData[POD_BR].power);
+				break;
 			case DISP_ENCODERS :
-				nxtDisplayTextLine(1, "P: %f", term_P_lift);
-				nxtDisplayTextLine(2, "pwr: %f", power_lift);
+				nxtDisplayTextLine(0, "FR %+5d  (%d)", encoder_pod[POD_FR], isAligned[POD_FR]);
+				nxtDisplayTextLine(1, "FL %+5d  (%d)", encoder_pod[POD_FL], isAligned[POD_FL]);
+				nxtDisplayTextLine(2, "BL %+5d  (%d)", encoder_pod[POD_BL], isAligned[POD_BL]);
+				nxtDisplayTextLine(3, "BR %+5d  (%d)", encoder_pod[POD_BR], isAligned[POD_BR]);
 				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
 				break;
@@ -566,6 +563,14 @@ task Display()
 				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);
 				nxtDisplayTextLine(1, "(%+5d,%+5d,%+3d)", f_pos_x, f_pos_y, f_pos_z);
 				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", f_angle_x, f_angle_y, f_angle_z);
+				break;
+			case DISP_JOYSTICKS :
+				nxtDisplayCenteredTextLine(0, "--Driver I:--");
+				nxtDisplayCenteredTextLine(1, "LX:%4d RX:%4d", joystick.joy1_x1, joystick.joy1_x2);
+				nxtDisplayCenteredTextLine(2, "LY:%4d RY:%4d", joystick.joy1_y1, joystick.joy1_y2);
+				nxtDisplayCenteredTextLine(4, "--Driver II:--");
+				nxtDisplayCenteredTextLine(5, "LX:%4d RX:%4d", joystick.joy2_x1, joystick.joy2_x2);
+				nxtDisplayCenteredTextLine(6, "LY:%4d RY:%4d", joystick.joy2_y1, joystick.joy2_y2);
 				break;
 			default :
 				nxtDisplayCenteredTextLine(3, "Doesn't work...");

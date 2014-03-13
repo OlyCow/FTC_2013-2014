@@ -29,7 +29,7 @@ typedef struct servoData {
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 
 // The threshold for IR values to count as detected.
-const int g_IRthreshold = 40; // arbitrary units from 0~1024.
+const int g_IRthreshold = 20; // arbitrary units from 0~1024.
 
 // TODO: This number is just a guess. Not verified at all.
 const int g_EncoderDeadband = 1; // degrees.
@@ -42,34 +42,29 @@ servoData g_ServoData[POD_NUM];
 
 // Various servo/encoder (motor) positions.
 // MAGIC_NUM: TODO (all).
-const int lift_pos_pickup = 0;
-const int lift_pos_dump = 5400;
-const int lift_pos_top = 5800;
-const int lift_shield_limit = 4700;
+const int lift_pos_pickup		= 0;
+const int lift_pos_dump			= 1800; // TODO
+const int lift_pos_top			= 3200;	// TODO
+const int lift_max_height		= 3300;
+const int lift_sweeper_guard	= 150;	// TODO
+const int lift_buffer_top		= 2500;
+const int lift_buffer_bottom	= 1200;
 
-const int servo_climb_L_open	= 115;
-const int servo_climb_L_closed	= 240;
-const int servo_climb_R_open	= 255;
-const int servo_climb_R_closed	= 140;
-const int servo_dump_open		= 30;
+const int servo_climb_L_open	= 0;	// TODO
+const int servo_climb_L_closed	= 0;	// TODO
+const int servo_climb_R_open	= 0;	// TODO
+const int servo_climb_R_closed	= 0;	// TODO
+const int servo_dump_open		= 28;
 const int servo_dump_closed		= 0;
-const int servo_auton_hold		= 220;
-const int servo_auton_dumped	= 90;
-const int servo_shield_up		= 0;
-const int servo_shield_down		= 55;
-const int servo_flip_L_up		= 10;
-const int servo_flip_L_down		= 215;
-const int servo_flip_R_up		= 245;
-const int servo_flip_R_down		= 40;
-const int servo_flag_L			= 0;
-const int servo_flag_R			= 255;
-const int servo_flag_M			= 128;
+const int servo_flip_L_up		= 213;
+const int servo_flip_L_down		= 31;
+const int servo_flip_R_up		= 42;
+const int servo_flip_R_down		= 224;
 
-// `waveFlagTask` uses this to decide whether to start a new instance.
-bool f_isWavingFlag = false;
-
-// Transfers the number of waves to `waveFlagTask` (can't pass to tasks).
-int f_waveNum = 3; // MAGIC_NUM: Seems suitable.
+// These two are how far the wheel pod servos can be off (it's how
+// wheel pod alignment is classified).
+const int align_far_limit		= 30;
+const int align_medium_limit	= 15;
 
 // Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
 int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.
@@ -80,11 +75,10 @@ TServoIndex Servo_Convert(WheelPod servoName); // TODO: Doesn't work.
 WheelPod	Servo_Convert(TServoIndex servoName); // TODO: Doesn't work.
 
 void initializeRobotVariables();
+void resetMotorsServos();
 
 void dumpCubes(int num=4); // MAGIC_NUM.
 task dumpCubesTask();
-void waveFlag(int waveNum=3); // MAGIC_NUM.
-task waveFlagTask();
 
 
 
@@ -163,7 +157,7 @@ WheelPod	Servo_Convert(TServoIndex servoName) {
 
 void initializeRobotVariables()
 {
-	Motor_ResetEncoder(motor_lift);
+	Motor_ResetEncoder(motor_lift_back);
 
 	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[POD_FR].angleOffset = 45;
@@ -173,7 +167,7 @@ void initializeRobotVariables()
 
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
-		Servo_SetPower(Servo_Convert((WheelPod)i), 0); // prevents CR servos from freaking out during init.
+		Servo_SetWinch(Servo_Convert((WheelPod)i), 0); // This is legal because the servos aren't CR.
 
 		g_MotorData[i].isReversed = false;
 		g_MotorData[i].fineTuneFactor = 1;
@@ -184,13 +178,45 @@ void initializeRobotVariables()
 
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
-	Servo_SetPosition(servo_shield, servo_shield_up);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
+
+	//for (int i=0; i<5; i++) {
+	//	Time_Wait(1000); // Because the pods might need to move.
+	//}
+	// TODO: Re-enable the above when swerve drive works.
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
+	}
+}
+void resetMotorsServos()
+{
+	Motor_SetPower(0, motor_FR);
+	Motor_SetPower(0, motor_FL);
+	Motor_SetPower(0, motor_BL);
+	Motor_SetPower(0, motor_BR);
+	Motor_SetPower(0, motor_lift_front);
+	Motor_SetPower(0, motor_lift_back);
+	Motor_SetPower(0, motor_sweeper);
+	Motor_SetPower(0, motor_flag);
+	Motor_SetPower(0, motor_assist_L);
+	Motor_SetPower(0, motor_assist_R);
+	Servo_SetPower(servo_FR, 0);
+	Servo_SetPower(servo_FL, 0);
+	Servo_SetPower(servo_BL, 0);
+	Servo_SetPower(servo_BR, 0);
+	Servo_SetPosition(servo_dump, servo_dump_open);
+	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Servo_SetWinch(servo_FR, 0);
+	Servo_SetWinch(servo_FL, 0);
+	Servo_SetWinch(servo_BL, 0);
+	Servo_SetWinch(servo_BR, 0);
 }
 
 void dumpCubes(int num)
@@ -200,8 +226,8 @@ void dumpCubes(int num)
 }
 task dumpCubesTask()
 {
-	const int short_delay = 160; // MAGIC_NUM: TODO. (milliseconds)
-	const int long_delay = 1600; // MAGIC_NUM: TODO. (milliseconds)
+	const int short_delay = 160; // MAGIC_NUM. (milliseconds)
+	const int long_delay = 1400; // MAGIC_NUM: TODO. (milliseconds)
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	if (f_cubeDumpNum<4) {
 		Time_Wait(short_delay);
@@ -209,30 +235,6 @@ task dumpCubesTask()
 		Time_Wait(long_delay);
 	}
 	Servo_SetPosition(servo_dump, servo_dump_closed);
-}
-void waveFlag(int waveNum)
-{
-	f_waveNum = waveNum;
-	Task_Spawn(waveFlagTask);
-}
-task waveFlagTask()
-{
-	f_isWavingFlag = true;
-
-	// MAGIC_NUM: TODO.
-	const int delay = 0;
-
-	for (int i=0; i<f_waveNum; i++) {
-		Servo_SetPosition(servo_flag, servo_flag_L);
-		Time_Wait(delay);
-		Servo_SetPosition(servo_flag, servo_flag_R);
-		Time_Wait(delay);
-	}
-	Servo_SetPosition(servo_flag, servo_flag_M);
-	Time_Wait(delay);
-
-	f_isWavingFlag = false;
-	Task_Kill(waveFlagTask);
 }
 
 

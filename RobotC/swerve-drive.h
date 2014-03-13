@@ -191,6 +191,15 @@ void initializeRobotVariables()
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
 	}
+
+	// MAGIC_NUM: 13V.
+	if (externalBatteryAvg<13000) {
+		PlaySound(soundDownwardTones);
+	}
+	// MAGIC_NUM: 8V.
+	if (nAvgBatteryLevel<8000) {
+		PlaySound(soundDownwardTones);
+	}
 }
 void resetMotorsServos()
 {

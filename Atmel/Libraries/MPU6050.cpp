@@ -45,7 +45,7 @@ void MPU::write_burst(uint8_t address, uint8_t request, uint8_t data[], int size
 	i2c_stop();
 }
 
-void MPU::initialize(void)
+void MPU::initialize()
 {
 	//setClockSource();
 	//setFullScaleGyroRange();
@@ -162,7 +162,7 @@ void MPU::setSleepEnabled(bool isEnabled)
 	// Make it so that only the necessary bits are set and stuff.
 }
 
-bool MPU::test(void)
+bool MPU::test()
 {
 	bool success = false;
 	uint8_t answer = 0;

@@ -108,7 +108,7 @@ namespace MPU
 	void write(uint8_t address, uint8_t RA, uint8_t data);
 	void write_burst(uint8_t address, uint8_t RA, uint8_t data[], int size);
 	
-	void initialize(void);
+	void initialize();
 	
 	//// SMPLRT_DIV register
 	//uint8_t getRate();
@@ -374,7 +374,7 @@ namespace MPU
 	//void getFIFOBytes(uint8_t *data, uint8_t length);
 	
 	void setSleepEnabled(bool isEnabled);
-	bool test(void);
+	bool test();
 
 	//// WHO_AM_I register
 	//bool who_am_I(void);

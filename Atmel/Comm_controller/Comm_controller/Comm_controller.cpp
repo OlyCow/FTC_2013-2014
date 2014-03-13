@@ -1,37 +1,20 @@
 // For communicating with the NXT (via the SuperPro board).
 #include "Comm_controller.h"
 
-int main(void)
+int main()
 {
 	setupPins();
-	_delay_ms(100);
-	//i2c_init();
-	////TWI::setup();
-	//MPU::initialize();
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
-	//MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	
-	//// TODO: Uncomment this stuff when we get the ATmega328s.
-	//// TODO: Move this interrupt registry stuff over to the
-	//// header file when they have been confirmed to work.
-	//PCMSK0 = (1<<PCINT1); 
-	//PCICR = (1<<PCIE0);
-	//
-	//// When we're ready, enable interrupts.
-	//sei();
-	
-	// Set up our ADCs.
-	ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
-	ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
-	ADCSRA |= (1<<ADFR); // Set to free-running mode.
-	//ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
-	ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
-	ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
-	// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
-	ADMUX |= (1<<MUX0) | (1<<MUX1);
+	//// TODO: Get rid of this. Leaving this here as an example of ADC setup.
+	//// Set up our ADCs.
+	//ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0); // Set clock prescalar as high as possible (128).
+	//ADMUX |= (1<<REFS0); // Set reference voltage to AVCC.
+	//ADCSRA |= (1<<ADFR); // Set to free-running mode.
+	////ADMUX |= (1<<ADLAR); // Left-align, I think? Makes it an 8-bit ADC, essentially. (TODO)
+	//ADCSRA |= (1<<ADEN); // Enable ADC (?). (TODO)
+	//ADCSRA |= (1<<ADSC); // Start taking measurements (?). (TODO)
+	//// TODO: Read from ADCH. Also, to change the ADC we're using: set ADMUX bits (page 255).
+	//ADMUX |= (1<<MUX0) | (1<<MUX1);
 	
 	
 	// Setting up a timer for debouncing.
@@ -40,6 +23,11 @@ int main(void)
 	// TOOD: Encapsulate these into a class!
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
 	uint64_t SYSTEM_TIME = 0; // In microseconds.
+	
+	// Timer variables.
+	double t_prev = 0.0;
+	double t_current = 0.0;
+	double dt = t_current - t_prev;
 	
 	// Variables for I/O with the NXT (prototype board).
 	bool clock_NXT_current = false;				// TODO: I don't think this initialization matters... Does it?
@@ -107,54 +95,56 @@ int main(void)
 	bool is_hang_bumped = true;
 	uint8_t bumpers_bmp = 0x71;
 	
-	// Variables to process pin inputs.
-	bool cube_counter_current = false;
-	bool cube_counter_prev = false;
-	bool isDebouncing = false;
-	short timer_cube_debounce = 0;
+	//// TODO: Leaving this here as an example of debouncing.
+	//// Variables to process pin inputs.
+	//bool cube_counter_current = false;
+	//bool cube_counter_prev = false;
+	//bool isDebouncing = false;
+	//short timer_cube_debounce = 0;
 	
-	// Variables to process MPU-6050 data.
-	double t_prev = 0.0;
-	double t_current = 0.0;
-	double dt = t_current - t_prev;
-	double rot_x = 0.0;
-	double rot_y = 0.0;
-	double rot_z = 0.0;
-	uint16_t vel_x_raw = 0;
-	uint16_t vel_y_raw = 0;
-	uint16_t vel_z_raw = 0;
-	uint8_t vel_x_L = 0;
-	uint8_t vel_x_H = 0;
-	uint8_t vel_y_L = 0;
-	uint8_t vel_y_H = 0;
-	uint8_t vel_z_L = 0;
-	uint8_t vel_z_H = 0;
-	uint16_t vel_x_offset = 0;
-	uint16_t vel_y_offset = 0;
-	uint16_t vel_z_offset = 0;
+	// Initialize SPI.
+	SPCR = ((1<<SPE) |	// Enable SPI.
+			(1<<MSTR) |	// 0=slave, 1=master.
+			(0<<DORD) |	// 0=MSB transmitted first.
+			(0<<CPOL) |	// Setting both of these to 0 ="mode 0".
+			(0<<CPHA));
+	
+	// Make sure all the other MCUs are ready.
+	bool MCU_ready[8] = {false, true, true, true, true, true, true, true};
+	bool all_ready = false;
+	while (all_ready == false) {
+		// TODO: Replace the following code with a proper loop to step through with.
+		PORTD |= (1<<PD2);	// TODO: Figure out the correct combo of these.
+		PORTD |= (1<<PD3);
+		PORTD |= (1<<PD4);
+		PORTB &= ~(1<<PB2);
 		
-	//// TODO: Initialization data reading (alliance, config(?), etc.).
-	//_delay_ms(100);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-	//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-	//vel_x_offset = (vel_x_H<<8) + vel_x_L;
-	//vel_y_offset = (vel_y_H<<8) + vel_y_L;
-	//vel_z_offset = (vel_z_H<<8) + vel_z_L;
+		uint8_t spi_W = STATUS_W_INIT;
+		uint8_t spi_R = 0;
+		
+		SPDR = spi_W;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		spi_R = SPDR;
+		if (spi_R == STATUS_R_INIT) {
+			spi_W = STATUS_W_ACK;
+		}
+		SPDR = spi_W;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		spi_R = SPDR;
+		if (spi_R == STATUS_R_ACK) {
+			MCU_ready[0] = true;
+		}
+		
+		for (short i=0; i<8; i++) {
+			all_ready = all_ready && (MCU_ready[i]);
+		}
+	}
 	
-	////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_x_L);
-	////if (vel_x_L == 0x68) {
-		////alert();
-	////} else {
-		////clear();
-	////}
+	// TODO: config reading.
 	
 	while (true) {
 		// Update system timer.
-		// TOOD: Encapsulate these into a class!
+		// TODO: Encapsulate these into a class!
 		SYSTEM_TIME += TCNT1;
 		TCNT1 = 0;
 		
@@ -287,12 +277,12 @@ int main(void)
 								isIOstate = IO_STATE_RESET;
 								break;
 							case NXT_CODE_ROT_RESET :
-								rot_x = 0;
-								rot_y = 0;
-								rot_z = 0;
-								// TODO: reset rotation.
-								// There's a couple other vars that will need to be
-								// reset as well once I get the gyro figured out.
+								//rot_x = 0;
+								//rot_y = 0;
+								//rot_z = 0;
+								//// TODO: reset rotation.
+								//// There's a couple other vars that will need to be
+								//// reset as well once I get the gyro figured out.
 								break;
 							case NXT_CODE_CUBE_RESET :
 								cube_num = 0;
@@ -413,93 +403,49 @@ int main(void)
 			}
 		}
 		
-		// Process cube counting.
-		cube_counter_current = (PINB & (1<<PB1));
-		if (cube_counter_current!=cube_counter_prev) {
-			switch (isDebouncing) {
-				case false :
-					isDebouncing = true;
-					timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
-				case true :
-					if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
-						// Under the correct conditions, increment cube count.
-						if (((~cube_counter_current)&cube_counter_prev) == true) {
-							if (cube_num<4) {
-								cube_num++; // Some really hackish error handling here :)
-							}
-						}
-						// Get ready for the next cycle.
-						timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
-						isDebouncing = false;
-						cube_counter_prev = cube_counter_current;
-					}
-					break;
-			}
-		}
+		// Get comms data.
 		
-		// Process light sensor (line-following) data.
-		pos_x_comm = ADCL + (ADCH<<8);
+		// Increment mux.
+		// Read value.
+		// Repeat above 7 more times.
 		
-		//// Process gyro data.
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, vel_x_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-		////MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, vel_y_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-		//vel_x_raw = (vel_x_H<<8) + vel_x_L;
-		//vel_y_raw = (vel_y_H<<8) + vel_y_L;
-		//vel_z_raw = (vel_z_H<<8) + vel_z_L;
-		//rot_x = vel_x_L;
-		//rot_y = vel_y_L;
-		//rot_z = vel_z_L;
-		////rot_x += ((((vel_x_raw-vel_x_offset)*500.0)/65536.0)*dt)/1000000.0;
-		////rot_y += ((((vel_y_raw-vel_y_offset)*500.0)/65536.0)*dt)/1000000.0;
-		////rot_z += ((((vel_z_raw-vel_z_offset)*500.0)/65536.0)*dt)/1000000.0;
-		////if (rot_x != 0) {
-			////int limit_buffer = static_cast<int>(round(fmod(rot_x, 360.0)));
-			////limit_buffer = fmin(limit_buffer, 60);
-			////limit_buffer = fmax(limit_buffer, -60);
-			////rot_x_comm = limit_buffer + 63;
-		////}
-		////if (rot_y != 0) {
-			////int limit_buffer = static_cast<int>(round(fmod(rot_y, 360.0)));
-			////limit_buffer = fmin(limit_buffer, 60);
-			////limit_buffer = fmax(limit_buffer, -60);
-			////rot_y_comm = limit_buffer + 63;
-		////}
-		////if (rot_z != 0) {
-			////int limit_buffer = static_cast<int>(round(fmod(rot_z, 360.0)));
-			////limit_buffer += 360;
-			////limit_buffer = fmod(limit_buffer, 360);
-			////rot_z_comm = limit_buffer;
-		////}
-		//rot_x_comm = rot_x;
-		//rot_y_comm = rot_y;
-		//rot_z_comm = rot_z;
-		//loop_time = (loop_time+dt)/2.0;
-		//pos_x_comm = loop_time;
-		//pos_x_comm = vel_x_offset;
-		//pos_y_comm = vel_z_offset;
+		//// TODO: I'm leaving this here as an example on debouncing switches.
+		//// Process cube counting.
+		//cube_counter_current = (PINB & (1<<PB1));
+		//if (cube_counter_current!=cube_counter_prev) {
+			//switch (isDebouncing) {
+				//case false :
+					//isDebouncing = true;
+					//timer_cube_debounce = SYSTEM_TIME; // Clear this timer; start counting.
+				//case true :
+					//if ((timer_cube_debounce-SYSTEM_TIME) >= debounce_delay) {
+						//// Under the correct conditions, increment cube count.
+						//if (((~cube_counter_current)&cube_counter_prev) == true) {
+							//if (cube_num<4) {
+								//cube_num++; // Some really hackish error handling here :)
+							//}
+						//}
+						//// Get ready for the next cycle.
+						//timer_cube_debounce = SYSTEM_TIME = 0; // Clear clock.
+						//isDebouncing = false;
+						//cube_counter_prev = cube_counter_current;
+					//}
+					//break;
+			//}
+		//}		
+		//// TODO: Leaving this here as an example of hot to use the ADC(s).
+		//pos_x_comm = ADCL + (ADCH<<8);
 	}
 }
 
-//// TODO: Enable this when we get the ATmega328s.
-//ISR(PCINT0_vect)
-//{
-	//
-//}
-
-void setupPins(void)
+void setupPins()
 {
 	// Set up I/O port directions with the DDRx registers. 1=out, 0=in.
 	// These can be changed later in the program (and some sensors need
 	// to do this, e.g. ultrasonic sensors).
 	//----------------SCHEMATIC----------------
-	//  1-PC6: RESET			28-PC5: LED_A (SCL)
-	//  2-PD0: SCLK_NXT			27-PC4: LED_B (SDA)
+	//  1-PC6: RESET			28-PC5: LED_A
+	//  2-PD0: SCLK_NXT			27-PC4: LED_B
 	//  3-PD1: MISO_NXT			26-PC3: LIGHT_SEL_A
 	//  4-PD2: SS_SEL_A			25-PC2: LIGHT_SEL_B
 	//  5-PD3: SS_SEL_B			24-PC1: LIGHT_SEL_C
@@ -511,7 +457,7 @@ void setupPins(void)
 	// 11-PD5: MOSI_NXT_D		18-PB4: MISO_MCU
 	// 12-PD6: MOSI_NXT_C		17-PB3: MOSI_MCU
 	// 13-PD7: MOSI_NXT_B		16-PB2: SS_MCU_WRITE
-	// 14-PB0: MOSI_NXT_A		15-PB1: LIFT_RESET (cube counter)
+	// 14-PB0: MOSI_NXT_A		15-PB1: LIFT_RESET (LED alert)
 	DDRB = ((1<<PB0) |
 			(0<<PB1) |
 			(1<<PB2) |
@@ -523,8 +469,7 @@ void setupPins(void)
 	DDRC = ((0<<PC0) |
 			(1<<PC1) |
 			(1<<PC2) |
-			(0<<PC3) |
-			//(1<<PC3) |
+			(1<<PC3) |
 			(1<<PC4) |
 			(1<<PC5) |
 			(0<<PC6)); // No bit 7.
@@ -564,13 +509,4 @@ void setupPins(void)
 			 (0<<PD5) |
 			 (0<<PD6) |
 			 (0<<PD7));
-}
-
-void alert(void)
-{
-	PORTB |= (1<<PB2);
-}
-void clear(void)
-{
-	PORTB &= ~(1<<PB2);
 }

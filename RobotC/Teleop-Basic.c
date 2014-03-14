@@ -583,7 +583,7 @@ task PID()
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 2.2;
 	const float kP_lift_up			= 0.28;
-	const float kP_lift_down		= 0.11;
+	const float kP_lift_down		= 0.13;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;

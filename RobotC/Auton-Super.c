@@ -148,10 +148,10 @@ task main()
 	float power_L = 0.0;
 	float power_R = 0.0;
 
-	float gingerly	= 25;
-	float slowly	= 35;
-	float feelingly	= 70;
-	float quickly	= 80;
+	float gingerly	= 40;
+	float slowly	= 50;
+	float feelingly	= 80;
+	float quickly	= 90;
 	int forever = 100;
 
 	typedef enum Crate{
@@ -172,21 +172,22 @@ task main()
 
 	// Times. (Dead reckoning.)
 	int delay_approach_block		= 1000;
-	int delay_pickup_block			= 2000;
+	int delay_pickup_block			= 2200;
 	int delay_avoid_crates			= 1000;
-	int delay_point_turn			= 1000;
+	int delay_point_turn			= 1600;
 	int delay_crate_adjust[CRATE_NUM] = {300, 400, 200, 100};
-	int delay_align_crate_start		= 500;
+	int delay_wait_for_lift			= 500;
+	int delay_align_crate_start		= 1200;
 	int delay_approach_crate		= 300;
 	int delay_dump_blocks			= 1000;
 	int delay_crate_retreat			= 400;
-	int delay_realign_robot			= 600;
+	int delay_realign_robot			= 1200;
 	int delay_along_ramp[CRATE_NUM]	= {1200, 900, 600, 300};
-	int delay_turn_beside_ramp		= 300;
+	int delay_turn_beside_ramp		= 800;
 	int delay_slant_near_ramp		= 600;
-	int delay_turn_normal_to_ramp	= 300;
+	int delay_turn_normal_to_ramp	= 600;
 	int delay_move_normal_to_ramp	= 500;
-	int delay_turn_onto_ramp		= 800;
+	int delay_turn_onto_ramp		= 1400;
 	int delay_steamroll_ramp		= 1300;
 
 	Joystick_WaitForStart();
@@ -202,11 +203,11 @@ task main()
 	MoveBackward(slowly);
 	Time_Wait(delay_avoid_crates);
 	Brake();
-	TurnRight(feelingly, 0);
+	TurnRight(quickly, 0);
 	Time_Wait(delay_point_turn);
 	Brake();
 
-	ClearTimer(IR_timer);
+	Time_ClearTimer(IR_timer);
 	MoveBackward(feelingly);
 	while (IR_C < g_IRthreshold) {
 		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
@@ -224,6 +225,7 @@ task main()
 	}
 	Time_Wait(delay_crate_adjust[isCrate]);
 	Brake();
+	Time_Wait(delay_wait_for_lift);
 
 	TurnRight(feelingly);
 	Time_Wait(delay_align_crate_start);
@@ -355,7 +357,7 @@ task PID()
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 2.2;
 	const float kP_lift_up			= 0.28;
-	const float kP_lift_down		= 0.11;
+	const float kP_lift_down		= 0.13;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;

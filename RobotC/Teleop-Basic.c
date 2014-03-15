@@ -10,7 +10,7 @@
 #pragma config(Motor,  mtr_S1_C2_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S1_C3_2,    servo_climb_R,        tServoStandard)
@@ -277,6 +277,8 @@ task main()
 				break;
 
 			case false :
+				isTank = true;
+				break; // TODO: IMPORTANT: DELETE THIS
 				// TODO: When the robot design is finalized and comms is working and all
 				// that good stuff, take this out and only use the joystick button to reset
 				// the gyro. Also update the climbing and lift controls when we finalize
@@ -698,9 +700,10 @@ task PID()
 			// Now we set the motor power to the pods, making sure that reversals are
 			// accounted for and power is limited to 100 (not really necessary).
 			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
-			if (g_MotorData[i].isReversed==true) {
-				g_MotorData[i].power *= -1;
-			}
+			//if (g_MotorData[i].isReversed==true) {
+			//	g_MotorData[i].power *= -1;
+			//}
+			// TODO: IMPORTANT: URGENT: NOTE: Re-enable the above!
 			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
 			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
 

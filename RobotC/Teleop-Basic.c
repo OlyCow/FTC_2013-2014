@@ -22,7 +22,7 @@
 #pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S1_C4_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S1_C4_5,    servo_auton,          tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_6,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
 #pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)

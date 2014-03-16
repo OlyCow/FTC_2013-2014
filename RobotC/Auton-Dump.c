@@ -125,6 +125,7 @@ ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
 
+void Dump();
 void RunPickup();
 void StopPickup();
 void MoveForward(float power);
@@ -145,12 +146,9 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	float power_L = 0.0;
-	float power_R = 0.0;
-
 	float gingerly	= 20;
-	float slowly	= 45;
-	float feelingly	= 75;
+	float slowly	= 35;
+	float feelingly	= 65;
 	float quickly	= 85;
 	int forever = 100;
 
@@ -168,115 +166,64 @@ task main()
 		IR_D = 0,
 		IR_E = 0;
 	int IR_timer = 0;
-	int IR_delay[CRATE_NUM] = {1000, 1500, 2000, 2500};
 
 	// Times. (Dead reckoning.)
-	int delay_approach_block		= 600;
-	int delay_pickup_block			= 1200;
-	int delay_shake_shake			= 300;
-	int delay_avoid_crates			= 1000;
-	int delay_point_turn			= 1000;
-	int delay_crate_adjust[CRATE_NUM] = {500, 400, 200, 100};
-	int delay_wait_for_lift			= 200;
-	int delay_align_crate_start		= 1000;
-	int delay_approach_crate		= 300; // Easier than deleting that leg :P
-	int delay_dump_blocks			= 1000;
-	int delay_crate_retreat			= 300;
-	int delay_realign_robot			= 1000;
-	int delay_along_ramp[CRATE_NUM]	= {1500, 900, 600, 300};
-	int delay_turn_beside_ramp		= 500;
-	int delay_slant_near_ramp		= 1000;
-	int delay_turn_normal_to_ramp	= 500;
-	int delay_move_normal_to_ramp	= 1200;
-	int delay_turn_onto_ramp		= 1300;
-	int delay_steamroll_ramp		= 1300;
+	int delay_IR[CRATE_NUM]		= {600, 900, 1600, 1900};
+	int adjust_IR[CRATE_NUM]	= {150, 50, -100, -300};
+	int finish_delay[CRATE_NUM]	= {1500, 1100, 600, 500};
+	int slant_turn		= 400;
+	int slant_adjust	= 900;
+	int normal_turn		= 400;
+	int charge			= 1100;
+	int ramp_turn		= 900;
+	int steamroll_ramp	= 1600;
 
 	Joystick_WaitForStart();
-
 	lift_target = lift_pos_pickup;
-	RunPickup();
-	MoveForward(gingerly);
-	Time_Wait(delay_approach_block);
-	Brake();
-	Time_Wait(delay_pickup_block);
-	//
-	MoveBackward(slowly);
-	Time_Wait(delay_shake_shake);
-	MoveForward(slowly);
-	Time_Wait(delay_shake_shake);
-	MoveBackward(slowly);
-	Time_Wait(delay_shake_shake);
-	MoveForward(slowly);
-	Time_Wait(delay_shake_shake);
-	Brake();
-	//
-	StopPickup();
-
-	MoveBackward(slowly);
-	Time_Wait(delay_avoid_crates);
-	Brake();
-	TurnRight(quickly, 0);
-	Time_Wait(delay_point_turn);
-	Brake();
 
 	Time_ClearTimer(IR_timer);
-	MoveBackward(feelingly);
-	while (IR_C < g_IRthreshold) {
+	MoveForward(slowly);
+	for (Crate i=CRATE_OUTER_CLOSE; i<1; i++) {
+		Time_Wait(delay_IR[i]);
 		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
-		if (Time_GetTime(IR_timer) > IR_delay[CRATE_OUTER_FAR]) {
-			break;
-		}
-	}
-	lift_target = lift_pos_dump;
-	int IR_sensed = Time_GetTime(IR_timer);
-	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
-		if (IR_sensed < IR_delay[i]) {
+		if (IR_C>g_IRthreshold) {
 			isCrate = i;
+			Brake();
 			break;
 		}
 	}
-	Time_Wait(delay_crate_adjust[isCrate]-IR_sensed);
-	Brake();
-	Time_Wait(delay_wait_for_lift);
-
-	TurnRight(feelingly);
-	Time_Wait(delay_align_crate_start);
-	Brake();
-	MoveBackward(slowly);
-	Time_Wait(delay_approach_crate);
-	Brake();
-	dumpCubes(4);
-	Time_Wait(delay_dump_blocks);
-
-	lift_target = lift_pos_pickup;
-	MoveForward(slowly);
-	Time_Wait(delay_crate_retreat);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(delay_realign_robot);
+	if (adjust_IR[isCrate]>0) {
+		MoveForward(slowly);
+	} else {
+		MoveBackward(slowly);
+	}
+	//Time_Wait(adjust_IR[isCrate]);
 	Brake();
 
-	MoveForward(quickly);
-	Time_Wait(delay_along_ramp[isCrate]);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(delay_turn_beside_ramp);
-	Brake();
-	MoveForward(slowly);
-	Time_Wait(delay_slant_near_ramp);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(delay_turn_normal_to_ramp);
-	Brake();
-	MoveForward(slowly);
-	Time_Wait(delay_move_normal_to_ramp);
-	Brake();
-	TurnLeft(feelingly);
-	Time_Wait(delay_turn_onto_ramp);
-	Brake();
-	MoveBackward(g_FullPower);
-	Time_Wait(delay_steamroll_ramp);
-	Brake();
+	Dump();
+
+	//MoveForward(quickly);
+	//Time_Wait(finish_delay[isCrate]);
+	//Brake();
+	//TurnRight(slowly);
+	//Time_Wait(slant_turn);
+	//Brake();
+	//MoveForward(slowly);
+	//Time_Wait(slant_adjust);
+	//Brake();
+	//TurnRight(slowly);
+	//Time_Wait(normal_turn);
+	//Brake();
+	//MoveForward(slowly);
+	//Time_Wait(charge);
+	//Brake();
+
+	//TurnRight(slowly);
+	//Time_Wait(ramp_turn);
+	//Brake();
+	//MoveForward(g_FullPower);
+	//Time_Wait(steamroll_ramp);
+	//Brake();
 
 	Motor_SetPower(g_FullPower, motor_flag);
 
@@ -286,6 +233,12 @@ task main()
 	}
 }
 
+void Dump()
+{
+	Servo_SetPosition(servo_auton, servo_auton_down);
+	Time_Wait(1000);
+	Servo_SetPosition(servo_auton, servo_auton_up);
+}
 void RunPickup()
 {
 	Motor_SetPower(g_FullPower, motor_sweeper);

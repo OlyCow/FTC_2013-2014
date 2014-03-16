@@ -146,9 +146,9 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	float gingerly	= 20;
-	float slowly	= 35;
-	float feelingly	= 65;
+	float gingerly	= 30;
+	float slowly	= 40;
+	float feelingly	= 75;
 	float quickly	= 85;
 	int forever = 100;
 
@@ -168,64 +168,74 @@ task main()
 	int IR_timer = 0;
 
 	// Times. (Dead reckoning.)
-	int delay_IR[CRATE_NUM]		= {600, 900, 1600, 1900};
-	int adjust_IR[CRATE_NUM]	= {150, 50, -100, -300};
-	int finish_delay[CRATE_NUM]	= {1500, 1100, 600, 500};
-	int slant_turn		= 400;
-	int slant_adjust	= 900;
-	int normal_turn		= 400;
-	int charge			= 1100;
-	int ramp_turn		= 900;
-	int steamroll_ramp	= 1600;
+	int delay_IR[CRATE_NUM]		= {500, 400, 1000, 400};
+	int adjust_IR[CRATE_NUM]	= {-50, 0, -300, -300};
+	int finish_delay[CRATE_NUM]	= {1700, 1100, 600, 500};
+	int slant_turn		= 600;
+	int slant_adjust	= 1400;
+	int normal_turn		= 750;
+	//int charge			= 1100;
+	//int ramp_turn		= 1100;
+	int steamroll_ramp	= 2300;
 
 	Joystick_WaitForStart();
 	lift_target = lift_pos_pickup;
 
 	Time_ClearTimer(IR_timer);
 	MoveForward(slowly);
-	for (Crate i=CRATE_OUTER_CLOSE; i<1; i++) {
+	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
+	MoveForward(slowly);
 		Time_Wait(delay_IR[i]);
 		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
 		if (IR_C>g_IRthreshold) {
 			isCrate = i;
 			Brake();
+			Time_Wait(500);
 			break;
 		}
 	}
-	if (adjust_IR[isCrate]>0) {
-		MoveForward(slowly);
+
+	if (adjust_IR[isCrate]<0) {
+		MoveBackward(feelingly);
 	} else {
-		MoveBackward(slowly);
+		MoveForward(feelingly);
 	}
-	//Time_Wait(adjust_IR[isCrate]);
+	Time_Wait(abs(adjust_IR[isCrate]));
 	Brake();
 
 	Dump();
 
-	//MoveForward(quickly);
-	//Time_Wait(finish_delay[isCrate]);
-	//Brake();
-	//TurnRight(slowly);
-	//Time_Wait(slant_turn);
-	//Brake();
-	//MoveForward(slowly);
-	//Time_Wait(slant_adjust);
-	//Brake();
-	//TurnRight(slowly);
-	//Time_Wait(normal_turn);
-	//Brake();
-	//MoveForward(slowly);
+	MoveForward(quickly);
+	Time_Wait(finish_delay[isCrate]);
+	Brake();
+	TurnRight(feelingly);
+	Time_Wait(slant_turn);
+	Brake();
+	MoveForward(quickly);
+	Time_Wait(slant_adjust);
+	Brake();
+	TurnLeft(feelingly);
+	Time_Wait(normal_turn);
+	Brake();
+	//MoveBackward(quickly);
 	//Time_Wait(charge);
 	//Brake();
 
-	//TurnRight(slowly);
+	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+
+	//TurnRight(feelingly);
 	//Time_Wait(ramp_turn);
 	//Brake();
-	//MoveForward(g_FullPower);
-	//Time_Wait(steamroll_ramp);
-	//Brake();
+	MoveBackward(g_FullPower);
+	Time_Wait(steamroll_ramp);
+	Brake();
 
-	Motor_SetPower(g_FullPower, motor_flag);
+	MoveForward(80);
+	Time_Wait(500);
+	Brake();
+
+	//Motor_SetPower(g_FullPower, motor_flag);
 
 	// TODO: BELOW IS DEBUG ONLY! REMEBER TO DELETE IT
 	while (true) {
@@ -235,6 +245,7 @@ task main()
 
 void Dump()
 {
+	Time_Wait(1000);
 	Servo_SetPosition(servo_auton, servo_auton_down);
 	Time_Wait(1000);
 	Servo_SetPosition(servo_auton, servo_auton_up);

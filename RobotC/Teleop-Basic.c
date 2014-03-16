@@ -521,14 +521,20 @@ task main()
 				Motor_SetPower(-g_FullPower, motor_sweeper);
 				Motor_SetPower(-g_FullPower, motor_assist_L);
 				Motor_SetPower(-g_FullPower, motor_assist_R);
-				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 				break;
 			case SWEEP_SUSPENDED :
+				Motor_SetPower(0, motor_sweeper);
+				Motor_SetPower(-g_FullPower, motor_assist_L);
+				Motor_SetPower(-g_FullPower, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+				break;
 			case SWEEP_OFF :
-				// Intentional fall-through. (The "suspended" state should behave exactly
-				// as when the sweeper is turned off; the only distinction should be that
-				// the state is "suspended" and will be turned on again automatically.)
+				//// Intentional fall-through. (The "suspended" state should behave exactly
+				//// as when the sweeper is turned off; the only distinction should be that
+				//// the state is "suspended" and will be turned on again automatically.)
 				Motor_SetPower(0, motor_sweeper);
 				Motor_SetPower(0, motor_assist_L);
 				Motor_SetPower(0, motor_assist_R);

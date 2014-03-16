@@ -138,6 +138,9 @@ void Brake();
 
 task main()
 {
+	bool CONFIG_isClimbing	= false;
+	bool CONFIG_isDelay		= false;
+	bool CONFIG_takeThird	= false;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
@@ -146,11 +149,11 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	float gingerly	= 30;
-	float slowly	= 40;
-	float feelingly	= 75;
-	float quickly	= 85;
-	int forever = 100;
+	const float gingerly	= 30;
+	const float slowly		= 40;
+	const float feelingly	= 75;
+	const float quickly		= 85;
+	const int forever		= 100; // This is actually an aribitrary refresh delay.
 
 	typedef enum Crate{
 		CRATE_OUTER_CLOSE	= 0,
@@ -168,37 +171,36 @@ task main()
 	int IR_timer = 0;
 
 	// Times. (Dead reckoning.)
-	int delay_IR[CRATE_NUM]		= {500, 400, 1000, 400};
-	int adjust_IR[CRATE_NUM]	= {-50, 0, -300, -300};
-	int finish_delay[CRATE_NUM]	= {1700, 1100, 600, 500};
-	int slant_turn		= 600;
-	int slant_adjust	= 1400;
-	int normal_turn		= 750;
-	//int charge			= 1100;
-	//int ramp_turn		= 1100;
-	int steamroll_ramp	= 2300;
+	const int delay_IR[CRATE_NUM]		= {450, 400, 900, 400};
+	const int adjust_IR[CRATE_NUM]		= {-100, -100, -500, -300};
+	const int finish_delay[CRATE_NUM]	= {1700, 1400, 800, 400};
+	const int jerk_prevention	= 500;
+	const int slant_turn		= 500;
+	const int slant_adjust		= 1400;
+	const int normal_turn		= 600;
+	const int steamroll_ramp	= 2150;
+	const int climb_adjust		= 500;
 
 	Joystick_WaitForStart();
 	lift_target = lift_pos_pickup;
 
 	Time_ClearTimer(IR_timer);
 	MoveForward(slowly);
-	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
-	MoveForward(slowly);
+	for (Crate i=CRATE_OUTER_CLOSE; i<3; i++) {
 		Time_Wait(delay_IR[i]);
 		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
 		if (IR_C>g_IRthreshold) {
 			isCrate = i;
 			Brake();
-			Time_Wait(500);
+			Time_Wait(jerk_prevention);
 			break;
 		}
 	}
 
 	if (adjust_IR[isCrate]<0) {
-		MoveBackward(feelingly);
+		MoveBackward(slowly);
 	} else {
-		MoveForward(feelingly);
+		MoveForward(slowly);
 	}
 	Time_Wait(abs(adjust_IR[isCrate]));
 	Brake();
@@ -217,23 +219,21 @@ task main()
 	TurnLeft(feelingly);
 	Time_Wait(normal_turn);
 	Brake();
-	//MoveBackward(quickly);
-	//Time_Wait(charge);
-	//Brake();
 
-	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
-	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+	if (CONFIG_isClimbing == true) {
+		Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+		Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+	}
 
-	//TurnRight(feelingly);
-	//Time_Wait(ramp_turn);
-	//Brake();
 	MoveBackward(g_FullPower);
 	Time_Wait(steamroll_ramp);
 	Brake();
 
-	MoveForward(80);
-	Time_Wait(500);
-	Brake();
+	if (CONFIG_isClimbing == true) {
+		MoveForward(feelingly);
+		Time_Wait(climb_adjust);
+		Brake();
+	}
 
 	//Motor_SetPower(g_FullPower, motor_flag);
 

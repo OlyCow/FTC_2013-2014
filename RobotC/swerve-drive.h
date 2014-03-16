@@ -196,7 +196,7 @@ void initializeRobotVariables()
 	}
 
 	// MAGIC_NUM: 13V.
-	if (externalBatteryAvg<13500) {
+	if (externalBatteryAvg<13600) {
 		PlaySound(soundDownwardTones);
 	}
 	// MAGIC_NUM: 8V.

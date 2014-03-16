@@ -148,10 +148,10 @@ task main()
 	float power_L = 0.0;
 	float power_R = 0.0;
 
-	float gingerly	= 40;
-	float slowly	= 50;
-	float feelingly	= 80;
-	float quickly	= 90;
+	float gingerly	= 20;
+	float slowly	= 45;
+	float feelingly	= 75;
+	float quickly	= 85;
 	int forever = 100;
 
 	typedef enum Crate{
@@ -162,32 +162,33 @@ task main()
 		CRATE_NUM
 	};
 	Crate isCrate = CRATE_OUTER_FAR;
-	int	IR_A=0,
-		IR_B=0,
-		IR_C=0,
-		IR_D=0,
-		IR_E=0;
+	int	IR_A = 0,
+		IR_B = 0,
+		IR_C = 0,
+		IR_D = 0,
+		IR_E = 0;
 	int IR_timer = 0;
 	int IR_delay[CRATE_NUM] = {1000, 1500, 2000, 2500};
 
 	// Times. (Dead reckoning.)
-	int delay_approach_block		= 1000;
-	int delay_pickup_block			= 2200;
+	int delay_approach_block		= 600;
+	int delay_pickup_block			= 1200;
+	int delay_shake_shake			= 300;
 	int delay_avoid_crates			= 1000;
-	int delay_point_turn			= 1600;
-	int delay_crate_adjust[CRATE_NUM] = {300, 400, 200, 100};
-	int delay_wait_for_lift			= 500;
-	int delay_align_crate_start		= 1200;
-	int delay_approach_crate		= 300;
+	int delay_point_turn			= 1000;
+	int delay_crate_adjust[CRATE_NUM] = {500, 400, 200, 100};
+	int delay_wait_for_lift			= 200;
+	int delay_align_crate_start		= 1000;
+	int delay_approach_crate		= 300; // Easier than deleting that leg :P
 	int delay_dump_blocks			= 1000;
-	int delay_crate_retreat			= 400;
-	int delay_realign_robot			= 1200;
-	int delay_along_ramp[CRATE_NUM]	= {1200, 900, 600, 300};
-	int delay_turn_beside_ramp		= 800;
-	int delay_slant_near_ramp		= 600;
-	int delay_turn_normal_to_ramp	= 600;
-	int delay_move_normal_to_ramp	= 500;
-	int delay_turn_onto_ramp		= 1400;
+	int delay_crate_retreat			= 300;
+	int delay_realign_robot			= 1000;
+	int delay_along_ramp[CRATE_NUM]	= {1500, 900, 600, 300};
+	int delay_turn_beside_ramp		= 500;
+	int delay_slant_near_ramp		= 1000;
+	int delay_turn_normal_to_ramp	= 500;
+	int delay_move_normal_to_ramp	= 1200;
+	int delay_turn_onto_ramp		= 1300;
 	int delay_steamroll_ramp		= 1300;
 
 	Joystick_WaitForStart();
@@ -198,6 +199,17 @@ task main()
 	Time_Wait(delay_approach_block);
 	Brake();
 	Time_Wait(delay_pickup_block);
+	//
+	MoveBackward(slowly);
+	Time_Wait(delay_shake_shake);
+	MoveForward(slowly);
+	Time_Wait(delay_shake_shake);
+	MoveBackward(slowly);
+	Time_Wait(delay_shake_shake);
+	MoveForward(slowly);
+	Time_Wait(delay_shake_shake);
+	Brake();
+	//
 	StopPickup();
 
 	MoveBackward(slowly);
@@ -223,7 +235,7 @@ task main()
 			break;
 		}
 	}
-	Time_Wait(delay_crate_adjust[isCrate]);
+	Time_Wait(delay_crate_adjust[isCrate]-IR_sensed);
 	Brake();
 	Time_Wait(delay_wait_for_lift);
 
@@ -259,10 +271,10 @@ task main()
 	MoveForward(slowly);
 	Time_Wait(delay_move_normal_to_ramp);
 	Brake();
-	TurnRight(feelingly);
+	TurnLeft(feelingly);
 	Time_Wait(delay_turn_onto_ramp);
 	Brake();
-	MoveForward(g_FullPower);
+	MoveBackward(g_FullPower);
 	Time_Wait(delay_steamroll_ramp);
 	Brake();
 
@@ -279,6 +291,8 @@ void RunPickup()
 	Motor_SetPower(g_FullPower, motor_sweeper);
 	Motor_SetPower(g_FullPower, motor_assist_L);
 	Motor_SetPower(g_FullPower, motor_assist_R);
+	//Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+	//Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_flip_L, servo_flip_L_down);
 	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 }
@@ -357,7 +371,7 @@ task PID()
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 2.2;
 	const float kP_lift_up			= 0.28;
-	const float kP_lift_down		= 0.13;
+	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;

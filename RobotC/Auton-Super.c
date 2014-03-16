@@ -145,13 +145,10 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	float power_L = 0.0;
-	float power_R = 0.0;
-
 	float gingerly	= 20;
-	float slowly	= 45;
-	float feelingly	= 75;
-	float quickly	= 85;
+	float slowly	= 40;
+	float feelingly	= 70;
+	float quickly	= 90;
 	int forever = 100;
 
 	typedef enum Crate{
@@ -171,25 +168,23 @@ task main()
 	int IR_delay[CRATE_NUM] = {1000, 1500, 2000, 2500};
 
 	// Times. (Dead reckoning.)
-	int delay_approach_block		= 600;
+	int delay_approach_block		= 800;
 	int delay_pickup_block			= 1200;
 	int delay_shake_shake			= 300;
-	int delay_avoid_crates			= 1000;
+	int delay_avoid_crates			= 1200;
 	int delay_point_turn			= 1000;
-	int delay_crate_adjust[CRATE_NUM] = {500, 400, 200, 100};
-	int delay_wait_for_lift			= 200;
-	int delay_align_crate_start		= 1000;
-	int delay_approach_crate		= 300; // Easier than deleting that leg :P
+	int delay_crate_adjust[CRATE_NUM] = {600, 400, 200, 100};
+	int delay_wait_for_lift			= 100; // Really not necessary.
+	int delay_align_crate_start		= 1200;
+	int delay_approach_crate		= 800;
 	int delay_dump_blocks			= 1000;
-	int delay_crate_retreat			= 300;
-	int delay_realign_robot			= 1000;
-	int delay_along_ramp[CRATE_NUM]	= {1500, 900, 600, 300};
-	int delay_turn_beside_ramp		= 500;
-	int delay_slant_near_ramp		= 1000;
-	int delay_turn_normal_to_ramp	= 500;
-	int delay_move_normal_to_ramp	= 1200;
-	int delay_turn_onto_ramp		= 1300;
-	int delay_steamroll_ramp		= 1300;
+	int delay_crate_retreat			= 600;
+	int delay_realign_robot			= 1100;
+	int delay_along_ramp[CRATE_NUM]	= {1250, 900, 600, 300};
+	int delay_turn_beside_ramp		= 600;
+	int delay_slant_near_ramp		= 2100;
+	int delay_turn_onto_ramp		= 900;
+	int delay_steamroll_ramp		= 1800;
 
 	Joystick_WaitForStart();
 
@@ -242,14 +237,14 @@ task main()
 	TurnRight(feelingly);
 	Time_Wait(delay_align_crate_start);
 	Brake();
-	MoveBackward(slowly);
+	MoveBackward(gingerly);
 	Time_Wait(delay_approach_crate);
 	Brake();
 	dumpCubes(4);
 	Time_Wait(delay_dump_blocks);
 
 	lift_target = lift_pos_pickup;
-	MoveForward(slowly);
+	MoveForward(gingerly);
 	Time_Wait(delay_crate_retreat);
 	Brake();
 	TurnRight(feelingly);
@@ -264,12 +259,6 @@ task main()
 	Brake();
 	MoveForward(slowly);
 	Time_Wait(delay_slant_near_ramp);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(delay_turn_normal_to_ramp);
-	Brake();
-	MoveForward(slowly);
-	Time_Wait(delay_move_normal_to_ramp);
 	Brake();
 	TurnLeft(feelingly);
 	Time_Wait(delay_turn_onto_ramp);

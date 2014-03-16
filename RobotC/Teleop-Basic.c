@@ -191,10 +191,11 @@ ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0
 task main()
 {
 	typedef enum SweepMode {
-		SWEEP_IN		= 0,
-		SWEEP_EJECT		= 1,
-		SWEEP_SUSPENDED	= 2,
-		SWEEP_OFF		= 3,
+		SWEEP_INIT		= 0,
+		SWEEP_IN		= 1,
+		SWEEP_OUT		= 2,
+		SWEEP_EJECT		= 3,
+		SWEEP_DOWN		= 4,
 	} SweepMode;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
@@ -227,7 +228,7 @@ task main()
 	float power_R = 0.0;
 
 	// Misc. variables.
-	SweepMode sweepMode = SWEEP_OFF;
+	SweepMode sweepMode = SWEEP_INIT;
 	float power_climb = 0.0;
 	const int eject_delay = 1200;
 	int timer_eject = 0;
@@ -374,10 +375,10 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 160; // MAGIC_NUM
+			lift_target += 180; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_target -= 100; // MAGIC_NUM
+			lift_target -= 120; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
 			lift_target += 80; // MAGIC_NUM
@@ -428,42 +429,60 @@ task main()
 		//Task_HogCPU();
 		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
 			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
-				sweepMode = SWEEP_EJECT;
+				if (sweepMode = SWEEP_OUT) {
+					sweepMode = SWEEP_EJECT;
+				} else {
+					sweepMode = SWEEP_OUT;
+				}
 				Time_ClearTimer(timer_eject);
 			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
 				sweepMode = SWEEP_IN;
 			} // No "else" here so that Button_B can do other stuff.
 		}
 		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
-			sweepMode = SWEEP_OFF;
+			switch (sweepMode) {
+				case SWEEP_INIT :
+					sweepMode = SWEEP_IN;
+					break;
+				case SWEEP_IN :
+				case SWEEP_OUT :
+				case SWEEP_DOWN :
+					sweepMode = SWEEP_INIT;
+					break;
+				case SWEEP_EJECT :
+					// Do nothing.
+					break;
+			}
 		}
 		if (Joystick_ButtonPressed(BUTTON_A)==true) {
 			switch (sweepMode) {
+				case SWEEP_INIT :
+					sweepMode = SWEEP_IN;
+					break;
 				case SWEEP_IN :
 					sweepMode = SWEEP_EJECT;
 					Time_ClearTimer(timer_eject);
 					break;
-				case SWEEP_EJECT :
-				case SWEEP_SUSPENDED :
-					// Intentional fall-through.
-					sweepMode = SWEEP_OFF;
+				case SWEEP_OUT :
+					sweepMode = SWEEP_DOWN;
 					break;
-				case SWEEP_OFF :
+				case SWEEP_EJECT :
+					// Do nothing. Treat it as an accidental press.
+					break;
+				case SWEEP_DOWN :
 					sweepMode = SWEEP_IN;
 					break;
+					// TODO: combine some of the above cases.
 			}
 		}
 		if ((sweepMode==SWEEP_EJECT)&&(Time_GetTime(timer_eject)>eject_delay)) {
-			sweepMode = SWEEP_OFF;
+			sweepMode = SWEEP_DOWN;
 		}
 		if (lift_pos>lift_sweeper_guard) {
 			if (sweepMode == SWEEP_IN) {
-				sweepMode = SWEEP_SUSPENDED;
+				sweepMode = SWEEP_EJECT;
+				Time_ClearTimer(timer_eject);
 				// In all other cases the sweeping mode shouldn't change.
-			}
-		} else {
-			if (sweepMode==SWEEP_SUSPENDED) {
-				sweepMode = SWEEP_IN;
 			}
 		}
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
@@ -500,20 +519,37 @@ task main()
 			power_climb = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
 		}
 
-		if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
-			Servo_SetPosition(servo_climb_L, servo_climb_L_open);
-			Servo_SetPosition(servo_climb_R, servo_climb_R_open);
-		} else if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
+		if (lift_pos<lift_tube_guard) {
+			if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
+				Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+				Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+			}
+		}
+		if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
 			Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
 		switch (sweepMode) {
+			case SWEEP_INIT :
+				Motor_SetPower(0, motor_sweeper);
+				Motor_SetPower(0, motor_assist_L);
+				Motor_SetPower(0, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+				break;
 			case SWEEP_IN :
 				Motor_SetPower(g_FullPower, motor_sweeper);
 				Motor_SetPower(g_FullPower, motor_assist_L);
 				Motor_SetPower(g_FullPower, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+				break;
+			case SWEEP_OUT :
+				Motor_SetPower(-g_FullPower, motor_sweeper);
+				Motor_SetPower(-g_FullPower, motor_assist_L);
+				Motor_SetPower(-g_FullPower, motor_assist_R);
 				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
 				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 				break;
@@ -524,22 +560,12 @@ task main()
 				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
 				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 				break;
-			case SWEEP_SUSPENDED :
-				Motor_SetPower(0, motor_sweeper);
-				Motor_SetPower(-g_FullPower, motor_assist_L);
-				Motor_SetPower(-g_FullPower, motor_assist_R);
-				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
-				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
-				break;
-			case SWEEP_OFF :
-				//// Intentional fall-through. (The "suspended" state should behave exactly
-				//// as when the sweeper is turned off; the only distinction should be that
-				//// the state is "suspended" and will be turned on again automatically.)
+			case SWEEP_DOWN :
 				Motor_SetPower(0, motor_sweeper);
 				Motor_SetPower(0, motor_assist_L);
 				Motor_SetPower(0, motor_assist_R);
-				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
 				break;
 		}
 		Motor_SetPower(power_flag, motor_flag);
@@ -590,8 +616,8 @@ task PID()
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 2.2;
-	const float kP_lift_up			= 0.28;
-	const float kP_lift_down		= 0.13;
+	const float kP_lift_up			= 0.27;
+	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;
@@ -1151,6 +1177,11 @@ task TimedOperations()
 	Joystick_WaitForStart();
 	for (int i=0; i<100; i++) { // MAGIC_NUM: 100=120-20
 		Time_Wait(1000);
+	}
+
+	// Makes sure the arms don't tangle with the servo wire tubing.
+	while (lift_pos>lift_tube_guard) {
+		Time_Wait(100); // MAGIC_NUM: An arbitrary delay.
 	}
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_open);

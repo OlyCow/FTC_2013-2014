@@ -44,11 +44,12 @@ servoData g_ServoData[POD_NUM];
 // MAGIC_NUM: TODO (all).
 const int lift_pos_pickup		= 0;
 const int lift_pos_dump			= 2600; // TODO
-const int lift_pos_top			= 3300;	// TODO
-const int lift_max_height		= 3400;
+const int lift_pos_top			= 3500;	// TODO
+const int lift_max_height		= 3600;
 const int lift_sweeper_guard	= 150;	// TODO
 const int lift_buffer_top		= 2500;
 const int lift_buffer_bottom	= 1200;
+const int lift_tube_guard		= 1000;
 
 const int servo_climb_L_open	= 255;	// TODO
 const int servo_climb_L_closed	= 0;	// TODO

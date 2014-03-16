@@ -162,7 +162,7 @@ task main()
 		CRATE_OUTER_FAR		= 3,
 		CRATE_NUM
 	};
-	Crate isCrate = CRATE_OUTER_FAR;
+	Crate isCrate = CRATE_OUTER_CLOSE;
 	int	IR_A = 0,
 		IR_B = 0,
 		IR_C = 0,
@@ -176,7 +176,7 @@ task main()
 	const int finish_delay[CRATE_NUM]	= {1700, 1400, 800, 400};
 	const int jerk_prevention	= 500;
 	const int slant_turn		= 500;
-	const int slant_adjust		= 1400;
+	const int slant_adjust		= 1500;
 	const int normal_turn		= 600;
 	const int steamroll_ramp	= 2150;
 	const int climb_adjust		= 500;
@@ -186,7 +186,7 @@ task main()
 
 	Time_ClearTimer(IR_timer);
 	MoveForward(slowly);
-	for (Crate i=CRATE_OUTER_CLOSE; i<3; i++) {
+	for (Crate i=CRATE_OUTER_CLOSE; i<1; i++) {
 		Time_Wait(delay_IR[i]);
 		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
 		if (IR_C>g_IRthreshold) {

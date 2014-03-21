@@ -186,7 +186,7 @@ task main()
 
 	Time_ClearTimer(IR_timer);
 	MoveForward(slowly);
-	for (Crate i=CRATE_OUTER_CLOSE; i<1; i++) {
+	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
 		Time_Wait(delay_IR[i]);
 		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
 		if (IR_C>g_IRthreshold) {

@@ -162,7 +162,7 @@ task main()
 		CRATE_OUTER_FAR		= 3,
 		CRATE_NUM
 	};
-	Crate isCrate = CRATE_OUTER_CLOSE;
+	Crate isCrate = CRATE_OUTER_FAR;
 	int	IR_A = 0,
 		IR_B = 0,
 		IR_C = 0,

@@ -228,7 +228,7 @@ task main()
 	float power_R = 0.0;
 
 	// Misc. variables.
-	SweepMode sweepMode = SWEEP_INIT;
+	SweepMode sweepMode = SWEEP_DOWN;
 	float power_climb = 0.0;
 	const int eject_delay = 1200;
 	int timer_eject = 0;

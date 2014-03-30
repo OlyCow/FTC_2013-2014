@@ -28,13 +28,15 @@
 #include "includes.h"
 #include "swerve-drive.h"
 
+#define TEST_MOTOR motor_BL
+
 task main()
 {
 	bDisplayDiagnostics = false;
 	float angle = 0.0;
-	Motor_ResetEncoder(motor_BL);
+	Motor_ResetEncoder(TEST_MOTOR);
 	while (true) {
-		angle = Motor_GetEncoder(motor_BL);
+		angle = Motor_GetEncoder(TEST_MOTOR);
 		angle /= 4.0;
 		nxtDisplayCenteredBigTextLine(3, "%+5d", angle);
 		Time_Wait(100);

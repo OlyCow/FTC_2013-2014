@@ -1,9 +1,6 @@
-#pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_gyro,    sensorI2CCustomFastSkipStates9V)
 
 #include "includes.h"
-
-
 
 task main()
 {
@@ -11,17 +8,16 @@ task main()
 	float rotation = 0.0;
 	float heading = 0.0;
 	HTGYROstartCal(sensor_gyro); // Does this function actually work? ...
-	Time_Wait(50); // <-unnecessary?
-	HTIRS2setDSPMode(sensor_IR, DSP_1200);
 	Display_Clear();
+	nxtDisplayTextLine(6, "Actual drift");
+	nxtDisplayTextLine(7, "less than shown.");
 	Time_ClearTimer(T1);
-	nxtDisplayTextLine(7, "Actual drift less than shown.");
 
 	while (true)
 	{
 		heading += ((float)Time_GetTime(T1))*((float)HTGYROreadRot(sensor_gyro))/((float)1000.0); // 1000 milliseconds per second.
 		Time_ClearTimer(T1);
-		nxtDisplayCenteredTextLine(3, "Rot: %f", heading);
+		nxtDisplayCenteredBigTextLine(3, "%+.2f", heading);
 		Time_Wait(10);
 	}
 }

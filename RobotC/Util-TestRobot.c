@@ -56,9 +56,27 @@ task main()
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 
-	// Move each motor back and forth.
-	// Move lift up a bit and dump.
-	// Move lift back down.
+	const int TEST_INTERVAL			= 600;
+	const int LIFT_TEST_POS			= 1600;
+	const int LIFT_TEST_INTERVAL	= 1300; // How much time to wait for lift to reach pos.
+
+	// Move each drive motor back and forth.
+	for (int i=POD_FR; i<(int)POD_NUM; i++) {
+		Motor_SetPower(g_FullPower, Motor_Convert((WheelPod)i));
+		Time_Wait(TEST_INTERVAL);
+		Motor_SetPower(0, Motor_Convert((WheelPod)i));
+		Time_Wait(TEST_INTERVAL);
+		Motor_SetPower(-g_FullPower, Motor_Convert((WheelPod)i));
+		Time_Wait(TEST_INTERVAL);
+		Motor_SetPower(0, Motor_Convert((WheelPod)i));
+	}
+
+	// Move lift up a bit and dump; move lift back down.
+	lift_target = LIFT_TEST_POS;
+	Time_Wait(LIFT_TEST_INTERVAL);
+	dumpCubes(1); // MAGIC_NUM: Just a short test.
+	lift_target = lift_pos_pickup;
+
 	// Move vertical roller down.
 	// Turn pickup on and off.
 	// Reverse vertical roller.

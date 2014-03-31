@@ -1,3 +1,4 @@
+// Ï×¸øÕÔµ¤Öñ
 // For communicating with the NXT (via the SuperPro board).
 #include "Comm_controller.h"
 

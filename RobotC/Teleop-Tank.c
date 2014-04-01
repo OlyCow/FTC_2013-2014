@@ -548,9 +548,9 @@ task PID()
 		// fast, we are slowing it down intentionally to prevent the it from killing itself.
 		if (isResettingLift==true) {
 			lift_pos = 0;
-			Motor_ResetEncoder(motor_lift_back);
+			Motor_ResetEncoder(motor_lift_front);
 		} else {
-			lift_pos = Motor_GetEncoder(motor_lift_back);
+			lift_pos = Motor_GetEncoder(motor_lift_front);
 			error_prev_lift = error_lift;
 			if (lift_target<0) { // Because we're safe.
 				lift_target = 0;

@@ -61,8 +61,8 @@ const int servo_flip_L_up		= 213;
 const int servo_flip_L_down		= 31;
 const int servo_flip_R_up		= 42;
 const int servo_flip_R_down		= 224;
-const int servo_auton_up		= 190;
-const int servo_auton_down		= 130;
+const int servo_auton_up		= 128;
+const int servo_auton_down		= 128;
 
 // These two are how far the wheel pod servos can be off (it's how
 // wheel pod alignment is classified).
@@ -160,7 +160,7 @@ WheelPod	Servo_Convert(TServoIndex servoName) {
 
 void initializeRobotVariables()
 {
-	Motor_ResetEncoder(motor_lift_back);
+	Motor_ResetEncoder(motor_lift_front);
 
 	// MAGIC_NUM. These can't be set in a loop.
 	g_MotorData[POD_FR].angleOffset = 45;

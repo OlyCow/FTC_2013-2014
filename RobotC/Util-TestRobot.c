@@ -56,9 +56,15 @@ task main()
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
 
-	const int TEST_INTERVAL			= 600;
-	const int LIFT_TEST_POS			= 1600;
+	const int TEST_INTERVAL			= 200;
+	const int LIFT_TEST_POS			= 1200;
 	const int LIFT_TEST_INTERVAL	= 1300; // How much time to wait for lift to reach pos.
+	const int PICKUP_LOWER_DELAY    = 1000;
+	const int PICKUP_TEST_DELAY     = 1000;
+	const int PICKUP_REVERSE_DELAY  = 1000;
+	const int PICKUP_RAISE_DELAY    = 1000;
+	const int FLAG_TEST_DELAY		= 1000;
+	const int AUTON_TEST_DELAY		= 1000;
 
 	// Move each drive motor back and forth.
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -76,15 +82,50 @@ task main()
 	Time_Wait(LIFT_TEST_INTERVAL);
 	dumpCubes(1); // MAGIC_NUM: Just a short test.
 	lift_target = lift_pos_pickup;
+	Time_Wait(LIFT_TEST_INTERVAL);
+
 
 	// Move vertical roller down.
+	Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+	Time_Wait(PICKUP_LOWER_DELAY);
+
 	// Turn pickup on and off.
+	Motor_SetPower(g_FullPower, motor_sweeper);
+	Motor_SetPower(g_FullPower, motor_assist_L);
+	Motor_SetPower(g_FullPower, motor_assist_R);
+	Time_Wait(PICKUP_TEST_DELAY);
+
 	// Reverse vertical roller.
+	Motor_SetPower(-g_FullPower, motor_sweeper);
+	Motor_SetPower(-g_FullPower, motor_assist_L);
+	Motor_SetPower(-g_FullPower, motor_assist_R);
+	Time_Wait(PICKUP_REVERSE_DELAY);
+
 	// Turn vertical roller off.
+	Motor_SetPower(0, motor_sweeper);
+	Motor_SetPower(0, motor_assist_L);
+	Motor_SetPower(0, motor_assist_R);
+
 	// Move vertical roller up.
+	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+	Time_Wait(PICKUP_RAISE_DELAY);
+
 	// Spin flag.
+	Motor_SetPower(g_FullPower, motor_flag);
+	Time_Wait(FLAG_TEST_DELAY);
+	Motor_SetPower(0, motor_flag);
+
 	// Flip autonomous servo.
+	Servo_SetPosition(servo_auton, 255);
+	Time_Wait(AUTON_TEST_DELAY);
+	Servo_SetPosition(servo_auton, 0);
+	Time_Wait(AUTON_TEST_DELAY);
+	Servo_SetPosition(servo_auton, 128);
+
 	// Play loud warning noise.
+	//TODO
 	// Release climbing on non-NXt side.
 	// Release climbing on other side.
 }
@@ -123,7 +164,7 @@ task PID()
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
 
-		lift_pos = Motor_GetEncoder(motor_lift_back);
+		lift_pos = Motor_GetEncoder(motor_lift_front);
 		error_prev_lift = error_lift;
 		if (lift_target<0) { // Because we're safe.
 			lift_target = 0;

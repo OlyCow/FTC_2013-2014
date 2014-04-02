@@ -61,8 +61,9 @@ const int servo_flip_L_up		= 213;
 const int servo_flip_L_down		= 31;
 const int servo_flip_R_up		= 42;
 const int servo_flip_R_down		= 224;
-const int servo_auton_up		= 128;
-const int servo_auton_down		= 128;
+const int servo_auton_up		= 255;
+const int servo_auton_down		= 0;
+const int servo_auton_hold 		= 128;
 
 // These two are how far the wheel pod servos can be off (it's how
 // wheel pod alignment is classified).
@@ -184,7 +185,7 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
-	Servo_SetPosition(servo_auton, servo_auton_up);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 
@@ -221,7 +222,7 @@ void resetMotorsServos()
 	Servo_SetPower(servo_FL, 0);
 	Servo_SetPower(servo_BL, 0);
 	Servo_SetPower(servo_BR, 0);
-	Servo_SetPosition(servo_auton, servo_auton_up);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);

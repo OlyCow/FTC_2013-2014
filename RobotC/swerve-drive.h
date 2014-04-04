@@ -64,6 +64,10 @@ const int servo_flip_R_down		= 224;
 const int servo_auton_up		= 255;
 const int servo_auton_down		= 0;
 const int servo_auton_hold 		= 128;
+const int servo_omni_L_up		= 0;
+const int servo_omni_L_down		= 28;
+const int servo_omni_R_up		= 240;
+const int servo_omni_R_down		= 212;
 
 // These two are how far the wheel pod servos can be off (it's how
 // wheel pod alignment is classified).
@@ -81,7 +85,7 @@ WheelPod	Servo_Convert(TServoIndex servoName); // TODO: Doesn't work.
 void initializeRobotVariables();
 void resetMotorsServos();
 
-void dumpCubes(int num=4); // MAGIC_NUM.
+void dumpCubes(int num);
 task dumpCubesTask();
 
 
@@ -186,13 +190,11 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 	Servo_SetPosition(servo_auton, servo_auton_hold);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
 
-	//for (int i=0; i<5; i++) {
-	//	Time_Wait(1000); // Because the pods might need to move.
-	//}
-	// TODO: Re-enable the above when swerve drive works.
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
 	}
@@ -202,7 +204,7 @@ void initializeRobotVariables()
 		PlaySound(soundDownwardTones);
 	}
 	// MAGIC_NUM: 8V.
-	if (nAvgBatteryLevel<8000) {
+	if (nAvgBatteryLevel<7900) {
 		PlaySound(soundDownwardTones);
 	}
 }

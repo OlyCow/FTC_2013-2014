@@ -9,15 +9,15 @@
 #pragma config(Motor,  mtr_S1_C4_1,     motor_lift_front, tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C4_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C1_1,    servo_flip_R,         tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_2,    servo_auton,          tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C1_4,    servo4,               tServoNone)
-#pragma config(Servo,  srvo_S1_C1_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S1_C1_6,    servo_omni_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_5,    servo_omni_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_6,    servo6,               tServoNone)
 #pragma config(Servo,  srvo_S1_C2_1,    servo7,               tServoNone)
 #pragma config(Servo,  srvo_S1_C2_2,    servo8,               tServoNone)
 #pragma config(Servo,  srvo_S1_C2_3,    servo_climb_R,        tServoStandard)
@@ -320,9 +320,10 @@ task main()
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			dumpCubes(1); // MAGIC_NUM.
+			dumpCubes(1); // Dumps one cube at a time.
 			// All this really does is dump for a short amount of time.
-			// (You can't make it dump 2 or 3 cubes yet. :P )
+			// TODO: Is it possible to dump 2 or 3 cubes? How should that
+			// be mapped to controls? Should the "fine-tune" be 2 cubes?
 		}
 
 		// TODO: Make sure driver 1 does indeed override driver 2. Not very urgent.

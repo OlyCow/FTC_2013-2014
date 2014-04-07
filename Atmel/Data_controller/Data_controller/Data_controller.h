@@ -44,5 +44,7 @@ const unsigned int LED_port[4] = {PORTD, PORTD, PORTD, PORTB};
 const unsigned int LED_pin[4] = {PORTD5, PORTD6, PORTD7, PORTB0};
 
 void setupPins();
+void alertD();
+void clearD();
 
 #endif // DATA_CONTROLLER_H

@@ -1,3 +1,4 @@
+// Ï×¸øÕÔµ¤Öñ
 // For collecting most of the data used in teleop (temp, IMU, etc.).
 #include "Data_controller.h"
 
@@ -92,7 +93,7 @@ int main()
 	sei();
 	
 	// Wait to make sure we've established communication with the Comm_controller.
-	while (is_comm_ready != true) {;}
+	//while (is_comm_ready != true) {;}
 
 	// TODO: Set up any interrupts that haven't been setup yet.
 	
@@ -143,6 +144,25 @@ int main()
 			comm_y = static_cast<int>(round(rot_y)) % 360;
 			comm_z = static_cast<int>(round(rot_z)) % 360;
 		}
+		
+		
+		
+		//TODO: DELETE THIS (TESTING)
+		uint8_t test_A = 0;
+		uint8_t test_B = 0;
+		uint8_t test_C = 0;
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_L, test_A);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_H, test_B);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, test_C);
+		//test_C = (test_B<<8) + test_A;
+		if (test_C==0) {
+		//if (test_C==MPU6050_ADDRESS) {
+			alertD();
+		} else {
+			clearD();
+		}
+		
+		
 		
 		// Debugging LEDs and pushbutton.
 			// read and debounce button
@@ -263,6 +283,16 @@ ISR(PCINT0_vect)
 			}
 		}
 	}
+}
+
+void alertD()
+{
+	PORTB |= 1<<PORTB0;
+}
+
+void clearD()
+{
+	PORTB &= ~(1<<PORTB0);
 }
 
 

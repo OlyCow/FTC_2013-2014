@@ -39,7 +39,7 @@ int main()
 	uint32_t data_write[NXT_LINE_NUM] = {0,0,0,0,0,0};
 	// Parity check vars DO NOT include header bits.
 	bool parity_read = false;					// TODO: Leaving this undefined really isn't a good idea either... Oh well.
-	bool parity_read_check = parity_read;		// DERP
+	bool parity_read_check = parity_read;		// DERP :D
 	bool parity_write[NXT_LINE_NUM] = {false,false,false,false,false,false}; // TODO: Same problem as `parity_read`.
 	bool isBadData = false; // We don't care about bad packets (we can't initiate a reset anyway).
 	uint8_t byte_write = 0;
@@ -81,8 +81,8 @@ int main()
 	uint8_t  rot_y_comm = 0;
 	uint16_t rot_z_comm = 0;
 	bool isRedAlliance = false; // Might as well.
-	uint8_t line_sensor_bmp = 0x22;
-	uint8_t cube_detect_bmp = 0x89;
+	uint8_t line_sensor_bmp = 0x22;	// TODO: I think these are just random numbers so the link doesn't die. Not sure though :P
+	uint8_t cube_detect_bmp = 0x89;	// TODO: I think these are just random numbers so the link doesn't die. Not sure though :P
 	uint8_t close_range_A = 0;
 	uint8_t close_range_B = 0;
 	uint8_t close_range_C = 0;
@@ -94,7 +94,7 @@ int main()
 	uint8_t cube_num = 0;
 	bool is_flag_bumped = true;
 	bool is_hang_bumped = true;
-	uint8_t bumpers_bmp = 0x71;
+	uint8_t bumpers_bmp = 0x71;		// TODO: I think these are just random numbers so the link doesn't die. Not sure though :P
 	
 	//// TODO: Leaving this here as an example of debouncing.
 	//// Variables to process pin inputs.
@@ -107,17 +107,20 @@ int main()
 	SPCR = ((1<<SPE) |	// Enable SPI.
 			(1<<MSTR) |	// 0=slave, 1=master.
 			(0<<DORD) |	// 0=MSB transmitted first.
-			(0<<CPOL) |	// Setting both of these to 0 ="mode 0".
-			(0<<CPHA));
+			(0<<CPOL) |	// Setting both of these (CPOL, CPHA) to 0 ="mode 0".
+			(0<<CPHA));	// Make sure all slaves have the same settings too. :P
 	
 	// Make sure all the other MCUs are ready.
 	bool MCU_ready[8] = {false, true, true, true, true, true, true, true};
 	bool all_ready = false;
-	while (all_ready == false) {
+	while (all_ready == false) {	// TODO: perhaps a "do... while" is more appropriate here?
+		
 		// TODO: Replace the following code with a proper loop to step through with.
 		PORTD |= (1<<PD2);	// TODO: Figure out the correct combo of these.
-		PORTD |= (1<<PD3);
+		PORTD &= ~(1<<PD3);	// Pretty sure it's HI-LO-HI (A-B-C).
 		PORTD |= (1<<PD4);
+		PORTB |= (1<<PB2);
+		_delay_ms(10);	// Make sure we trigger a pin change!
 		PORTB &= ~(1<<PB2);
 		
 		uint8_t spi_W = STATUS_W_INIT;
@@ -136,10 +139,11 @@ int main()
 			MCU_ready[0] = true;
 		}
 		
-		for (short i=0; i<8; i++) {
+		for (short i=0; i<8; i++) {	// You know, I could mischievously replace "8" with "sizeof(uint8_t)" :)
 			all_ready = all_ready && (MCU_ready[i]);
 		}
 	}
+	PORTB |= (1<<PB2); // Release our slave. (TODO: plural requires a "for each" loop)
 	
 	// TODO: config reading.
 	
@@ -405,7 +409,29 @@ int main()
 		}
 		
 		// Get comms data.
+		PORTB &= ~(1<<PB2);	// Bring SS' low.
 		
+		SPDR = STATUS_W_REQ_GYRO_X;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		uint8_t spi_w_flush = SPDR; // Remember, we'll always be a cycle off.
+		
+		SPDR = STATUS_W_REQ_GYRO_Y;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		rot_x_comm = SPDR;
+		
+		SPDR = STATUS_W_REQ_GYRO_Z;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		rot_y_comm = SPDR;
+		
+		SPDR = STATUS_R_ACK;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		rot_z_comm = SPDR;
+		
+		PORTB |= (1<<PB2);
+		// TODO: Delete this last line?
+		_delay_ms(1); // Give the slave some time to do other stuff...
+		
+		//// TODO: Actually write this stuff!
 		// Increment mux.
 		// Read value.
 		// Repeat above 7 more times.

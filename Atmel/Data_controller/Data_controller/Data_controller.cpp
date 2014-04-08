@@ -70,6 +70,8 @@ int main()
 			(0<<DORD) |	// 0=MSB transmitted first.
 			(0<<CPOL) |	// Setting both of these to 0 ="mode 0".
 			(0<<CPHA));
+	// TODO: Is this necessary? (Re-pulling up the SS' pin.)
+	PORTB |= (1<<PINB2);
 	
 	// Initialize TWI.
 	i2c_init();
@@ -127,12 +129,12 @@ int main()
 	
 	// Set up interrupts.
 	PCMSK0 |= (1<<PCINT2);
-	PCICR |= (1<<PCIE2);
+	PCICR |= (1<<PCIE0);
 	PCIFR |= (1<<PCIF0);
 	sei();
 	
 	// Wait to make sure we've established communication with the Comm_controller.
-	//while (is_comm_ready != true) {;}
+	while (is_comm_ready != true) {;}
 
 	// TODO: Set up any interrupts that haven't been setup yet.
 	
@@ -212,12 +214,12 @@ int main()
 		
 		
 		
-		//TODO: DELETE THIS (TESTING)
-		if (fabs(rot_z)<0.5) {
-			alertD();
-		} else {
-			clearD();
-		}
+		////TODO: DELETE THIS (TESTING)
+		//if (fabs(rot_z)<0.5) {
+			//alertD();
+		//} else {
+			//clearD();
+		//}
 
 		
 		
@@ -249,10 +251,10 @@ int main()
 
 ISR(PCINT0_vect)
 {
-	if ((PINB & (0<<PINB2)) != 0) {
+	if ((PINB & (1<<PINB2)) != 0) {
 		return; // We only care if the SS' pin is pulled low.
 	} else {
-		while ((PINB & (0<<PINB2)) == 0) {
+		while ((PINB & (1<<PINB2)) == 0) {
 			uint8_t spi_W = STATUS_W_INIT;
 			uint8_t spi_R = 0;
 			
@@ -337,6 +339,10 @@ ISR(PCINT0_vect)
 					LED_state[LED_D] = LED_OFF;
 					spi_W = STATUS_W_ACK;
 					break;
+					
+				default :
+					// TODO: Should probably do something other than break...
+					break;
 			}
 		}
 	}
@@ -404,7 +410,7 @@ void setupPins()
 	PORTB = ((0<<PINB0) |
 			 (1<<PINB1) |
 			 (1<<PINB2) |	// We DO want SS to be pulled up.
-			 (0<<PINB3) | // SPI doesn't need pull-up.
+			 (0<<PINB3) |	// SPI doesn't need pull-up.
 			 (0<<PINB4) |
 			 (0<<PINB5) |
 			 (0<<PINB6) |	// Unused pins shouldn't be pulled up.

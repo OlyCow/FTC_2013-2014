@@ -103,6 +103,9 @@
 
 namespace MPU
 {
+	// TODO: Put this into its own library (of math-y stuff? idk).
+	int convert_complement(uint16_t input);
+
 	void read(uint8_t address, uint8_t RA, uint8_t &data);
 	void read_burst(uint8_t address, uint8_t RA, uint8_t* data, int size);
 	void write(uint8_t address, uint8_t RA, uint8_t data);

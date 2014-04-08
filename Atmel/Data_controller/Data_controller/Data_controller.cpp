@@ -42,6 +42,9 @@ int main()
 	double rot_x = 0.0;
 	double rot_y = 0.0;
 	double rot_z = 0.0;
+	int vel_x_signed = 0;
+	int vel_y_signed = 0;
+	int vel_z_signed = 0;
 	uint16_t vel_x = 0; // TODO: switch all of these over to unions.
 	uint16_t vel_y = 0;
 	uint16_t vel_z = 0;
@@ -51,10 +54,11 @@ int main()
 	uint8_t vel_y_H = 0;
 	uint8_t vel_z_L = 0;
 	uint8_t vel_z_H = 0;
-	uint16_t vel_x_offset = 0;
-	uint16_t vel_y_offset = 0;
-	uint16_t vel_z_offset = 0;
-	const double bit_to_gyro = 250.0/32768.0;
+	int vel_x_offset = 0;
+	int vel_y_offset = 0;
+	int vel_z_offset = 0;
+	const double bit_to_gyro = 250.0/32768.0; // Also in MPU-6050 Register Map "Gyroscope Measurements".
+	const double usec_to_sec = 1.0/1000000.0;
 	short LED_timer = 0;
 	
 	// Initialize SPI.
@@ -82,9 +86,12 @@ int main()
 	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
 	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
 	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-	vel_x_offset = (vel_x_H<<8) + vel_x_L;
-	vel_y_offset = (vel_y_H<<8) + vel_y_L;
-	vel_z_offset = (vel_z_H<<8) + vel_z_L;
+	vel_x = (vel_x_H<<8) + vel_x_L;
+	vel_y = (vel_y_H<<8) + vel_y_L;
+	vel_z = (vel_z_H<<8) + vel_z_L;
+	vel_x_offset = MPU::convert_complement(vel_x);
+	vel_y_offset = MPU::convert_complement(vel_y);
+	vel_z_offset = MPU::convert_complement(vel_z);
 	
 	// Set up interrupts.
 	PCMSK0 |= (1<<PCINT2);
@@ -126,19 +133,25 @@ int main()
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-		vel_x = (vel_x_H<<8) + vel_x_L - vel_x_offset;
-		vel_y = (vel_y_H<<8) + vel_y_L - vel_y_offset;
-		vel_z = (vel_z_H<<8) + vel_z_L - vel_z_offset;
-		rot_x += ((double)(vel_x-32768)*dt) * bit_to_gyro;
-		rot_y += ((double)(vel_y-32768)*dt) * bit_to_gyro;
-		rot_z += ((double)(vel_z-32768)*dt) * bit_to_gyro;
+		vel_x = (vel_x_H<<8) + vel_x_L;
+		vel_y = (vel_y_H<<8) + vel_y_L;
+		vel_z = (vel_z_H<<8) + vel_z_L;
+		vel_x_signed = MPU::convert_complement(vel_x) - vel_x_offset;
+		vel_y_signed = MPU::convert_complement(vel_y) - vel_y_offset;
+		vel_z_signed = MPU::convert_complement(vel_z) - vel_z_offset;
+		rot_x += ((double)vel_x_signed)*bit_to_gyro *dt *usec_to_sec;
+		rot_y += ((double)vel_y_signed)*bit_to_gyro *dt *usec_to_sec;
+		rot_z += ((double)vel_z_signed)*bit_to_gyro *dt *usec_to_sec;
 		if (is_gyro_resetting == true) {
 			rot_x = 0;
-			rot_x = 0;
-			rot_x = 0;
+			rot_y = 0;
+			rot_z = 0;
 			is_gyro_resetting = false;
 		}
 		// TODO: Split into three atomic blocks?
+		// Pros:	Interrupts can happen before all three vars get assigned.
+		// Cons:	Possibly more overhead and too much delay from capturing
+		//			and releasing the processor (and might miss the SS window).
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 			comm_x = static_cast<int>(round(rot_x)) % 360;
 			comm_y = static_cast<int>(round(rot_y)) % 360;
@@ -148,15 +161,7 @@ int main()
 		
 		
 		//TODO: DELETE THIS (TESTING)
-		uint8_t test_A = 0;
-		uint8_t test_B = 0;
-		uint8_t test_C = 0;
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_L, test_A);
-		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_ACCEL_ZOUT_H, test_B);
-		MPU::read(MPU6050_ADDRESS, MPU6050_RA_WHO_AM_I, test_C);
-		//test_C = (test_B<<8) + test_A;
-		if (test_C==0) {
-		//if (test_C==MPU6050_ADDRESS) {
+		if (rot_z<90) {
 			alertD();
 		} else {
 			clearD();

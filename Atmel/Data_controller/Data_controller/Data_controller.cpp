@@ -45,6 +45,9 @@ int main()
 	int vel_x_signed = 0;
 	int vel_y_signed = 0;
 	int vel_z_signed = 0;
+	int vel_x_signed_prev = 0;
+	int vel_y_signed_prev = 0;
+	int vel_z_signed_prev = 0;
 	uint16_t vel_x = 0; // TODO: switch all of these over to unions.
 	uint16_t vel_y = 0;
 	uint16_t vel_z = 0;
@@ -73,25 +76,54 @@ int main()
 	
 	// Initialize and calibrate gyro.
 	MPU::initialize();
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x03);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x01); // NOTE: This could be a very bad idea.
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
-	// TODO: Make this calibration better (take an average?).
-	_delay_ms(100); // MAGIC_NUM: 
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-	vel_x = (vel_x_H<<8) + vel_x_L;
-	vel_y = (vel_y_H<<8) + vel_y_L;
-	vel_z = (vel_z_H<<8) + vel_z_L;
-	vel_x_offset = MPU::convert_complement(vel_x);
-	vel_y_offset = MPU::convert_complement(vel_y);
-	vel_z_offset = MPU::convert_complement(vel_z);
+	//// TODO: Make this calibration better.
+	//_delay_us(10); // MAGIC_NUM
+	//double offset_x_sum = 0.0;
+	//double offset_y_sum = 0.0;
+	//double offset_z_sum = 0.0;
+	//// MAGIC_NUM: 100 is a decent number of samples :P
+	//for (int i=0; i<2; ++i) {
+	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+	//	vel_x = (vel_x_H<<8) + vel_x_L;
+	//	vel_y = (vel_y_H<<8) + vel_y_L;
+	//	vel_z = (vel_z_H<<8) + vel_z_L;
+	//	offset_x_sum += MPU::convert_complement(vel_x);
+	//	offset_y_sum += MPU::convert_complement(vel_y);
+	//	offset_z_sum += MPU::convert_complement(vel_z);
+	//	_delay_us(10); // MAGIC_NUM
+	//}
+	//vel_x_offset = offset_x_sum/2.0; // MAGIC_NUM: number of samples.
+	//vel_y_offset = offset_y_sum/2.0; // MAGIC_NUM: number of samples.
+	//vel_z_offset = offset_z_sum/2.0; // MAGIC_NUM: number of samples.
+
+	_delay_us(100); // MAGIC_NUM
+	for (int i=0; i<10; i++) { // MAGIC_NUM: NOTE: flush out bad readings?
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+		vel_x = (vel_x_H<<8) + vel_x_L;
+		vel_y = (vel_y_H<<8) + vel_y_L;
+		vel_z = (vel_z_H<<8) + vel_z_L;
+		vel_x_offset = MPU::convert_complement(vel_x);
+		vel_y_offset = MPU::convert_complement(vel_y);
+		vel_z_offset = MPU::convert_complement(vel_z);
+		//vel_x_signed_prev = vel_x_offset;
+		//vel_y_signed_prev = vel_y_offset;
+		//vel_z_signed_prev = vel_z_offset;
+	}
 	
 	// Set up interrupts.
 	PCMSK0 |= (1<<PCINT2);
@@ -127,6 +159,9 @@ int main()
 		
 		// Gyro handling.
 		// TODO: It *might* be more efficient to calculate x, y, and z one-at-a-time.
+		//vel_x_signed_prev = vel_x_signed;
+		//vel_y_signed_prev = vel_y_signed;
+		//vel_z_signed_prev = vel_z_signed;
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L); // TODO: Condense into a single "burst read".
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
@@ -136,12 +171,29 @@ int main()
 		vel_x = (vel_x_H<<8) + vel_x_L;
 		vel_y = (vel_y_H<<8) + vel_y_L;
 		vel_z = (vel_z_H<<8) + vel_z_L;
-		vel_x_signed = MPU::convert_complement(vel_x) - vel_x_offset;
-		vel_y_signed = MPU::convert_complement(vel_y) - vel_y_offset;
-		vel_z_signed = MPU::convert_complement(vel_z) - vel_z_offset;
-		rot_x += ((double)vel_x_signed)*bit_to_gyro *dt *usec_to_sec;
-		rot_y += ((double)vel_y_signed)*bit_to_gyro *dt *usec_to_sec;
-		rot_z += ((double)vel_z_signed)*bit_to_gyro *dt *usec_to_sec;
+		vel_x_signed = MPU::convert_complement(vel_x);
+		vel_y_signed = MPU::convert_complement(vel_y);
+		vel_z_signed = MPU::convert_complement(vel_z);
+		vel_x_signed -= vel_x_offset;
+		vel_y_signed -= vel_y_offset;
+		vel_z_signed -= vel_z_offset;
+
+		// Yeah trapezoids. Also dividing is too much brain-work. Since we're multiplying already...
+		double rect_x = (double)vel_x_signed;
+		double rect_y = (double)vel_y_signed;
+		double rect_z = (double)vel_z_signed;
+		//rect_x += (double)vel_x_signed_prev;
+		//rect_y += (double)vel_y_signed_prev;
+		//rect_z += (double)vel_z_signed_prev;
+		rect_x *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rect_y *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rect_z *= (bit_to_gyro * (double)dt * usec_to_sec);
+		//rect_x /= 2.0;
+		//rect_y /= 2.0;
+		//rect_z /= 2.0;
+		rot_x += rect_x;
+		rot_y += rect_y;
+		rot_z += rect_z;
 		if (is_gyro_resetting == true) {
 			rot_x = 0;
 			rot_y = 0;
@@ -161,12 +213,12 @@ int main()
 		
 		
 		//TODO: DELETE THIS (TESTING)
-		if (rot_z<90) {
+		if (fabs(rot_z)<0.5) {
 			alertD();
 		} else {
 			clearD();
 		}
-		
+
 		
 		
 		// Debugging LEDs and pushbutton.
@@ -290,15 +342,14 @@ ISR(PCINT0_vect)
 	}
 }
 
-void alertD()
-{
-	PORTB |= 1<<PORTB0;
-}
-
-void clearD()
-{
-	PORTB &= ~(1<<PORTB0);
-}
+void alertA() { PORTD |= 1<<PORTD5; }
+void clearA() { PORTD &= ~(1<<PORTD5); }
+void alertB() { PORTD |= 1<<PORTD6; }
+void clearB() { PORTD &= ~(1<<PORTD6); }
+void alertC() { PORTD |= 1<<PORTD7; }
+void clearC() { PORTD &= ~(1<<PORTD7); }
+void alertD() { PORTB |= 1<<PORTB0; }
+void clearD() { PORTB &= ~(1<<PORTB0); }
 
 
 

@@ -1,41 +1,38 @@
-#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTServo)
+#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_R,   tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  motorB,          motor_assist_L,   tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_BR,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back,  tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_lift_front, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
-#pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
-#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_1,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S1_C4_5,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_6,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
+#pragma config(Motor,  motorA,          motor_assist_L, 	tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  motorB,          motor_assist_R, 	tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,       	tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_lift_back,	tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_lift_front,   tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_FR,   	    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      		tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, 		tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    		tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      		tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C1_1,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_2,    servo_omni_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_3,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_4,    servo4,               tServoNone)
+#pragma config(Servo,  srvo_S1_C1_5,    servo5,       		  tServoNone)
+#pragma config(Servo,  srvo_S1_C1_6,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_18,             tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_omni_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo20,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_3,    servo21,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_BL,             tServoStandard)
+
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -48,12 +45,16 @@
 task PID(); // Sets winch servos' position, wheel pod motors' power, and lift motor's power. Others set in main.
 task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
 task Display(); // Updates the NXT's LCD display with useful info.
+task TimedOperations(); // Anything depending on match time (release climbing, etc.).
 
 //---------------- README!!! ------------------------------------------------>>
 //     As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
 // `BL`, and `BR` (going counterclockwise starting with `FR`).
 //
-//     The code is split into a couple tasks. I.) `main` is self-explanatory.
+//     The code is split into a couple tasks. I.) `main` does most of the high-
+// level logic processing (mostly controller input), and sets targets for the
+// PID task (motors and continuous rotation servos). If the power assignment is
+// trivial (e.g. the sweeper motor) it is done directly in the `main` loop.
 // II.) The `PID` loop currently runs a very simple PID loop monitoring lift
 // position, and is hard-coded to never allow the lift to go below 0. It also
 // runs a more complex PID loop for the wheel pods' continuous rotation servos,
@@ -63,16 +64,63 @@ task Display(); // Updates the NXT's LCD display with useful info.
 // BLACK MAGIC, DO NOT TOUCH. In the future we will want to optimize it, and
 // possibly move it into its own library. IV.) `Display` is a cyclical display
 // that provides valuable debugging information. Press the arrow buttons to go
-// to a different screen.
+// to a different screen. V.) This is an easter egg I'll probably never get to
+// implement. :P It would basically be an autonomous teleop period.
+//
+// CONTROLS:	Controller_1, Joystick_R:	Translational movement.
+//				Controller_1, Joystick_L:	Rotational movement.
+//				Controller_1, Button_Joy_R:	Reset gyro.
+//				Controller_1, Button_LT*:	Cut motor power (adjust pods).
+//				Controller_1, Button_RT*:	Fine-tune motors.
+//				Controller_1, Button_LB:	Dump 4 cubes.
+//				Controller_1, Button_RB:	Dump 1 cube.
+//				Controller_1, Button_A:		Toggle sweeper state.
+//				Controller_1, Button_B:		Reset gyro (eventually flag).
+//				Controller_1, Button_X:		Flag (eventually climb down).
+//				Controller_1, Button_Y:		Climb (eventually climb up).
+//				Controller_1, Direction_F:	Raise lift.
+//				Controller_1, Direction_B:	Lower lift.
+//				Controller_1, Direction_L:	Flag CCW fine-tune.
+//				Controller_1, Direction_R:	Flag CW fine-tune.
+//				Controller_1, Button_Start:	Toggle auton mode.
+//				Controller_1, Button_Back:	[UNUSED]
+//
+//				Controller_2, Joystick_L:	Lift height.
+//				Controller_2, Joystick_R:	Climbing.
+//				Controller_2, Button_LB:	Dump 4 cubes.
+//				Controller_2, Button_RB:	Dump 1 cube.
+//				Controller_2, Button_LT:	Release climbing.
+//				Controller_2, Button_RT:	Release climbing.
+//				Controller_2, Button_A:		Dump auton cube.
+//				Controller_2, Button_B:		Lift modifier key.
+//				Controller_2, Button_Joy_L:	[UNUSED]
+//				Controller_2, Button_Joy_R:	[UNUSED]
+//				Controller_2, Button_X:		[UNUSED]
+//				Controller_2, Button_Y:		Turns sweeper off.
+//				Controller_2, Direction_L:	Flag CCW.
+//				Controller_2, Direction_R:	Flag CW.
+//				Controller_2, Direction_F:	Sweep outwards/off.
+//				Controller_2, Direction_B:	Sweep inwards.
+//				Controller_2, Button_Start:	Toggle auton mode.
+//				Controller_2, Button_Back:	Emergency shutdown.
+//
+// *: Button_LT overrides Button_RT.
 //-------------------------------------------------------------------------->>
 
 // For main task:
+bool isResettingLift = false;
+float power_flag = 0.0;
+bool isLiftOverriden = false;
+const int liftOverrideDifference = 800; // MAGIC_NUM: TODO: find appropriate value.
+
+// For PID:
 float power_lift = 0.0;
 int lift_target = 0;
-float lift_pos = 0;
+float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
+// If I had STL at my disposal much std::vector<bool> would happen here.
 const int NXT_LINE_NUM = 6;
 typedef enum CardinalDirection {
 	CARDINAL_DIR_N	= 0,
@@ -125,18 +173,16 @@ ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
 
-void RunPickup();
-void StopPickup();
-void MoveForward(float power);
-void MoveBackward(float power);
-void TurnLeft(float power);
-void TurnRight(float power);
-void TurnLeft(float power_L, float power_R);
-void TurnRight(float power_L, float power_R);
-void Brake();
 
 task main()
 {
+	typedef enum SweepMode {
+		SWEEP_INIT		= 0,
+		SWEEP_IN		= 1,
+		SWEEP_OUT		= 2,
+		SWEEP_EJECT		= 3,
+		SWEEP_DOWN		= 4,
+	} SweepMode;
 
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
@@ -144,204 +190,314 @@ task main()
 	Task_Spawn(PID);
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
+	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
-	float gingerly	= 20;
-	float slowly	= 40;
-	float feelingly	= 70;
-	float quickly	= 90;
-	int forever = 100;
+	// Variables for heading/gyro processing.
+	float heading = 0.0; // Because f_angle_z is an int.
+	float gyro_current = 0.0; // For trapezoidal approximation.
+	float gyro_prev = 0.0; // For trapezoidal approximation.
 
-	typedef enum Crate{
-		CRATE_OUTER_CLOSE	= 0,
-		CRATE_INNER_CLOSE	= 1,
-		CRATE_INNER_FAR		= 2,
-		CRATE_OUTER_FAR		= 3,
-		CRATE_NUM
-	};
-	Crate isCrate = CRATE_OUTER_FAR;
-	int	IR_A = 0,
-		IR_B = 0,
-		IR_C = 0,
-		IR_D = 0,
-		IR_E = 0;
-	int IR_timer = 0;
-	int IR_delay[CRATE_NUM] = {1000, 1500, 2000, 2500};
+	// Timers.
+	int timer_gyro = 0.0;
 
-	// Times. (Dead reckoning.)
-	int delay_approach_block		= 800;
-	int delay_pickup_block			= 1200;
-	int delay_shake_shake			= 300;
-	int delay_avoid_crates			= 1200;
-	int delay_point_turn			= 1000;
-	int delay_crate_adjust[CRATE_NUM] = {600, 400, 200, 100};
-	int delay_wait_for_lift			= 100; // Really not necessary.
-	int delay_align_crate_start		= 1200;
-	int delay_approach_crate		= 800;
-	int delay_dump_blocks			= 1000;
-	int delay_crate_retreat			= 600;
-	int delay_realign_robot			= 1100;
-	int delay_along_ramp[CRATE_NUM]	= {1250, 900, 600, 300};
-	int delay_turn_beside_ramp		= 600;
-	int delay_slant_near_ramp		= 2100;
-	int delay_turn_onto_ramp		= 900;
-	int delay_steamroll_ramp		= 1800;
+	// Tank-mode power levels.
+	float power_L = 0.0;
+	float power_R = 0.0;
+
+	// Misc. variables.
+	SweepMode sweepMode = SWEEP_DOWN;
+	float power_climb = 0.0;
+	const int eject_delay = 1200;
+	int timer_eject = 0;
+	Time_ClearTimer(timer_eject);
 
 	Joystick_WaitForStart();
+	Time_ClearTimer(timer_gyro);
 
-	lift_target = lift_pos_pickup;
-	RunPickup();
-	MoveForward(gingerly);
-	Time_Wait(delay_approach_block);
-	Brake();
-	Time_Wait(delay_pickup_block);
-	//
-	MoveBackward(slowly);
-	Time_Wait(delay_shake_shake);
-	MoveForward(slowly);
-	Time_Wait(delay_shake_shake);
-	MoveBackward(slowly);
-	Time_Wait(delay_shake_shake);
-	MoveForward(slowly);
-	Time_Wait(delay_shake_shake);
-	Brake();
-	//
-	StopPickup();
-
-	MoveBackward(slowly);
-	Time_Wait(delay_avoid_crates);
-	Brake();
-	TurnRight(quickly, 0);
-	Time_Wait(delay_point_turn);
-	Brake();
-
-	Time_ClearTimer(IR_timer);
-	MoveBackward(feelingly);
-	while (IR_C < g_IRthreshold) {
-		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
-		if (Time_GetTime(IR_timer) > IR_delay[CRATE_OUTER_FAR]) {
-			break;
-		}
-	}
-	lift_target = lift_pos_dump;
-	int IR_sensed = Time_GetTime(IR_timer);
-	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
-		if (IR_sensed < IR_delay[i]) {
-			isCrate = i;
-			break;
-		}
-	}
-	Time_Wait(delay_crate_adjust[isCrate]-IR_sensed);
-	Brake();
-	Time_Wait(delay_wait_for_lift);
-
-	TurnRight(feelingly);
-	Time_Wait(delay_align_crate_start);
-	Brake();
-	MoveBackward(gingerly);
-	Time_Wait(delay_approach_crate);
-	Brake();
-	dumpCubes(4);
-	Time_Wait(delay_dump_blocks);
-
-	lift_target = lift_pos_pickup;
-	MoveForward(gingerly);
-	Time_Wait(delay_crate_retreat);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(delay_realign_robot);
-	Brake();
-
-	MoveForward(quickly);
-	Time_Wait(delay_along_ramp[isCrate]);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(delay_turn_beside_ramp);
-	Brake();
-	MoveForward(slowly);
-	Time_Wait(delay_slant_near_ramp);
-	Brake();
-	TurnLeft(feelingly);
-	Time_Wait(delay_turn_onto_ramp);
-	Brake();
-	MoveBackward(g_FullPower);
-	Time_Wait(delay_steamroll_ramp);
-	Brake();
-
-	Motor_SetPower(g_FullPower, motor_flag);
-
-	// TODO: BELOW IS DEBUG ONLY! REMEBER TO DELETE IT
 	while (true) {
-		Time_Wait(forever);
-	}
-}
+		Joystick_UpdateData();
 
-void RunPickup()
-{
-	Motor_SetPower(g_FullPower, motor_sweeper);
-	Motor_SetPower(g_FullPower, motor_assist_L);
-	Motor_SetPower(g_FullPower, motor_assist_R);
-	//Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	//Servo_SetPosition(servo_flip_R, servo_flip_R_up);
-	Servo_SetPosition(servo_flip_L, servo_flip_L_down);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
-}
-void StopPickup()
-{
-	Motor_SetPower(0, motor_sweeper);
-	Motor_SetPower(0, motor_assist_L);
-	Motor_SetPower(0, motor_assist_R);
-	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
-}
-void MoveForward(float power)
-{
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(power, motor_BR);
-}
-void MoveBackward(float power)
-{
-	Motor_SetPower(-power, motor_FR);
-	Motor_SetPower(-power, motor_FL);
-	Motor_SetPower(-power, motor_BL);
-	Motor_SetPower(-power, motor_BR);
-}
-void TurnLeft(float power)
-{
-	Motor_SetPower(-power, motor_FL);
-	Motor_SetPower(-power, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
-}
-void TurnRight(float power)
-{
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(-power, motor_FR);
-	Motor_SetPower(-power, motor_BR);
-}
-void TurnLeft(float power_L, float power_R)
-{
-	Motor_SetPower(-power_L, motor_FL);
-	Motor_SetPower(-power_L, motor_BL);
-	Motor_SetPower(power_R, motor_FR);
-	Motor_SetPower(power_R, motor_BR);
-}
-void TurnRight(float power_L, float power_R)
-{
-	Motor_SetPower(power_L, motor_FL);
-	Motor_SetPower(power_L, motor_BL);
-	Motor_SetPower(-power_R, motor_FR);
-	Motor_SetPower(-power_R, motor_BR);
-}
-void Brake()
-{
-	Motor_SetPower(0, motor_FR);
-	Motor_SetPower(0, motor_FL);
-	Motor_SetPower(0, motor_BL);
-	Motor_SetPower(0, motor_BR);
-	Time_Wait(100);
+		// TODO: Figure all of the below gyro stuff out.
+		gyro_current = 0;
+		gyro_prev = gyro_current;
+		heading = gyro_current;
+		////// TODO: Figure this out. Semaphores? Is it even necessary?
+		////Task_HogCPU();
+		////gyro_current = (float)HTGYROreadRot(sensor_protoboard);
+		////heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
+		//heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
+		//Time_ClearTimer(timer_gyro);
+		//gyro_prev = gyro_current;
+		//f_angle_z = round(heading);
+		////// TODO: Figure this out. Semaphores? Is it even necessary?
+		////Task_ReleaseCPU();
+
+		// MAGIC_NUM: No need for weird angles because omniwheels :P
+		g_ServoData[POD_FR].angle = 90;
+		g_ServoData[POD_FL].angle = 90;
+		g_ServoData[POD_BL].angle = 90;
+		g_ServoData[POD_BR].angle = 90;
+		power_L = Joystick_GenericInput(JOYSTICK_L, AXIS_Y);
+		power_R = Joystick_GenericInput(JOYSTICK_R, AXIS_Y);
+		g_MotorData[POD_FR].power = power_R;
+		g_MotorData[POD_FL].power = power_L;
+		g_MotorData[POD_BL].power = power_L;
+		g_MotorData[POD_BR].power = power_R;
+
+		// Set our "fine-tune" factor (amount motor power is divided by).
+		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
+		// while holding both triggers stops movement? The `if... else if...` structure
+		// is also a problem, since BUTTON_LT will take precedence over BUTTON_RT.
+		if (Joystick_Button(BUTTON_RT)==true) {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 0.25;
+			}
+		}
+		if (Joystick_Button(BUTTON_LT)==true) {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
+			}
+		} else {
+			for (int i=POD_FR; i<(int)POD_NUM; i++) {
+				g_MotorData[i].fineTuneFactor = 1; // Equivalent to not fine-tuning at all.
+			}
+		}
+
+		// Second driver's lift controls are overridden by the first's. The first
+		// driver can also lock the lift position by pressing the D-pad (L or R).
+		// Proper procedure for resetting lift would be to press Button_B and then
+		// go to press the Joystick_L button. Resetting of the lift is registered
+		// when the joystick button is released.
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
+		//Task_HogCPU();
+		if (Joystick_Direction(DIRECTION_F)==true) {
+			lift_target += 180; // MAGIC_NUM
+			isLiftOverriden = true;
+		} else if (Joystick_Direction(DIRECTION_B)==true) {
+			lift_target -= 120; // MAGIC_NUM
+			isLiftOverriden = true;
+		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
+			lift_target += 80; // MAGIC_NUM
+			isLiftOverriden = true;
+		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
+			lift_target -= 50; // MAGIC_NUM
+			isLiftOverriden = true;
+		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
+			// Nesting these is more efficient.
+			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
+				if (Joystick_DirectionPressed(DIRECTION_F, CONTROLLER_2)==true) {
+					lift_target = lift_pos_top;
+					sweepMode = SWEEP_EJECT;
+					Time_ClearTimer(timer_eject);
+					isLiftOverriden = false;
+				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
+					lift_target = lift_pos_pickup;
+					sweepMode = SWEEP_IN;
+					isLiftOverriden = false;
+				}
+			}
+			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
+				isResettingLift = true;
+				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
+				isLiftOverriden = true;
+			} else {
+				isResettingLift = false; // This is important! Or it never stops resetting.
+				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
+				if (joystick_input != 0) {
+					lift_target += joystick_input*1.3; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+					isLiftOverriden = true;
+				}
+			}
+		}
+		// Setting the lift too high or too low is handled in the PID loop.
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
+		//Task_ReleaseCPU();
+
+		// If both buttons are pressed, 1 cube is dumped instead of 4.
+		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
+			dumpCubes(4); // MAGIC_NUM.
+		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
+			dumpCubes(1); // Dumps one cube at a time.
+			// All this really does is dump for a short amount of time.
+			// TODO: Is it possible to dump 2 or 3 cubes? How should that
+			// be mapped to controls? Should the "fine-tune" be 2 cubes?
+		}
+
+		// TODO: Make sure driver 1 does indeed override driver 2. Not very urgent.
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
+		//Task_HogCPU();
+		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
+			if (Joystick_Direction(DIRECTION_F, CONTROLLER_2)==true) {
+				if (sweepMode==SWEEP_OUT) {
+					sweepMode = SWEEP_EJECT;
+				} else {
+					sweepMode = SWEEP_OUT;
+				}
+				Time_ClearTimer(timer_eject);
+			} else if (Joystick_Direction(DIRECTION_B, CONTROLLER_2)==true) {
+				sweepMode = SWEEP_IN;
+			} // No "else" here so that Button_B can do other stuff.
+		}
+		if (Joystick_ButtonPressed(BUTTON_Y, CONTROLLER_2)==true) {
+			switch (sweepMode) {
+				case SWEEP_INIT :
+					sweepMode = SWEEP_IN;
+					break;
+				case SWEEP_IN :
+				case SWEEP_OUT :
+				case SWEEP_DOWN :
+					sweepMode = SWEEP_INIT;
+					break;
+				case SWEEP_EJECT :
+					// Do nothing.
+					break;
+			}
+		}
+		if (Joystick_ButtonPressed(BUTTON_A)==true) {
+			switch (sweepMode) {
+				case SWEEP_INIT :
+					sweepMode = SWEEP_IN;
+					break;
+				case SWEEP_IN :
+					sweepMode = SWEEP_EJECT;
+					Time_ClearTimer(timer_eject);
+					break;
+				case SWEEP_OUT :
+					sweepMode = SWEEP_DOWN;
+					break;
+				case SWEEP_EJECT :
+					// Do nothing. Treat it as an accidental press.
+					break;
+				case SWEEP_DOWN :
+					sweepMode = SWEEP_IN;
+					break;
+					// TODO: combine some of the above cases.
+			}
+		}
+		if ((sweepMode==SWEEP_EJECT)&&(Time_GetTime(timer_eject)>eject_delay)) {
+			sweepMode = SWEEP_DOWN;
+		}
+		if (lift_pos>lift_sweeper_guard) {
+			if (sweepMode == SWEEP_IN) {
+				sweepMode = SWEEP_EJECT;
+				Time_ClearTimer(timer_eject);
+				// In all other cases the sweeping mode shouldn't change.
+			}
+		}
+		//// TODO: Figure this out. Semaphores? Is it even necessary?
+		//Task_ReleaseCPU();
+
+		if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
+			power_flag = -g_FullPower;
+		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
+			power_flag = g_FullPower;
+		} else {
+			power_flag = 0;
+		}
+
+		// TODO: Make climbing work. When we get comms working, fix the controls.
+		// As usual, driver 1's controls take precedence over driver 2.
+		if (Joystick_Button(BUTTON_X)==true) {
+			// TODO: Climb "down" instead.
+			power_flag = g_FullPower;
+		} else if (Joystick_Direction(DIRECTION_L)==true) {
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Direction(DIRECTION_R)==true) {
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
+			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+		} else {
+			power_flag = 0;
+		}
+		if (Joystick_Button(BUTTON_Y)==true) {
+			power_climb = g_FullPower; // Climb "up".
+		} else {
+			// This gracefully handles the "else" condition (sets climbing power to 0.
+			power_climb = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
+		}
+
+		if (lift_pos<lift_tube_guard) {
+			if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
+				Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+				Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+			}
+		}
+		if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
+			Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+		}
+
+		// Set motor and servo values (lift motor is set in PID()):
+		switch (sweepMode) {
+			case SWEEP_INIT :
+				Motor_SetPower(0, motor_sweeper);
+				Motor_SetPower(0, motor_assist_L);
+				Motor_SetPower(0, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_up);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+				break;
+			case SWEEP_IN :
+				Motor_SetPower(g_FullPower, motor_sweeper);
+				Motor_SetPower(g_FullPower, motor_assist_L);
+				Motor_SetPower(g_FullPower, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+				break;
+			case SWEEP_OUT :
+				Motor_SetPower(-g_FullPower, motor_sweeper);
+				Motor_SetPower(-g_FullPower, motor_assist_L);
+				Motor_SetPower(-g_FullPower, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+				break;
+			case SWEEP_EJECT :
+				Motor_SetPower(-g_FullPower, motor_sweeper);
+				Motor_SetPower(-g_FullPower, motor_assist_L);
+				Motor_SetPower(-g_FullPower, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+				break;
+			case SWEEP_DOWN :
+				Motor_SetPower(0, motor_sweeper);
+				Motor_SetPower(0, motor_assist_L);
+				Motor_SetPower(0, motor_assist_R);
+				Servo_SetPosition(servo_flip_L, servo_flip_L_down);
+				Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+				break;
+		}
+		Motor_SetPower(power_flag, motor_flag);
+
+		// While the "back" button is pressed on controller 2, go into shutdown mode.
+		// TODO: Make this less of a kludge. This may even be unnecessary given the limit switch.
+		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
+			isResettingLift = true;
+			power_lift = 0.0;
+		} else {
+			isResettingLift = false;
+		}
+
+		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
+		if (bDisconnected==true) {
+			int original_counter_limit = nNoMessageCounterLimit;
+			nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
+			Task_Suspend(PID);	// These two tasks won't get to execute anyway (CPU is hogged).
+			Task_Suspend(CommLink);
+			do {
+				Task_HogCPU();
+				resetMotorsServos();
+				if (bSoundActive==false) {
+					PlaySound(soundFastUpwardTones);
+				}
+				Task_ReleaseCPU();
+				Task_EndTimeslice();
+			} while (bDisconnected==true);
+			Task_Resume(PID);
+			Task_Resume(CommLink);
+			nNoMessageCounterLimit = original_counter_limit;
+		}
+	}
 }
 
 
@@ -359,7 +515,7 @@ task PID()
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 2.2;
-	const float kP_lift_up			= 0.28;
+	const float kP_lift_up			= 0.27;
 	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
@@ -373,32 +529,50 @@ task PID()
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
+		//Task_HogCPU();
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
 
+		// Assign the power settings to the motors and servos.
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
+			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
+			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
+		}
+
+		// TODO: Replace this hacked together lift resetter (or not?).
 		// The following is a PID loop for setting the lift's power. Because the lift is so
 		// fast, we are slowing it down intentionally to prevent the it from killing itself.
-		lift_pos = Motor_GetEncoder(motor_lift_back);
-		error_prev_lift = error_lift;
-		if (lift_target<0) { // Because we're safe.
-			lift_target = 0;
-		} else if (lift_target>lift_max_height) {
-			lift_target = lift_max_height;
-		}
+		if (isResettingLift==true) {
+			lift_pos = 0;
+			Motor_ResetEncoder(motor_lift_front);
+		} else {
+			lift_pos = Motor_GetEncoder(motor_lift_front);
+			error_prev_lift = error_lift;
+			if (lift_target<0) { // Because we're safe.
+				lift_target = 0;
+			} else if (lift_target>lift_max_height) {
+				lift_target = lift_max_height;
+			}
 
-		error_lift = lift_target-lift_pos;
-		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		if (error_lift>0) {
-			term_P_lift = kP_lift_up*error_lift;
-			term_D_lift = kD_lift_up*error_rate_lift;
-		} else if (error_lift<=0) {
-			term_P_lift = kP_lift_down*error_lift;
-			term_D_lift = kD_lift_down*error_rate_lift;
-		}
-		power_lift = term_P_lift+term_D_lift;
-		power_lift = Math_Limit(power_lift, g_FullPower);
+			if (isLiftOverriden==true && abs(lift_target-lift_pos)>liftOverrideDifference) {
+				lift_target = lift_pos;
+				isLiftOverriden = false;
+			}
 
+			error_lift = lift_target-lift_pos;
+			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+			if (error_lift>0) {
+				term_P_lift = kP_lift_up*error_lift;
+				term_D_lift = kD_lift_up*error_rate_lift;
+			} else if (error_lift<=0) {
+				term_P_lift = kP_lift_down*error_lift;
+				term_D_lift = kD_lift_down*error_rate_lift;
+			}
+			power_lift = term_P_lift+term_D_lift;
+			power_lift = Math_Limit(power_lift, g_FullPower);
+		}
 
 		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
 		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
@@ -409,6 +583,9 @@ task PID()
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
+
+		//Task_ReleaseCPU();
+		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)
 	}
 }
 
@@ -675,15 +852,11 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
-		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
-		DISP_ENCODERS,			// Raw encoder values (7? 8?).
+		DISP_ENCODERS,			// Raw encoder values.
 		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_COMM_DEBUG,
 		DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
-		//DISP_SERVOS,			// Show each servo's position.
-		//DISP_TASKS,				// Which tasks are running.
-		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM
 	};
 
@@ -698,24 +871,15 @@ task Display()
 		switch (isMode) {
 			case DISP_FCS :
 				break;
-			case DISP_SWERVE_DEBUG :
-				// The value of `pod_current[i]` is (should be?) between 0~360.
-				//nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
-				//nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
-				//nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
-				//nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, " pow%+4d", g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, " pow%+4d", g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, " pow%+4d", g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, " pow%+4d", g_MotorData[POD_BR].power);
-				break;
 			case DISP_ENCODERS :
-				//nxtDisplayTextLine(0, "FR %+5d  (%d)", encoder_pod[POD_FR], isAligned[POD_FR]);
-				//nxtDisplayTextLine(1, "FL %+5d  (%d)", encoder_pod[POD_FL], isAligned[POD_FL]);
-				//nxtDisplayTextLine(2, "BL %+5d  (%d)", encoder_pod[POD_BL], isAligned[POD_BL]);
-				//nxtDisplayTextLine(3, "BR %+5d  (%d)", encoder_pod[POD_BR], isAligned[POD_BR]);
-				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
-				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
+				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);
+				nxtDisplayTextLine(1, "Gyro: %+6d", f_angle_z);
+				nxtDisplayTextLine(2, "FRpow %+4d", g_MotorData[POD_FR].power);
+				nxtDisplayTextLine(3, "FLpow %+4d", g_MotorData[POD_FL].power);
+				nxtDisplayTextLine(4, "BLpow %+4d", g_MotorData[POD_BL].power);
+				nxtDisplayTextLine(5, "BRpow %+4d", g_MotorData[POD_BR].power);
+				nxtDisplayTextLine(6, "ROmni %i", Motor_GetEncoder(motor_FR));
+				nxtDisplayTextLine(7, "LOmni %i", Motor_GetEncoder(motor_FL));
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {
@@ -785,6 +949,23 @@ task Display()
 				Task_Kill(displayDiagnostics);
 			}
 		}
-		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
+		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death.
 	}
+}
+
+
+
+task TimedOperations()
+{
+	Joystick_WaitForStart();
+	for (int i=0; i<100; i++) { // MAGIC_NUM: 100=120-20
+		Time_Wait(1000);
+	}
+
+	// Makes sure the arms don't tangle with the servo wire tubing.
+	while (lift_pos>lift_tube_guard) {
+		Time_Wait(100); // MAGIC_NUM: An arbitrary delay.
+	}
+	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
 }

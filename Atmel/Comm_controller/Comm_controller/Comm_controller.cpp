@@ -80,6 +80,8 @@ int main()
 	uint8_t  rot_x_comm = 0;
 	uint8_t  rot_y_comm = 0;
 	uint16_t rot_z_comm = 0;
+	uint8_t  rot_z_comm_L = 0;
+	uint8_t  rot_z_comm_H = 0;
 	bool isRedAlliance = false; // Might as well.
 	uint8_t line_sensor_bmp = 0x22;	// TODO: I think these are just random numbers so the link doesn't die. Not sure though :P
 	uint8_t cube_detect_bmp = 0x89;	// TODO: I think these are just random numbers so the link doesn't die. Not sure though :P
@@ -122,6 +124,7 @@ int main()
 		PORTB |= (1<<PB2);
 		_delay_us(100);	// Make sure we trigger a pin change!
 		PORTB &= ~(1<<PB2);
+		_delay_us(100); // We can afford to have delays here.
 		
 		uint8_t spi_W = STATUS_W_INIT;
 		uint8_t spi_R = 0;
@@ -145,6 +148,7 @@ int main()
 		}
 	}
 	PORTB |= (1<<PB2); // Release our slave. (TODO: plural requires a "for each" loop)
+	alert();
 	
 	// TODO: config reading.
 	
@@ -420,17 +424,22 @@ int main()
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_x_comm = SPDR;
 		
-		SPDR = STATUS_W_REQ_GYRO_Z;
+		SPDR = STATUS_W_REQ_GYRO_Z_L;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_y_comm = SPDR;
 		
-		SPDR = STATUS_R_ACK;
+		SPDR = STATUS_W_REQ_GYRO_Z_H;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
-		rot_z_comm = SPDR;
+		rot_z_comm_L = SPDR;
+		
+		SPDR = STATUS_W_ACK;
+		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
+		rot_z_comm_H = SPDR;
+		rot_z_comm = rot_z_comm_L + (rot_z_comm_H<<8);
 		
 		PORTB |= (1<<PB2);
 		// TODO: Delete this last line?
-		_delay_ms(1); // Give the slave some time to do other stuff...
+		_delay_us(500); // Give the slave some time to do other stuff...
 		
 		//// TODO: Actually write this stuff!
 		// Increment mux.

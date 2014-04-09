@@ -5,9 +5,10 @@
 
 
 // Variables that are shared inside interrupts.
-volatile uint16_t comm_x = 0;
-volatile uint16_t comm_y = 0;
-volatile uint16_t comm_z = 0;
+volatile uint8_t comm_x = 0;
+volatile uint8_t comm_y = 0;
+volatile uint8_t comm_z_L = 0;
+volatile uint8_t comm_z_H = 0;
 volatile bool is_gyro_resetting = false;
 volatile bool is_comm_ready = false;
 enum LED_STATE {
@@ -36,6 +37,9 @@ int main()
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
 	uint64_t SYSTEM_TIME = 0; // In microseconds.
 	
+	int comm_x_temp = 0;
+	int comm_y_temp = 0;
+	int comm_z_temp = 0;
 	double t_prev = 0.0; // TODO: Wrap all timers into a library.
 	double t_current = 0.0;
 	double dt = t_current - t_prev;
@@ -132,9 +136,13 @@ int main()
 	PCICR |= (1<<PCIE0);
 	PCIFR |= (1<<PCIF0);
 	sei();
+	alertA();
 	
 	// Wait to make sure we've established communication with the Comm_controller.
 	while (is_comm_ready != true) {;}
+	alertB();
+	// TODO: FOR SOME REASON THE ABOVE BLOCKS WHEN BOOTING RIGHT AFTER TURNING THE NXT OFF.
+	// THEN TO HAVE IT WORK AGAIN, TURN OFF THE NXT, WAIT A WHILE, THEN TURN IT BACK ON.
 
 	// TODO: Set up any interrupts that haven't been setup yet.
 	
@@ -160,6 +168,13 @@ int main()
 			// read
 		
 		// Gyro handling.
+		if (is_gyro_resetting == true) {
+			rot_x = 0;
+			rot_y = 0;
+			rot_z = 0;
+			is_gyro_resetting = false;
+		}
+		
 		// TODO: It *might* be more efficient to calculate x, y, and z one-at-a-time.
 		//vel_x_signed_prev = vel_x_signed;
 		//vel_y_signed_prev = vel_y_signed;
@@ -196,30 +211,53 @@ int main()
 		rot_x += rect_x;
 		rot_y += rect_y;
 		rot_z += rect_z;
-		if (is_gyro_resetting == true) {
-			rot_x = 0;
-			rot_y = 0;
-			rot_z = 0;
-			is_gyro_resetting = false;
+		//rot_x = fmod(rot_x, 360.0);
+		//rot_y = fmod(rot_y, 360.0);
+		//rot_z = fmod(rot_z, 360.0);
+		//if (rot_z<(-360.0)) {
+			//rot_z += 360.0;	// Making sure we're positive.
+		//}
+		
+		if (rot_x>=30.0) {
+			comm_x_temp = 30;
+		} else if (rot_x<=(-30.0)) {
+			comm_x_temp = -30;
+		} else {
+			comm_x_temp = static_cast<int>(round(rot_x));
 		}
-		// TODO: Split into three atomic blocks?
+		comm_x_temp += 30;
+		if (rot_y>=30.0) {
+			comm_y_temp = 60;
+		} else if (rot_y<=(-30.0)) {
+			comm_y_temp = -30;
+		} else {
+			comm_y_temp = static_cast<int>(round(rot_y));
+		}
+		comm_y_temp += 30;
+		comm_z_temp = static_cast<int>(round(rot_z));
+		// TODO: Split into four atomic blocks?
 		// Pros:	Interrupts can happen before all three vars get assigned.
 		// Cons:	Possibly more overhead and too much delay from capturing
 		//			and releasing the processor (and might miss the SS window).
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-			comm_x = static_cast<int>(round(rot_x)) % 360;
-			comm_y = static_cast<int>(round(rot_y)) % 360;
-			comm_z = static_cast<int>(round(rot_z)) % 360;
+			comm_x = static_cast<uint8_t>(comm_x_temp);
+			comm_y = static_cast<uint8_t>(comm_y_temp);
+			comm_z_L = static_cast<uint8_t>(comm_z_temp & 0x00FF);
+			comm_z_H = static_cast<uint8_t>((comm_z_temp & 0x0100) >>8);
 		}
 		
 		
 		
-		//TODO: DELETE THIS (TESTING)
+		// TODO: This is just to make sure we are indeed executing inside the main loop.
+		alertC();
+		
+		// TODO: DELETE THIS (TESTING)
 		if (fabs(rot_z)<0.5) {
 			alertD();
 		} else {
 			clearD();
 		}
+		
 		//// TODO: This is extremely hackish (and possibly dangerous).
 		//// Delete at some point. Also there's no debouncing at all.
 		//if ((PINB&(PINB1))==0) {
@@ -259,6 +297,7 @@ ISR(PCINT0_vect)
 	if ((PINB & (1<<PINB2)) != 0) {
 		return; // We only care if the SS' pin is pulled low.
 	} else {
+		
 		uint8_t spi_W = STATUS_W_INIT;
 		uint8_t spi_R = 0;
 		
@@ -284,8 +323,11 @@ ISR(PCINT0_vect)
 				case STATUS_R_REQ_GYRO_Y :
 					spi_W = comm_y;
 					break;
-				case STATUS_R_REQ_GYRO_Z :
-					spi_W = comm_z;
+				case STATUS_R_REQ_GYRO_Z_L :
+					spi_W = comm_z_L;
+					break;
+				case STATUS_R_REQ_GYRO_Z_H :
+					spi_W = comm_z_H;
 					break;
 				case STATUS_R_END :
 					spi_W = STATUS_W_ACK;

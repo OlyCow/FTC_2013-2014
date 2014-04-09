@@ -913,7 +913,9 @@ task Display()
 			case DISP_SENSORS :
 				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);
 				nxtDisplayTextLine(1, "(%+5d,%+5d,%+3d)", f_pos_x, f_pos_y, f_pos_z);
-				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", f_angle_x, f_angle_y, f_angle_z);
+				int temp_x = f_angle_x - 30;	// TODO: Make this not ugly.
+				int temp_y = f_angle_y - 30;
+				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", temp_x, temp_y, f_angle_z);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");
@@ -947,7 +949,7 @@ task Display()
 				Task_Kill(displayDiagnostics);
 			}
 		}
-		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death.
+		Time_Wait(50); // MAGIC_NUM: Prevents the LCD from updating itself to death.
 	}
 }
 

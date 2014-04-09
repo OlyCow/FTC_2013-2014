@@ -49,9 +49,9 @@ int main()
 	int vel_x_signed = 0;
 	int vel_y_signed = 0;
 	int vel_z_signed = 0;
-	int vel_x_signed_prev = 0;
-	int vel_y_signed_prev = 0;
-	int vel_z_signed_prev = 0;
+	//int vel_x_signed_prev = 0;
+	//int vel_y_signed_prev = 0;
+	//int vel_z_signed_prev = 0;
 	uint16_t vel_x = 0; // TODO: switch all of these over to unions.
 	uint16_t vel_y = 0;
 	uint16_t vel_z = 0;
@@ -112,7 +112,7 @@ int main()
 	//vel_y_offset = offset_y_sum/2.0; // MAGIC_NUM: number of samples.
 	//vel_z_offset = offset_z_sum/2.0; // MAGIC_NUM: number of samples.
 
-	_delay_us(100); // MAGIC_NUM
+	_delay_us(500); // MAGIC_NUM
 	for (int i=0; i<10; i++) { // MAGIC_NUM: NOTE: flush out bad readings?
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
@@ -139,9 +139,11 @@ int main()
 	alertA();
 	
 	// Wait to make sure we've established communication with the Comm_controller.
-	while (is_comm_ready != true) {;}
+	while (is_comm_ready != true) {
+		_delay_us(100);	// MAGIC_NUM: I have no clue what I'm doing.
+	}
 	alertB();
-	// TODO: FOR SOME REASON THE ABOVE BLOCKS WHEN BOOTING RIGHT AFTER TURNING THE NXT OFF.
+	// TODO: (SOMETIMES) THE ABOVE BLOCKS WHEN BOOTING RIGHT AFTER TURNING THE NXT OFF.
 	// THEN TO HAVE IT WORK AGAIN, TURN OFF THE NXT, WAIT A WHILE, THEN TURN IT BACK ON.
 
 	// TODO: Set up any interrupts that haven't been setup yet.
@@ -202,21 +204,21 @@ int main()
 		//rect_x += (double)vel_x_signed_prev;
 		//rect_y += (double)vel_y_signed_prev;
 		//rect_z += (double)vel_z_signed_prev;
-		rect_x *= (bit_to_gyro * (double)dt * usec_to_sec);
-		rect_y *= (bit_to_gyro * (double)dt * usec_to_sec);
-		rect_z *= (bit_to_gyro * (double)dt * usec_to_sec);
 		//rect_x /= 2.0;
 		//rect_y /= 2.0;
 		//rect_z /= 2.0;
+		rect_x *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rect_y *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rect_z *= (bit_to_gyro * (double)dt * usec_to_sec);
 		rot_x += rect_x;
 		rot_y += rect_y;
 		rot_z += rect_z;
-		//rot_x = fmod(rot_x, 360.0);
-		//rot_y = fmod(rot_y, 360.0);
-		//rot_z = fmod(rot_z, 360.0);
-		//if (rot_z<(-360.0)) {
-			//rot_z += 360.0;	// Making sure we're positive.
-		//}
+		rot_x = fmod(rot_x, 360);
+		rot_y = fmod(rot_y, 360);
+		rot_z = fmod(rot_z, 360);
+		if (rot_z<(-360.0)) {
+			rot_z += 360.0;	// Making sure we're positive.
+		}
 		
 		if (rot_x>=30.0) {
 			comm_x_temp = 30;
@@ -227,7 +229,7 @@ int main()
 		}
 		comm_x_temp += 30;
 		if (rot_y>=30.0) {
-			comm_y_temp = 60;
+			comm_y_temp = 30;
 		} else if (rot_y<=(-30.0)) {
 			comm_y_temp = -30;
 		} else {
@@ -258,11 +260,11 @@ int main()
 			clearD();
 		}
 		
-		//// TODO: This is extremely hackish (and possibly dangerous).
-		//// Delete at some point. Also there's no debouncing at all.
-		//if ((PINB&(PINB1))==0) {
-			//is_gyro_resetting = true;
-		//}
+		// TODO: This is extremely hackish (and possibly dangerous).
+		// Delete at some point. Also there's no debouncing at all.
+		if ((PINB&(1<<PINB1))==0) {
+			is_gyro_resetting = true;
+		}
 
 		
 		
@@ -335,7 +337,7 @@ ISR(PCINT0_vect)
 					
 				// Status setting codes:
 				case STATUS_R_RESET_GYRO :
-					is_gyro_resetting = true;
+					//is_gyro_resetting = true;
 					spi_W = STATUS_W_ACK;
 					break;
 				case STATUS_R_LED_A_ON :
@@ -403,8 +405,6 @@ void alertC() { PORTD |= 1<<PORTD7; }
 void clearC() { PORTD &= ~(1<<PORTD7); }
 void alertD() { PORTB |= 1<<PORTB0; }
 void clearD() { PORTB &= ~(1<<PORTB0); }
-
-
 
 void setupPins()
 {

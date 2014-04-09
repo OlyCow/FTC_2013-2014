@@ -122,9 +122,9 @@ int main()
 		PORTD &= ~(1<<PD3);	// Pretty sure it's HI-LO-HI (A-B-C).
 		PORTD |= (1<<PD4);
 		PORTB |= (1<<PB2);
-		_delay_us(100);	// Make sure we trigger a pin change!
+		_delay_ms(1);	// Make sure we trigger a pin change!
 		PORTB &= ~(1<<PB2);
-		_delay_us(100); // We can afford to have delays here.
+		_delay_ms(1);	// We can afford to have delays here.
 		
 		uint8_t spi_W = STATUS_W_INIT;
 		uint8_t spi_R = 0;
@@ -135,6 +135,7 @@ int main()
 		if (spi_R == STATUS_R_INIT) {
 			spi_W = STATUS_W_ACK;
 		}
+		_delay_us(100); // #MAGIC_NUM #OMG #MICROSEC
 		SPDR = spi_W;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		spi_R = SPDR;
@@ -148,6 +149,7 @@ int main()
 		}
 	}
 	PORTB |= (1<<PB2); // Release our slave. (TODO: plural requires a "for each" loop)
+	_delay_ms(1); // MAGIC_NUM? Give our slaves plenty of time to get ready.
 	alert();
 	
 	// TODO: config reading.
@@ -416,22 +418,27 @@ int main()
 		// Get comms data.
 		PORTB &= ~(1<<PB2);	// Bring SS' low.
 		
+		_delay_us(50); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_X;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		uint8_t spi_w_flush = SPDR; // Remember, we'll always be a cycle off.
 		
+		_delay_us(50); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_Y;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_x_comm = SPDR;
 		
+		_delay_us(50); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_Z_L;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_y_comm = SPDR;
 		
+		_delay_us(50); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_Z_H;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_z_comm_L = SPDR;
 		
+		_delay_us(50); // MAGIC_NUM
 		SPDR = STATUS_W_ACK;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_z_comm_H = SPDR;
@@ -439,7 +446,7 @@ int main()
 		
 		PORTB |= (1<<PB2);
 		// TODO: Delete this last line?
-		_delay_us(500); // Give the slave some time to do other stuff...
+		_delay_us(150); // Give the slave some time to do other stuff...
 		
 		//// TODO: Actually write this stuff!
 		// Increment mux.

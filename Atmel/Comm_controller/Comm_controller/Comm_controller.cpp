@@ -120,7 +120,7 @@ int main()
 		PORTD &= ~(1<<PD3);	// Pretty sure it's HI-LO-HI (A-B-C).
 		PORTD |= (1<<PD4);
 		PORTB |= (1<<PB2);
-		_delay_ms(10);	// Make sure we trigger a pin change!
+		_delay_us(100);	// Make sure we trigger a pin change!
 		PORTB &= ~(1<<PB2);
 		
 		uint8_t spi_W = STATUS_W_INIT;
@@ -139,8 +139,9 @@ int main()
 			MCU_ready[0] = true;
 		}
 		
-		for (short i=0; i<8; i++) {	// You know, I could mischievously replace "8" with "sizeof(uint8_t)" :)
-			all_ready = all_ready && (MCU_ready[i]);
+		all_ready = true; // Reset this so the following check will work.
+		for (int i=0; i<8; i++) {	// You know, I could mischievously replace "8" with "sizeof(uint8_t)" :)
+			all_ready = (all_ready && (MCU_ready[i]));
 		}
 	}
 	PORTB |= (1<<PB2); // Release our slave. (TODO: plural requires a "for each" loop)
@@ -164,7 +165,7 @@ int main()
 		clock_NXT_current = ((PIND & (1<<PD0)) != 0);
 		if (clock_NXT_current != clock_NXT_prev) {
 			clock_NXT_prev = clock_NXT_current;
-			byte_read = false;
+			byte_read = false;	// TODO: Can this be a 0x00? For consistency (with 0x01)?
 			if ((PIND & (1<<PD1)) != 0) {
 				byte_read = 0x01;
 			}
@@ -465,6 +466,9 @@ int main()
 	}
 }
 
+void alert() { PORTB |= 1<<PB1; }
+void clear() { PORTB &= ~(1<<PB1); }
+
 void setupPins()
 {
 	// Set up I/O port directions with the DDRx registers. 1=out, 0=in.
@@ -486,7 +490,8 @@ void setupPins()
 	// 13-PD7: MOSI_NXT_B		16-PB2: SS_MCU_WRITE
 	// 14-PB0: MOSI_NXT_A		15-PB1: LIFT_RESET (LED alert)
 	DDRB = ((1<<PB0) |
-			(0<<PB1) |
+			//(0<<PB1) |	// TODO: THIS IS THE ORIGINAL
+			(1<<PB1) |		// TODO: THIS IS THE "ALERT" VERSION
 			(1<<PB2) |
 			(1<<PB3) |
 			(0<<PB4) |
@@ -514,7 +519,8 @@ void setupPins()
 	// details, see the schematic for the DDRx registers' set-up.
 	// SPI shouldn't need pull-up resistors. Nor do multiplexer read pins.
 	PORTB = ((0<<PB0) |
-			 (1<<PB1) |
+			 //(1<<PB1) |	// TODO: THIS IS THE ORIGINAL
+			 (0<<PB1) |		// TODO: THIS IS THE "ALERT" VERSION
 			 (0<<PB2) |
 			 (0<<PB3) |
 			 (0<<PB4) |

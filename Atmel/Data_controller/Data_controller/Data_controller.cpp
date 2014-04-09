@@ -214,11 +214,16 @@ int main()
 		
 		
 		
-		////TODO: DELETE THIS (TESTING)
-		//if (fabs(rot_z)<0.5) {
-			//alertD();
-		//} else {
-			//clearD();
+		//TODO: DELETE THIS (TESTING)
+		if (fabs(rot_z)<0.5) {
+			alertD();
+		} else {
+			clearD();
+		}
+		//// TODO: This is extremely hackish (and possibly dangerous).
+		//// Delete at some point. Also there's no debouncing at all.
+		//if ((PINB&(PINB1))==0) {
+			//is_gyro_resetting = true;
 		//}
 
 		
@@ -254,10 +259,10 @@ ISR(PCINT0_vect)
 	if ((PINB & (1<<PINB2)) != 0) {
 		return; // We only care if the SS' pin is pulled low.
 	} else {
+		uint8_t spi_W = STATUS_W_INIT;
+		uint8_t spi_R = 0;
+		
 		while ((PINB & (1<<PINB2)) == 0) {
-			uint8_t spi_W = STATUS_W_INIT;
-			uint8_t spi_R = 0;
-			
 			SPDR = spi_W;
 			while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 			spi_R = SPDR;

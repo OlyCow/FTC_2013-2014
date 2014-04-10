@@ -190,6 +190,11 @@ task main()
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
+	// Variables for disabling things.
+	int original_counter_limit = nNoMessageCounterLimit;
+	nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
+	//nNoMessageCounterLimit = original_counter_limit;	// Add this back in when (if?) you need to use it.
+
 	// Variables for heading/gyro processing.
 	float heading = 0.0; // Because f_angle_z is an int.
 	float gyro_current = 0.0; // For trapezoidal approximation.
@@ -478,8 +483,6 @@ task main()
 
 		// If bDisconnected is true, go into an infinite loop and continually assign 0 to everything.
 		if (bDisconnected==true) {
-			int original_counter_limit = nNoMessageCounterLimit;
-			nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
 			Task_Suspend(PID);	// These two tasks won't get to execute anyway (CPU is hogged).
 			Task_Suspend(CommLink);
 			do {
@@ -493,7 +496,6 @@ task main()
 			} while (bDisconnected==true);
 			Task_Resume(PID);
 			Task_Resume(CommLink);
-			nNoMessageCounterLimit = original_counter_limit;
 		}
 	}
 }

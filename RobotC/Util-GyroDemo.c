@@ -8,6 +8,17 @@
 task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
 task Display(); // Updates the NXT's LCD display with useful info.
 
+
+
+bool IS_EXAGGERATE_XY = true;
+
+int motor_x_target = 0;
+int motor_y_target = 0;
+int motor_z_target = 0;
+float motor_x_error = 0.0;
+float motor_y_error = 0.0;
+float motor_z_error = 0.0;
+
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
 // If I had STL at my disposal much std::vector<bool> would happen here.
@@ -77,12 +88,6 @@ task main()
 	int motor_x_pos = 0;
 	int motor_y_pos = 0;
 	int motor_z_pos = 0;
-	int motor_x_target = 0;
-	int motor_y_target = 0;
-	int motor_z_target = 0;
-	float motor_x_error = 0.0;
-	float motor_y_error = 0.0;
-	float motor_z_error = 0.0;
 	Motor_ResetEncoder(motor_x);
 	Motor_ResetEncoder(motor_y);
 	Motor_ResetEncoder(motor_z);
@@ -90,8 +95,10 @@ task main()
 	while (true) {
 		motor_x_target = f_angle_x - 30;	// MAGIC_NUM: Built-in offset (commlink).
 		motor_y_target = f_angle_y - 30;	// MAGIC_NUM: Built-in offset (commlink).
-		motor_x_target *=  2.0;
-		motor_y_target *=  2.0;
+		if (IS_EXAGGERATE_XY==true) {
+			motor_x_target *=  2.0;
+			motor_y_target *=  2.0;
+		}
 		motor_z_target = f_angle_z;
 		motor_x_pos = Motor_GetEncoder(motor_x);
 		motor_y_pos = Motor_GetEncoder(motor_y);
@@ -100,6 +107,16 @@ task main()
 		motor_x_error = motor_x_target - motor_x_pos;
 		motor_y_error = motor_y_target - motor_y_pos;
 		motor_z_error = motor_z_target - motor_z_pos;
+
+		while (abs(motor_z_error)>360) {
+			if (motor_z_error>360) {
+				motor_z_target -= 360;
+				motor_z_error -= 360;
+			} else if (motor_z_error<-360) {
+				motor_z_target += 360;
+				motor_z_error += 360;
+			}
+		}
 
 		Motor_SetPower(kP_x*motor_x_error, motor_x);
 		Motor_SetPower(kP_y*motor_y_error, motor_y);
@@ -370,9 +387,10 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
+		DISP_PID_STATUS,		// PID variables for the motors.
 		DISP_COMM_STATUS,		// Each line of each frame.
-		DISP_COMM_DEBUG,
-		DISP_SENSORS,			// Might need to split this into two screens.
+		DISP_COMM_DEBUG,		// The literal frames received.
+		DISP_SENSORS,			// TODO: Might need to split this into two screens.
 		DISP_NUM
 	};
 
@@ -386,6 +404,14 @@ task Display()
 
 		switch (isMode) {
 			case DISP_FCS :
+				break;
+			case DISP_PID_STATUS :
+				nxtDisplayTextLine(0, "X:   err-  %+4d", motor_x_error);
+				nxtDisplayTextLine(1, "    trgt-  %+4d", motor_x_target);
+				nxtDisplayTextLine(2, "Y:   err-  %+4d", motor_y_error);
+				nxtDisplayTextLine(3, "    trgt-  %+4d", motor_y_target);
+				nxtDisplayTextLine(4, "Z:   err-  %+4d", motor_z_error);
+				nxtDisplayTextLine(5, "    trgt-  %+4d", motor_z_target);
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {
@@ -420,10 +446,12 @@ task Display()
 				break;
 			case DISP_SENSORS :
 				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);
-				nxtDisplayTextLine(1, "(%+5d,%+5d,%+3d)", f_pos_x, f_pos_y, f_pos_z);
+				nxtDisplayTextLine(2, "Position:");
+				nxtDisplayTextLine(3, "(%+5d,%+5d,%+3d)", f_pos_x, f_pos_y, f_pos_z);
+				nxtDisplayTextLine(5, "Rotation:");
 				int temp_x = f_angle_x - 30;	// TODO: Make this not ugly.
 				int temp_y = f_angle_y - 30;
-				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", temp_x, temp_y, f_angle_z);
+				nxtDisplayTextLine(6, "(%3d,%3d,%3d)", temp_x, temp_y, f_angle_z);
 				break;
 			default :
 				nxtDisplayCenteredTextLine(3, "Doesn't work...");

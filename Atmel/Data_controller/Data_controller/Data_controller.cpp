@@ -216,7 +216,7 @@ int main()
 		rot_x = fmod(rot_x, 360);
 		rot_y = fmod(rot_y, 360);
 		rot_z = fmod(rot_z, 360);
-		if (rot_z<(-360.0)) {
+		if (rot_z<0) {
 			rot_z += 360.0;	// Making sure we're positive.
 		}
 		
@@ -261,8 +261,10 @@ int main()
 		}
 		
 		// TODO: This is extremely hackish (and possibly dangerous).
-		// Delete at some point. Also there's no debouncing at all.
+		// Delete at some point. Also there's no real debouncing.
 		if ((PINB&(1<<PINB1))==0) {
+			// Here's some hackish debouncing :P
+			_delay_ms(10);
 			is_gyro_resetting = true;
 		}
 

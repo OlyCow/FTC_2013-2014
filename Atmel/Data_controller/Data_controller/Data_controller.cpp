@@ -49,9 +49,9 @@ int main()
 	int vel_x_signed = 0;
 	int vel_y_signed = 0;
 	int vel_z_signed = 0;
-	//int vel_x_signed_prev = 0;
-	//int vel_y_signed_prev = 0;
-	//int vel_z_signed_prev = 0;
+	int vel_x_signed_prev = 0;
+	int vel_y_signed_prev = 0;
+	int vel_z_signed_prev = 0;
 	uint16_t vel_x = 0; // TODO: switch all of these over to unions.
 	uint16_t vel_y = 0;
 	uint16_t vel_z = 0;
@@ -88,29 +88,29 @@ int main()
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	//// TODO: Make this calibration better.
-	//_delay_us(10); // MAGIC_NUM
+	//_delay_us(500); // MAGIC_NUM: We can afford some delay here to get things right.
 	//double offset_x_sum = 0.0;
 	//double offset_y_sum = 0.0;
 	//double offset_z_sum = 0.0;
 	//// MAGIC_NUM: 100 is a decent number of samples :P
-	//for (int i=0; i<2; ++i) {
-	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-	//	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-	//	vel_x = (vel_x_H<<8) + vel_x_L;
-	//	vel_y = (vel_y_H<<8) + vel_y_L;
-	//	vel_z = (vel_z_H<<8) + vel_z_L;
-	//	offset_x_sum += MPU::convert_complement(vel_x);
-	//	offset_y_sum += MPU::convert_complement(vel_y);
-	//	offset_z_sum += MPU::convert_complement(vel_z);
-	//	_delay_us(10); // MAGIC_NUM
+	//for (int i=0; i<10; ++i) {
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+		//vel_x = (vel_x_H<<8) + vel_x_L;
+		//vel_y = (vel_y_H<<8) + vel_y_L;
+		//vel_z = (vel_z_H<<8) + vel_z_L;
+		//offset_x_sum += MPU::convert_complement(vel_x);
+		//offset_y_sum += MPU::convert_complement(vel_y);
+		//offset_z_sum += MPU::convert_complement(vel_z);
+		//_delay_us(10); // MAGIC_NUM
 	//}
-	//vel_x_offset = offset_x_sum/2.0; // MAGIC_NUM: number of samples.
-	//vel_y_offset = offset_y_sum/2.0; // MAGIC_NUM: number of samples.
-	//vel_z_offset = offset_z_sum/2.0; // MAGIC_NUM: number of samples.
+	//vel_x_offset = offset_x_sum/10.0; // MAGIC_NUM: number of samples.
+	//vel_y_offset = offset_y_sum/10.0; // MAGIC_NUM: number of samples.
+	//vel_z_offset = offset_z_sum/10.0; // MAGIC_NUM: number of samples.
 
 	_delay_us(500); // MAGIC_NUM
 	for (int i=0; i<10; i++) { // MAGIC_NUM: NOTE: flush out bad readings?
@@ -126,29 +126,31 @@ int main()
 		vel_x_offset = MPU::convert_complement(vel_x);
 		vel_y_offset = MPU::convert_complement(vel_y);
 		vel_z_offset = MPU::convert_complement(vel_z);
-		//vel_x_signed_prev = vel_x_offset;
-		//vel_y_signed_prev = vel_y_offset;
-		//vel_z_signed_prev = vel_z_offset;
 	}
+	
+	vel_x_signed_prev = vel_x_offset;
+	vel_y_signed_prev = vel_y_offset;
+	vel_z_signed_prev = vel_z_offset;
 	
 	// Set up interrupts.
 	PCMSK0 |= (1<<PCINT2);
 	PCICR |= (1<<PCIE0);
 	PCIFR |= (1<<PCIF0);
 	sei();
-	alertA();
 	
 	// Wait to make sure we've established communication with the Comm_controller.
 	while (is_comm_ready != true) {
 		_delay_us(100);	// MAGIC_NUM: I have no clue what I'm doing.
 	}
-	alertB();
+	alertA();
 	// TODO: (SOMETIMES) THE ABOVE BLOCKS WHEN BOOTING RIGHT AFTER TURNING THE NXT OFF.
 	// THEN TO HAVE IT WORK AGAIN, TURN OFF THE NXT, WAIT A WHILE, THEN TURN IT BACK ON.
 
 	// TODO: Set up any interrupts that haven't been setup yet.
 	
     while (true) {
+		alertB();
+		
 		// Update system timer. TODO: Encapsulate timers into a class.
 		SYSTEM_TIME += TCNT1;
 		TCNT1 = 0;
@@ -178,9 +180,9 @@ int main()
 		}
 		
 		// TODO: It *might* be more efficient to calculate x, y, and z one-at-a-time.
-		//vel_x_signed_prev = vel_x_signed;
-		//vel_y_signed_prev = vel_y_signed;
-		//vel_z_signed_prev = vel_z_signed;
+		vel_x_signed_prev = vel_x_signed;
+		vel_y_signed_prev = vel_y_signed;
+		vel_z_signed_prev = vel_z_signed;
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L); // TODO: Condense into a single "burst read".
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
@@ -196,17 +198,26 @@ int main()
 		vel_x_signed -= vel_x_offset;
 		vel_y_signed -= vel_y_offset;
 		vel_z_signed -= vel_z_offset;
+		if (fabs(vel_x_signed)<500) {	// MAGIC_NUM: seems like a nice small number :P
+			vel_x_signed = 0;
+		}
+		if (fabs(vel_y_signed)<500) {	// MAGIC_NUM: seems like a nice small number :P
+			vel_y_signed = 0;
+		}
+		if (fabs(vel_z_signed)<500) {	// MAGIC_NUM: seems like a nice small number :P
+			vel_z_signed = 0;
+		}
 
 		// Yeah trapezoids. Also dividing is too much brain-work. Since we're multiplying already...
 		double rect_x = (double)vel_x_signed;
 		double rect_y = (double)vel_y_signed;
 		double rect_z = (double)vel_z_signed;
-		//rect_x += (double)vel_x_signed_prev;
-		//rect_y += (double)vel_y_signed_prev;
-		//rect_z += (double)vel_z_signed_prev;
-		//rect_x /= 2.0;
-		//rect_y /= 2.0;
-		//rect_z /= 2.0;
+		rect_x += (double)vel_x_signed_prev;
+		rect_y += (double)vel_y_signed_prev;
+		rect_z += (double)vel_z_signed_prev;
+		rect_x /= 2.0;
+		rect_y /= 2.0;
+		rect_z /= 2.0;
 		rect_x *= (bit_to_gyro * (double)dt * usec_to_sec);
 		rect_y *= (bit_to_gyro * (double)dt * usec_to_sec);
 		rect_z *= (bit_to_gyro * (double)dt * usec_to_sec);
@@ -222,21 +233,22 @@ int main()
 		
 		if (rot_x>=30.0) {
 			comm_x_temp = 30;
-		} else if (rot_x<=(-30.0)) {
+			} else if (rot_x<=(-30.0)) {
 			comm_x_temp = -30;
-		} else {
+			} else {
 			comm_x_temp = static_cast<int>(round(rot_x));
 		}
 		comm_x_temp += 30;
 		if (rot_y>=30.0) {
 			comm_y_temp = 30;
-		} else if (rot_y<=(-30.0)) {
+			} else if (rot_y<=(-30.0)) {
 			comm_y_temp = -30;
-		} else {
+			} else {
 			comm_y_temp = static_cast<int>(round(rot_y));
 		}
 		comm_y_temp += 30;
 		comm_z_temp = static_cast<int>(round(rot_z));
+		
 		// TODO: Split into four atomic blocks?
 		// Pros:	Interrupts can happen before all three vars get assigned.
 		// Cons:	Possibly more overhead and too much delay from capturing
@@ -249,9 +261,6 @@ int main()
 		}
 		
 		
-		
-		// TODO: This is just to make sure we are indeed executing inside the main loop.
-		alertC();
 		
 		// TODO: DELETE THIS (TESTING)
 		if (fabs(rot_z)<0.5) {

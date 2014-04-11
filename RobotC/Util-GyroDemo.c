@@ -44,8 +44,8 @@ CommLinkMode f_commLinkMode[6] = {	COMM_LINK_POS_XY,
 									COMM_LINK_RANGE_CD,
 									COMM_LINK_TELEOP,
 									COMM_LINK_BUMPERS	};
-int f_angle_x = 0; // RobotC doesn't support unsigned types (other than ubyte).
-int f_angle_y = 0;
+int f_angle_x = 30; // RobotC doesn't support unsigned types (other than ubyte).
+int f_angle_y = 30; // This is equivalent to "0".
 int f_angle_z = 0;
 int f_pos_x = 0;
 int f_pos_y = 0;
@@ -82,12 +82,18 @@ task main()
 	Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	float kP_x = 6.8;
-	float kP_y = 6.8;
-	float kP_z = 6.8;
+	float kP_x = 2.7;
+	float kP_y = 2.7;
+	float kP_z = 2.7;
 	int motor_x_pos = 0;
 	int motor_y_pos = 0;
 	int motor_z_pos = 0;
+	float motor_x_power = 0.0;
+	float motor_y_power = 0.0;
+	float motor_z_power = 0.0;
+	float motor_x_power_prev = 0.0;
+	float motor_y_power_prev = 0.0;
+	float motor_z_power_prev = 0.0;
 	Motor_ResetEncoder(motor_x);
 	Motor_ResetEncoder(motor_y);
 	Motor_ResetEncoder(motor_z);
@@ -108,19 +114,35 @@ task main()
 		motor_y_error = motor_y_target - motor_y_pos;
 		motor_z_error = motor_z_target - motor_z_pos;
 
-		while (abs(motor_z_error)>360) {
-			if (motor_z_error>360) {
+		while (abs(motor_z_error)>180) {
+			if (motor_z_error>180) {
 				motor_z_target -= 360;
 				motor_z_error -= 360;
-			} else if (motor_z_error<-360) {
+			} else if (motor_z_error<-180) {
 				motor_z_target += 360;
 				motor_z_error += 360;
 			}
 		}
 
-		Motor_SetPower(kP_x*motor_x_error, motor_x);
-		Motor_SetPower(kP_y*motor_y_error, motor_y);
-		Motor_SetPower(kP_z*motor_z_error, motor_z);
+		motor_x_power_prev = motor_x_power;
+		motor_y_power_prev = motor_y_power;
+		motor_z_power_prev = motor_z_power;
+		motor_x_power = kP_x * motor_x_error;
+		motor_y_power = kP_y * motor_y_error;
+		motor_z_power = kP_z * motor_z_error;
+		if ((motor_x_power-motor_x_power_prev) > 1.0) {
+			motor_x_power = motor_x_power_prev + 1.0;
+		}
+		if ((motor_y_power-motor_y_power_prev) > 1.0) {
+			motor_y_power = motor_y_power_prev + 1.0;
+		}
+		if ((motor_z_power-motor_z_power_prev) > 1.0) {
+			motor_z_power = motor_z_power_prev + 1.0;
+		}
+
+		Motor_SetPower(round(motor_x_power), motor_x);
+		Motor_SetPower(round(motor_y_power), motor_y);
+		Motor_SetPower(round(motor_z_power), motor_z);
 	}
 }
 
@@ -406,12 +428,12 @@ task Display()
 			case DISP_FCS :
 				break;
 			case DISP_PID_STATUS :
-				nxtDisplayTextLine(0, "X:   err-  %+4d", motor_x_error);
-				nxtDisplayTextLine(1, "    trgt-  %+4d", motor_x_target);
-				nxtDisplayTextLine(2, "Y:   err-  %+4d", motor_y_error);
-				nxtDisplayTextLine(3, "    trgt-  %+4d", motor_y_target);
-				nxtDisplayTextLine(4, "Z:   err-  %+4d", motor_z_error);
-				nxtDisplayTextLine(5, "    trgt-  %+4d", motor_z_target);
+				nxtDisplayTextLine(0, "X:  trgt-  %+4d", motor_x_target);
+				nxtDisplayTextLine(1, "     err-  %+4d", motor_x_error);
+				nxtDisplayTextLine(2, "Y:  trgt-  %+4d", motor_y_target);
+				nxtDisplayTextLine(3, "     err-  %+4d", motor_y_error);
+				nxtDisplayTextLine(4, "Z:  trgt-  %+4d", motor_z_target);
+				nxtDisplayTextLine(5, "     err-  %+4d", motor_z_error);
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {

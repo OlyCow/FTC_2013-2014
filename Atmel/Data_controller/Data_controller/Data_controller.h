@@ -24,7 +24,8 @@
 #define STATUS_R_RESET_GYRO		0x03
 #define STATUS_R_REQ_GYRO_X		0x04
 #define STATUS_R_REQ_GYRO_Y		0x05
-#define STATUS_R_REQ_GYRO_Z		0x06
+#define STATUS_R_REQ_GYRO_Z_L	0x06
+#define STATUS_R_REQ_GYRO_Z_H	0x07
 #define STATUS_R_LED_A_ON		0x10
 #define STATUS_R_LED_B_ON		0x11
 #define STATUS_R_LED_C_ON		0x12
@@ -44,5 +45,13 @@ const unsigned int LED_port[4] = {PORTD, PORTD, PORTD, PORTB};
 const unsigned int LED_pin[4] = {PORTD5, PORTD6, PORTD7, PORTB0};
 
 void setupPins();
+void alertA();
+void clearA();
+void alertB();
+void clearB();
+void alertC();
+void clearC();
+void alertD();
+void clearD();
 
 #endif // DATA_CONTROLLER_H

@@ -3,14 +3,29 @@
 // For more documentation (and I mean *more*), see his website or repo.
 #include "MPU6050.h"
 
-void MPU::read(uint8_t address, uint8_t RA, uint8_t data)
+// TODO: Put this into its own library (of math-y stuff? idk).
+int MPU::convert_complement(uint16_t input)
+{
+	int output = 0; // TODO: Is this a safe initialization value?
+
+	// If MSB is 1:
+	if (input>(0x8000-1)) {
+		output -= (~input)+1;
+	} else {
+		output = input;
+	}
+
+	return output;
+}
+
+void MPU::read(uint8_t address, uint8_t RA, uint8_t &data)
 {
 	uint8_t buffer[1] = {0};
 	MPU::read_burst(address, RA, buffer, 1);
 	data = buffer[0];
 }
 
-void MPU::read_burst(uint8_t address, uint8_t RA, uint8_t data[], int size)
+void MPU::read_burst(uint8_t address, uint8_t RA, uint8_t* data, int size)
 {
 	uint8_t address_W = address<<1;
 	uint8_t address_R = address_W|1;

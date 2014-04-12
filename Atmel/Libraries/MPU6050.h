@@ -12,7 +12,7 @@
 #define MPU6050_ADDRESS_AD0_HIGH	0x69 // address pin high (VCC)
 #define MPU6050_DEFAULT_ADDRESS		MPU6050_ADDRESS_AD0_LOW
 
-#define MPU6050_ADDRESS				MPU6050_ADDRESS_AD0_LOW
+#define MPU6050_ADDRESS				MPU6050_ADDRESS_AD0_LOW // NOTE: This definition is application specific.
 
 // Copied from Jeff Rowberg's library.
 // These are only the ones contained in the official registry map.
@@ -103,8 +103,11 @@
 
 namespace MPU
 {
-	void read(uint8_t address, uint8_t RA, uint8_t data);
-	void read_burst(uint8_t address, uint8_t RA, uint8_t data[], int size);
+	// TODO: Put this into its own library (of math-y stuff? idk).
+	int convert_complement(uint16_t input);
+
+	void read(uint8_t address, uint8_t RA, uint8_t &data);
+	void read_burst(uint8_t address, uint8_t RA, uint8_t* data, int size);
 	void write(uint8_t address, uint8_t RA, uint8_t data);
 	void write_burst(uint8_t address, uint8_t RA, uint8_t data[], int size);
 	

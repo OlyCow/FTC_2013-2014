@@ -418,27 +418,27 @@ int main()
 		// Get comms data.
 		PORTB &= ~(1<<PB2);	// Bring SS' low.
 		
-		_delay_us(50); // MAGIC_NUM
+		_delay_us(30); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_X;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		uint8_t spi_w_flush = SPDR; // Remember, we'll always be a cycle off.
 		
-		_delay_us(50); // MAGIC_NUM
+		_delay_us(30); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_Y;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_x_comm = SPDR;
 		
-		_delay_us(50); // MAGIC_NUM
+		_delay_us(30); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_Z_L;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_y_comm = SPDR;
 		
-		_delay_us(50); // MAGIC_NUM
+		_delay_us(30); // MAGIC_NUM
 		SPDR = STATUS_W_REQ_GYRO_Z_H;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_z_comm_L = SPDR;
 		
-		_delay_us(50); // MAGIC_NUM
+		_delay_us(30); // MAGIC_NUM
 		SPDR = STATUS_W_ACK;
 		while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 		rot_z_comm_H = SPDR;

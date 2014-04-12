@@ -64,7 +64,7 @@ int main()
 	int vel_x_offset = 0;
 	int vel_y_offset = 0;
 	int vel_z_offset = 0;
-	const double bit_to_gyro = 250.0/32768.0; // Also in MPU-6050 Register Map "Gyroscope Measurements".
+	const double bit_to_gyro = 500.0/32768.0; // Also in MPU-6050 Register Map "Gyroscope Measurements".
 	const double usec_to_sec = 1.0/1000000.0;
 	short LED_timer = 0;
 	
@@ -85,7 +85,7 @@ int main()
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x03);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x01); // NOTE: This could be a very bad idea.
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x08); // +/- 500 deg/sec
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
 	//// TODO: Make this calibration better.
 	//_delay_us(500); // MAGIC_NUM: We can afford some delay here to get things right.
@@ -198,13 +198,13 @@ int main()
 		vel_x_signed -= vel_x_offset;
 		vel_y_signed -= vel_y_offset;
 		vel_z_signed -= vel_z_offset;
-		if (fabs(vel_x_signed)<500) {	// MAGIC_NUM: seems like a nice small number :P
+		if (fabs(vel_x_signed)<240) {	// MAGIC_NUM: seems like a nice small number :P
 			vel_x_signed = 0;
 		}
-		if (fabs(vel_y_signed)<500) {	// MAGIC_NUM: seems like a nice small number :P
+		if (fabs(vel_y_signed)<240) {	// MAGIC_NUM: seems like a nice small number :P
 			vel_y_signed = 0;
 		}
-		if (fabs(vel_z_signed)<500) {	// MAGIC_NUM: seems like a nice small number :P
+		if (fabs(vel_z_signed)<240) {	// MAGIC_NUM: seems like a nice small number :P
 			vel_z_signed = 0;
 		}
 

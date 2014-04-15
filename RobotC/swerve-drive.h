@@ -65,9 +65,9 @@ const int servo_auton_up		= 255;
 const int servo_auton_down		= 0;
 const int servo_auton_hold 		= 128;
 const int servo_omni_L_up		= 0;
-const int servo_omni_L_down		= 28;
+const int servo_omni_L_down		= 32;
 const int servo_omni_R_up		= 240;
-const int servo_omni_R_down		= 212;
+const int servo_omni_R_down		= 208;
 
 // These two are how far the wheel pod servos can be off (it's how
 // wheel pod alignment is classified).

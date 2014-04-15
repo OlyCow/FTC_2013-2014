@@ -129,10 +129,11 @@ bool header_read[6] = {false, false, false, false, false, false};
 ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
-void MoveForward(int inches);
-void MoveBackward(int inches);
+void MoveForward(float inches, bool doBrake=true);
+void MoveBackward(float inches, bool doBrake=true);
 void TurnLeft(int degrees);
 void TurnRight(int degrees);
+void Settle();
 
 
 
@@ -140,38 +141,46 @@ task main()
 {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
+	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Gyro);
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
+	heading = 0.0;
 
 	Joystick_WaitForStart();
 
-	MoveForward(12);
+	MoveForward(12*2);
+	TurnLeft(45);
+	MoveForward(12*2);
+	TurnLeft(45);
+	MoveForward(12*2);
+	Settle();
 }
 
 float pos_L, pos_R, pos_avg;
-float error_L, error_R, error;
+float error;
 
-void MoveForward(int inches)
+void MoveForward(float inches, bool doBrake)
 {
-	int target = round((float)inches/3/g_pi);
+	float target = inches*152.789;
 	float power = 0.0;
-	float kP = 1.0;
+	float kP = 0.03;
 	bool isMoving = true;
 
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
 
 	while (isMoving==true){
-		pos_L = -Motor_GetEncoder(omniL);
-		pos_R = Motor_GetEncoder(omniR);
+		pos_L = Motor_GetEncoder(omniL);
+		pos_R = -Motor_GetEncoder(omniR);
 		pos_avg = (pos_L+pos_R)/2.0;
 		error = target-pos_avg;
-		if (error>1000) {
+		if (error>3000) {
 			power = g_FullPower;
-		} else if (error<-1000) {
+		} else if (error<-3000) {
 			power = -g_FullPower;
 		} else {
 			power = kP*error;
@@ -180,32 +189,52 @@ void MoveForward(int inches)
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power, motor_FR);
 		Motor_SetPower(power, motor_BR);
+		if (abs(error)<50) {
+			if (abs(power)<5) {
+				isMoving = false;
+			}
+		}
+	}
+	if (doBrake==true) {
+		Motor_SetPower(0, motor_FL);
+		Motor_SetPower(0, motor_BL);
+		Motor_SetPower(0, motor_FR);
+		Motor_SetPower(0, motor_BR);
 	}
 }
-
+void MoveBackward(float inches, bool doBrake)
+{
+	MoveForward(-inches, doBrake);
+}
 void TurnLeft(int degrees)
 {
 	bool isTurning = true;
-	int target = round((float)degrees*15.6);
-	float power_L, power_R;
-	float kP = 0.15;
-
-	Motor_ResetEncoder(omniL);
-	Motor_ResetEncoder(omniR);
+	float start_pos = heading;
+	float current_pos = heading;
+	float target = start_pos-(float)degrees;
+	float power = 0.0;
+	float power_neg = 0.0;
+	float kP = 2.8;
 
 	while (isTurning==true) {
-		pos_L = -Motor_GetEncoder(omniL);
-		pos_R = Motor_GetEncoder(omniR);
-		error_L = -target-pos_L;
-		error_R = target-pos_R;
-		power_L = kP*error_L;
-		power_R = kP*error_R;
-		Motor_SetPower(-power_L, motor_FL);
-		Motor_SetPower(-power_L, motor_BL);
-		Motor_SetPower(-power_R, motor_FR);
-		Motor_SetPower(-power_R, motor_BR);
-		if ((abs(power_L)<30)&&(abs(power_R)<30)) {
-			isTurning = false;
+		current_pos = heading;
+		error = target-current_pos;
+		if (error>60) {
+			power = g_FullPower;
+		} else if (error<-60) {
+			power = -g_FullPower;
+		} else {
+			power = kP*error;
+		}
+		power_neg = -power;
+		Motor_SetPower(power, motor_FL);
+		Motor_SetPower(power, motor_BL);
+		Motor_SetPower(power_neg, motor_FR);
+		Motor_SetPower(power_neg, motor_BR);
+		if (abs(error)<1) {
+			if (abs(power)<5) {
+				isTurning = false;
+			}
 		}
 	}
 	Motor_SetPower(0, motor_FL);
@@ -213,35 +242,26 @@ void TurnLeft(int degrees)
 	Motor_SetPower(0, motor_FR);
 	Motor_SetPower(0, motor_BR);
 }
+void TurnRight(int degrees)
+{
+	TurnLeft(-degrees);
+}
+void Settle()
+{
+	Time_Wait(500);
+}
 
 
 
 task Gyro()
 {
-	// Variables for heading/gyro processing.
-	float gyro_current = 0.0; // For trapezoidal approximation.
-	float gyro_prev = 0.0; // For trapezoidal approximation.
-
-	// Timers.
 	int timer_gyro = 0.0;
-
-	Joystick_WaitForStart();
 	Time_ClearTimer(timer_gyro);
 	while (true) {
-		// TODO: Figure all of the below gyro stuff out.
-		gyro_current = 0;
-		gyro_prev = gyro_current;
-		heading = gyro_current;
-		////// TODO: Figure this out. Semaphores? Is it even necessary?
-		////Task_HogCPU();
-		////gyro_current = (float)HTGYROreadRot(sensor_protoboard);
-		////heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
-		//heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
-		//Time_ClearTimer(timer_gyro);
-		//gyro_prev = gyro_current;
-		//f_angle_z = round(heading);
-		////// TODO: Figure this out. Semaphores? Is it even necessary?
-		////Task_ReleaseCPU();
+		// TODO: Clean this up a bit.
+		heading += ((float)Time_GetTime(timer_gyro))*((float)HTGYROreadRot(sensor_protoboard))/((float)1000.0); // 1000 milliseconds per second.
+		Time_ClearTimer(timer_gyro);
+		Time_Wait(10);
 	}
 }
 
@@ -608,13 +628,13 @@ task Display()
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);
-				nxtDisplayTextLine(1, "Gyro: %+6d", f_angle_z);
+				nxtDisplayTextLine(1, "Gyro: %+6d", heading);
 				nxtDisplayTextLine(2, "FRpow %+4d", g_MotorData[POD_FR].power);
 				nxtDisplayTextLine(3, "FLpow %+4d", g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(4, "LTarget %i", error_L);
-				nxtDisplayTextLine(5, "RTarget %i", error_R);
-				nxtDisplayTextLine(6, "LOmniPos %i", pos_L);
-				nxtDisplayTextLine(7, "ROmniPos %i", pos_R);
+				nxtDisplayTextLine(4, "Error: %i", error);
+				nxtDisplayTextLine(5, "avg pos: %i", pos_avg);
+				nxtDisplayTextLine(6, "encdr R: %i", pos_L);
+				nxtDisplayTextLine(7, "encdr L: %i", pos_R);
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {

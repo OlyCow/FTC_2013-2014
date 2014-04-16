@@ -67,6 +67,12 @@ task Display(); // Updates the NXT's LCD display with useful info.
 tMotor omniL = motor_FL;
 tMotor omniR = motor_FR;
 
+// For debugging display.
+float pos_L = 0.0;
+float pos_R = 0.0;
+float pos_avg = 0.0;
+float error = 0.0;
+
 // Gyro readings:
 float heading = 0.0; // Because f_angle_z is an int.
 
@@ -129,8 +135,12 @@ bool header_read[6] = {false, false, false, false, false, false};
 ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
+void DumpAutonCube();
+void LowerAutonArm();
 void MoveForward(float inches, bool doBrake=true);
 void MoveBackward(float inches, bool doBrake=true);
+void ChargeForward(int milliseconds, float power, bool doBrake=true);
+void ChargeBackward(int milliseconds, float power, bool doBrake=true);
 void TurnLeft(int degrees);
 void TurnRight(int degrees);
 void Settle();
@@ -151,18 +161,41 @@ task main()
 	heading = 0.0;
 
 	Joystick_WaitForStart();
+	Motor_ResetEncoder(omniL);
+	Motor_ResetEncoder(omniR);
 
 	MoveForward(12*2);
 	TurnLeft(45);
 	MoveForward(12*2);
+	DumpAutonCube();
 	TurnLeft(45);
+	LowerAutonArm();
 	MoveForward(12*2);
 	Settle();
 }
 
-float pos_L, pos_R, pos_avg;
-float error;
 
+
+void DumpAutonCube()
+{
+	const int lower_delay = 500;
+	const int drop_delay = 1000;
+	const int raise_delay = 800;
+	Servo_SetPosition(servo_auton, servo_auton_down);
+	Time_Wait(lower_delay);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
+	Time_Wait(drop_delay);
+	Servo_SetPosition(servo_auton, servo_auton_up);
+	Time_Wait(raise_delay);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
+}
+void LowerAutonArm()
+{
+	const int lower_delay = 1200;
+	Servo_SetPosition(servo_auton, servo_auton_down);
+	Time_Wait(lower_delay);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
+}
 void MoveForward(float inches, bool doBrake)
 {
 	float target = inches*152.789;
@@ -205,6 +238,24 @@ void MoveForward(float inches, bool doBrake)
 void MoveBackward(float inches, bool doBrake)
 {
 	MoveForward(-inches, doBrake);
+}
+void ChargeForward(int milliseconds, float power, bool doBrake)
+{
+	Motor_SetPower(power, motor_FL);
+	Motor_SetPower(power, motor_BL);
+	Motor_SetPower(power, motor_FR);
+	Motor_SetPower(power, motor_BR);
+	Time_Wait(milliseconds);
+	if (doBrake==true) {
+		Motor_SetPower(0, motor_FL);
+		Motor_SetPower(0, motor_BL);
+		Motor_SetPower(0, motor_FR);
+		Motor_SetPower(0, motor_BR);
+	}
+}
+void ChargeBackward(int milliseconds, float power, bool doBrake)
+{
+	ChargeForward(milliseconds, power, doBrake);
 }
 void TurnLeft(int degrees)
 {

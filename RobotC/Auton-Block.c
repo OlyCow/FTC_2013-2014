@@ -1,4 +1,4 @@
-#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
+reg#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
@@ -66,6 +66,9 @@ task Display(); // Updates the NXT's LCD display with useful info.
 // Motor Assignments
 tMotor omniL = motor_FL;
 tMotor omniR = motor_FR;
+
+// Configs.
+bool DO_DELAY_AT_START = false;
 
 // For debugging display.
 float pos_L = 0.0;
@@ -135,6 +138,9 @@ bool header_read[6] = {false, false, false, false, false, false};
 ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
+void config_values(	bool &key,	string txt_disp,
+					bool val_L,	string txt_L,
+					bool val_R,	string txt_R);
 void DumpAutonCube();
 void LowerAutonArm();
 void MoveForward(float inches, bool doBrake=true);
@@ -158,9 +164,11 @@ task main()
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
-	heading = 0.0;
+
+	config_values(DO_DELAY_AT_START, "Delayed start?", true, "YES", false, "NO");
 
 	Joystick_WaitForStart();
+	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
 
@@ -176,6 +184,57 @@ task main()
 
 
 
+void config_values(	bool &key,	string txt_disp,
+					bool val_L,	string txt_L,
+					bool val_R,	string txt_R)
+{
+	Task_Kill(Display);
+	bDisplayDiagnostics = false;
+	Display_Clear();
+
+	bool isConfig = true;
+	string arrow = "-> ";
+	string blank = "   ";
+	string disp_L = "";
+	string disp_R = "";
+	bool isL = true;
+	bool isR = false;
+
+	while (isConfig==true) {
+		Buttons_UpdateData();
+		if (Buttons_Released(NXT_BUTTON_YES)==true) {
+			isConfig = false;
+		} else if ((Buttons_Released(NXT_BUTTON_L)||Buttons_Released(NXT_BUTTON_R))==true) {
+			isL = !isL;
+			isR = !isR;
+		}
+
+		if (isL==true) {
+			disp_L = arrow + txt_L;
+		} else {
+			disp_L = blank + txt_L;
+		}
+		if (isR==true) {
+			disp_R = arrow + txt_R;
+		} else {
+			disp_R = blank + txt_R;
+		}
+
+		nxtDisplayString(0, txt_disp);
+		nxtDisplayString(1, disp_L);
+		nxtDisplayString(2, disp_R);
+
+		Time_Wait(10);
+	}
+	if (isL==true) {
+		isConfig = val_L;
+	} else if (isR==true) {
+		isConfig = val_R;
+	}
+
+	bDisplayDiagnostics = true;
+	Task_Spawn(Display);
+}
 void DumpAutonCube()
 {
 	const int lower_delay = 500;

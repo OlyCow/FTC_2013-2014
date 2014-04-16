@@ -186,13 +186,13 @@ task main()
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	Task_Spawn(CommLink);
+	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
 	// Variables for disabling things.
 	int original_counter_limit = nNoMessageCounterLimit;
-	nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
+	nNoMessageCounterLimit = 210; // 250 * 4ms = 1000ms = 1sec
 	//nNoMessageCounterLimit = original_counter_limit;	// Add this back in when (if?) you need to use it.
 
 	// Variables for heading/gyro processing.
@@ -274,16 +274,16 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 180; // MAGIC_NUM
+			lift_target += 360; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_target -= 120; // MAGIC_NUM
+			lift_target -= 320; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 80; // MAGIC_NUM
+			lift_target += 180; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
-			lift_target -= 50; // MAGIC_NUM
+			lift_target -= 120; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 			// Nesting these is more efficient.
@@ -514,8 +514,8 @@ task PID()
 	// Separate constants are needed for up vs. down motion of the lift because
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
-	const float lift_guard_divisor	= 2.2;
-	const float kP_lift_up			= 0.27;
+	const float lift_guard_divisor	= 1.8;
+	const float kP_lift_up			= 0.57;
 	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;

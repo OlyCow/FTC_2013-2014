@@ -40,35 +40,33 @@
 #warn "This code will explode!"
 #endif
 
-task Gyro(); // Constantly updates the rotation of the robot.
-task PID(); // Sets winch servos' position, wheel pod motors' power, and lift motor's power. Others set in main.
+task Gyro(); // Constantly updates the heading of the robot.
+task PID(); // Sets lift motor's power.
 task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
 task Display(); // Updates the NXT's LCD display with useful info.
 
 //---------------- README!!! ------------------------------------------------>>
-//     The code is split into a couple tasks. I.) `main` does most of the high-
-// level logic processing (mostly controller input), and sets targets for the
-// PID task (motors and continuous rotation servos). If the power assignment is
-// trivial (e.g. the sweeper motor) it is done directly in the `main` loop.
-// II.) The `PID` loop currently runs a very simple PID loop monitoring lift
-// position, and is hard-coded to never allow the lift to go below 0. It also
-// runs a more complex PID loop for the wheel pods' continuous rotation servos,
-// which limits them to a certain amount of turns in each direction so that the
-// motor wires don't get all twisted up. III.) `CommLink` is how data is trans-
-// ferred between the SuperPro prototype board and the AVR(s?) we have. This is
-// BLACK MAGIC, DO NOT TOUCH. In the future we will want to optimize it, and
-// possibly move it into its own library. IV.) `Display` is a cyclical display
-// that provides valuable debugging information. Press the arrow buttons to go
-// to a different screen. V.) This is an easter egg I'll probably never get to
-// implement. :P It would basically be an autonomous teleop period.
+//     The code is split into a couple tasks. I.) `main` contains the linear
+// autonomous program logic, and calls other convenience functions to do things.
+// If it needs to make a trivial power assignment (such as raising the flag),
+// it is done directly in the `main` loop. II.) The `PID` loop runs a simple PD
+// loop which monitors position, and has hard-coded limits/safeties. III.)
+// `CommLink` is how data is trans ferred between the SuperPro prototype board
+// and the AVRs we have. This is BLACK MAGIC, DO NOT TOUCH. Since it conflicts
+// with our use of the gyro, currently the task isn't spawned at all for autono-
+// mous or teleop. In the future it will probably be moved into its own library.
+// IV.) `Display` is a cyclical display that provides valuable debugging infor-
+// mation. Press the arrow buttons to go to different screens.
 //-------------------------------------------------------------------------->>
 
-// Motor Assignments
+// Motor Assignments!
 tMotor omniL = motor_FL;
 tMotor omniR = motor_FR;
 
-// Configs.
-bool DO_DELAY_AT_START = false;
+// Program settings:
+bool DO_DELAY_AT_START	= false;
+bool IS_FIRST_TURN_L	= true;
+bool DO_DUMP_AUTON		= true;
 
 // For debugging display.
 float pos_L = 0.0;
@@ -170,7 +168,7 @@ task main()
 	string c = "NO";
 	//config_values(DO_DELAY_AT_START, a, true, b, false, c);
 
-	Joystick_WaitForStart();
+	//Joystick_WaitForStart();
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
@@ -348,7 +346,9 @@ void TurnLeft(int degrees)
 	float target = start_pos-(float)degrees;
 	float power = 0.0;
 	float power_neg = 0.0;
-	float kP = 5.4;
+	float kP = 3.6;
+	bool isFineTune = false;
+	int finish_timer = 0;
 
 	while (isTurning==true) {
 		current_pos = heading;
@@ -373,9 +373,12 @@ void TurnLeft(int degrees)
 		Motor_SetPower(power_neg, motor_FR);
 		Motor_SetPower(power_neg, motor_BR);
 		if (abs(error)<1) {
-			//if (abs(vel)<0.001) {
-			//	isTurning = false;
-			//}
+			if (isFineTune==false) {
+				Time_ClearTimer(finish_timer);
+				isFineTune = true;
+			} else if (Time_GetTime(finish_timer)>2000) {
+				isTurning = false;
+			}
 		}
 	}
 	Motor_SetPower(0, motor_FL);
@@ -484,6 +487,8 @@ task PID()
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
+
+		Time_Wait(4);
 
 		//Task_ReleaseCPU();
 		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)

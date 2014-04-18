@@ -31,7 +31,6 @@
 #pragma config(Servo,  srvo_S2_C2_5,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_BL,             tServoStandard)
 
-
 #include "includes.h"
 #include "swerve-drive.h"
 
@@ -67,6 +66,7 @@ tMotor omniR = motor_FR;
 bool DO_DELAY_AT_START	= false;
 bool IS_FIRST_TURN_L	= true;
 bool DO_DUMP_AUTON		= true;
+bool DO_ATTEMPT_RAMP	= false;
 
 // For debugging display.
 float pos_L = 0.0;
@@ -143,8 +143,8 @@ void DumpAutonCube();
 void LowerAutonArm();
 void MoveForward(float inches, bool doBrake=true);
 void MoveBackward(float inches, bool doBrake=true);
-void ChargeForward(int milliseconds, float power, bool doBrake=true);
-void ChargeBackward(int milliseconds, float power, bool doBrake=true);
+void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
+void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
 void TurnLeft(int degrees);
 void TurnRight(int degrees);
 void Settle();
@@ -161,14 +161,14 @@ task main()
 	Task_Spawn(Gyro);
 	Task_Spawn(PID);
 	//Task_Spawn(CommLink);
-	Task_Spawn(Display);
+	//Task_Spawn(Display);
 
 	string a = "Delayed start?";
 	string b = "YES";
 	string c = "NO";
 	//config_values(DO_DELAY_AT_START, a, true, b, false, c);
 
-	//Joystick_WaitForStart();
+	Joystick_WaitForStart();
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
@@ -179,15 +179,21 @@ task main()
 		}
 	}
 
-	TurnLeft(360);
-
-	//MoveForward(6);
-	//TurnRight(45);
-	//MoveForward(58);
-	//TurnLeft(45);
-	//MoveForward(24);
-	//TurnLeft(45);
-	//MoveForward(24);
+	MoveForward(7);
+	DumpAutonCube();
+	TurnLeft(15);
+	LowerAutonArm();
+	MoveForward(60);
+	TurnRight(60);
+	MoveForward(26);
+	for (int i=0; i<10; ++i) {
+		Time_Wait(1000);
+	}
+	MoveBackward(24);
+	TurnLeft(45);
+	MoveBackward(18);
+	TurnRight(90);
+	ChargeForward(2000, 100, true, true);
 }
 
 
@@ -269,10 +275,6 @@ void MoveForward(float inches, bool doBrake)
 	float power = 0.0;
 	float kP = 0.08;
 	bool isMoving = true;
-	float error_prev = 0.0;
-	float vel = 0.0;
-	int timer_D = 0;
-	Time_ClearTimer(timer_D);
 
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
@@ -282,9 +284,6 @@ void MoveForward(float inches, bool doBrake)
 		pos_R = -Motor_GetEncoder(omniR);
 		pos_avg = (pos_L+pos_R)/2.0;
 		error = target-pos_avg;
-		error_prev = error;
-		vel = (error-error_prev)/(float)Time_GetTime(timer_D)*0.001;
-		Time_ClearTimer(timer_D);
 		if (error>3000) {
 			power = g_FullPower;
 		} else if (error<-3000) {
@@ -299,14 +298,15 @@ void MoveForward(float inches, bool doBrake)
 				power = -10;
 			}
 		}
+		power = Math_Limit(power, g_FullPower);
 		Motor_SetPower(power, motor_FL);
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power, motor_FR);
 		Motor_SetPower(power, motor_BR);
 		if (abs(error)<50) {
-			if (abs(vel)<20) {
+			//if (abs(vel)<20) {
 				isMoving = false;
-			}
+			//}
 		}
 	}
 	if (doBrake==true) {
@@ -320,8 +320,10 @@ void MoveBackward(float inches, bool doBrake)
 {
 	MoveForward(-inches, doBrake);
 }
-void ChargeForward(int milliseconds, float power, bool doBrake)
+void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 {
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
 	Motor_SetPower(power, motor_FL);
 	Motor_SetPower(power, motor_BL);
 	Motor_SetPower(power, motor_FR);
@@ -333,10 +335,14 @@ void ChargeForward(int milliseconds, float power, bool doBrake)
 		Motor_SetPower(0, motor_FR);
 		Motor_SetPower(0, motor_BR);
 	}
+	if (doLowerOmni==true) {
+		Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+		Servo_SetPosition(servo_omni_R, servo_omni_R_down);
+	}
 }
-void ChargeBackward(int milliseconds, float power, bool doBrake)
+void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 {
-	ChargeForward(milliseconds, power, doBrake);
+	ChargeForward(milliseconds, power, doLowerOmni, doBrake);
 }
 void TurnLeft(int degrees)
 {
@@ -346,7 +352,7 @@ void TurnLeft(int degrees)
 	float target = start_pos-(float)degrees;
 	float power = 0.0;
 	float power_neg = 0.0;
-	float kP = 3.6;
+	float kP = 5.4;
 	bool isFineTune = false;
 	int finish_timer = 0;
 
@@ -360,11 +366,11 @@ void TurnLeft(int degrees)
 		} else {
 			power = kP*error;
 		}
-		if (abs(power)<5) {
+		if (abs(power)<15) {
 			if (power>0) {
-				power = 5;
+				power = 15;
 			} else if (power<0) {
-				power = -5;
+				power = -15;
 			}
 		}
 		power_neg = -power;
@@ -376,7 +382,7 @@ void TurnLeft(int degrees)
 			if (isFineTune==false) {
 				Time_ClearTimer(finish_timer);
 				isFineTune = true;
-			} else if (Time_GetTime(finish_timer)>2000) {
+			} else if (Time_GetTime(finish_timer)>500) {
 				isTurning = false;
 			}
 		}

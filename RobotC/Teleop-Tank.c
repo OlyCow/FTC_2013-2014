@@ -515,7 +515,7 @@ task PID()
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 1.8;
-	const float kP_lift_up			= 0.57;
+	const float kP_lift_up			= 0.86;
 	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;

@@ -1,4 +1,4 @@
-reg#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
+#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
@@ -165,21 +165,31 @@ task main()
 	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	config_values(DO_DELAY_AT_START, "Delayed start?", true, "YES", false, "NO");
+	string a = "Delayed start?";
+	string b = "YES";
+	string c = "NO";
+	//config_values(DO_DELAY_AT_START, a, true, b, false, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
 
-	MoveForward(12*2);
-	TurnLeft(45);
-	MoveForward(12*2);
-	DumpAutonCube();
-	TurnLeft(45);
-	LowerAutonArm();
-	MoveForward(12*2);
-	Settle();
+	if (DO_DELAY_AT_START==true) {
+		for (int i=0; i<10; i++) {
+			Time_Wait(1000);
+		}
+	}
+
+	TurnLeft(360);
+
+	//MoveForward(6);
+	//TurnRight(45);
+	//MoveForward(58);
+	//TurnLeft(45);
+	//MoveForward(24);
+	//TurnLeft(45);
+	//MoveForward(24);
 }
 
 
@@ -221,8 +231,8 @@ void config_values(	bool &key,	string txt_disp,
 		}
 
 		nxtDisplayString(0, txt_disp);
-		nxtDisplayString(1, disp_L);
-		nxtDisplayString(2, disp_R);
+		nxtDisplayString(2, disp_L);
+		nxtDisplayString(3, disp_R);
 
 		Time_Wait(10);
 	}
@@ -237,9 +247,9 @@ void config_values(	bool &key,	string txt_disp,
 }
 void DumpAutonCube()
 {
-	const int lower_delay = 500;
+	const int lower_delay = 480;
 	const int drop_delay = 1000;
-	const int raise_delay = 800;
+	const int raise_delay = 500;
 	Servo_SetPosition(servo_auton, servo_auton_down);
 	Time_Wait(lower_delay);
 	Servo_SetPosition(servo_auton, servo_auton_hold);
@@ -259,8 +269,12 @@ void MoveForward(float inches, bool doBrake)
 {
 	float target = inches*152.789;
 	float power = 0.0;
-	float kP = 0.03;
+	float kP = 0.08;
 	bool isMoving = true;
+	float error_prev = 0.0;
+	float vel = 0.0;
+	int timer_D = 0;
+	Time_ClearTimer(timer_D);
 
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
@@ -270,6 +284,9 @@ void MoveForward(float inches, bool doBrake)
 		pos_R = -Motor_GetEncoder(omniR);
 		pos_avg = (pos_L+pos_R)/2.0;
 		error = target-pos_avg;
+		error_prev = error;
+		vel = (error-error_prev)/(float)Time_GetTime(timer_D)*0.001;
+		Time_ClearTimer(timer_D);
 		if (error>3000) {
 			power = g_FullPower;
 		} else if (error<-3000) {
@@ -277,12 +294,19 @@ void MoveForward(float inches, bool doBrake)
 		} else {
 			power = kP*error;
 		}
+		if (abs(power)<10) {
+			if (power>0) {
+				power = 10;
+			} else if (power<0) {
+				power = -10;
+			}
+		}
 		Motor_SetPower(power, motor_FL);
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power, motor_FR);
 		Motor_SetPower(power, motor_BR);
 		if (abs(error)<50) {
-			if (abs(power)<5) {
+			if (abs(vel)<20) {
 				isMoving = false;
 			}
 		}
@@ -324,7 +348,7 @@ void TurnLeft(int degrees)
 	float target = start_pos-(float)degrees;
 	float power = 0.0;
 	float power_neg = 0.0;
-	float kP = 2.8;
+	float kP = 5.4;
 
 	while (isTurning==true) {
 		current_pos = heading;
@@ -336,15 +360,22 @@ void TurnLeft(int degrees)
 		} else {
 			power = kP*error;
 		}
+		if (abs(power)<5) {
+			if (power>0) {
+				power = 5;
+			} else if (power<0) {
+				power = -5;
+			}
+		}
 		power_neg = -power;
 		Motor_SetPower(power, motor_FL);
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power_neg, motor_FR);
 		Motor_SetPower(power_neg, motor_BR);
 		if (abs(error)<1) {
-			if (abs(power)<5) {
-				isTurning = false;
-			}
+			//if (abs(vel)<0.001) {
+			//	isTurning = false;
+			//}
 		}
 	}
 	Motor_SetPower(0, motor_FL);
@@ -365,13 +396,18 @@ void Settle()
 
 task Gyro()
 {
+	float vel_curr = 0.0;
+	float vel_prev = 0.0;
+	float dt = 0.0;
 	int timer_gyro = 0.0;
 	Time_ClearTimer(timer_gyro);
 	while (true) {
-		// TODO: Clean this up a bit.
-		heading += ((float)Time_GetTime(timer_gyro))*((float)HTGYROreadRot(sensor_protoboard))/((float)1000.0); // 1000 milliseconds per second.
+		vel_prev = (float)vel_curr;
+		dt = (float)Time_GetTime(timer_gyro)/(float)1000.0;
 		Time_ClearTimer(timer_gyro);
-		Time_Wait(10);
+		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
+		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
+		Time_Wait(1);
 	}
 }
 

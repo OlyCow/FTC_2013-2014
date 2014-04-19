@@ -159,9 +159,9 @@ task main()
 	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Gyro);
-	Task_Spawn(PID);
+	//Task_Spawn(PID);
 	//Task_Spawn(CommLink);
-	//Task_Spawn(Display);
+	Task_Spawn(Display);
 
 	string a = "Delayed start?";
 	string b = "YES";
@@ -179,33 +179,44 @@ task main()
 		}
 	}
 
-	MoveForward(60);
-	TurnLeft(90);
-	MoveForward(50);
-	
-Motor_ResetEncoder(omniL);
+	//MoveForward(60);
+	//TurnLeft(90);
+	//MoveForward(50);
+
+	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
+	float kp = -0.02;
+	float power_L = 0.0;
+	float power_R = 0.0;
 
-while(true) 
-{
-pos_L = Motor_GetEncoder(omniL);
-pos_R = -Motor_GetEncoder(omniR);
+	while (true) {
+		pos_L = Motor_GetEncoder(omniL);
+		pos_R = -Motor_GetEncoder(omniR);
 
-int kp = -0.02;
-if
-{
-abs(pos_L) < 20;
-Motor_SetPower(pos_L * kp, FL);
-Motor_SetPower(pos_L * kp, FB);
-}
+		if (abs(pos_L) > 120) {
+			power_L = kP * pos_L;
+			if (power_L < 20) {
+				power_L = 20;
+			}
+		} else {
+			power_L = 0;
+		}
+		if (abs(pos_R) > 120) {
+			power_R = kP * pos_R;
+			if (power_R < 20) {
+				power_R = 20;
+			}
+		} else {
+			power_R = 0;
+		}
 
-if
-{
-abs(pos_R) < 20;
-Motor_SetPower(pos_R * kp, FR);
-Motor_SetPower(pos_R * kp, BR);
-}
+		Motor_SetPower(power_L, motor_FL);
+		Motor_SetPower(power_L, motor_BL);
+		Motor_SetPower(power_R, motor_FR);
+		Motor_SetPower(power_R, motor_BR);
 
+		Time_Wait(10);
+	}
 }
 
 void config_values(	bool &key,	string txt_disp,
@@ -335,9 +346,9 @@ void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 
 	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
 	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
-	
+
 	for (int i=0; i<1; i++)
-{ 
+{
 	Motor_SetPower(power, motor_FL);
 	Motor_SetPower(power, motor_BL);
 	Motor_SetPower(power, motor_FR);

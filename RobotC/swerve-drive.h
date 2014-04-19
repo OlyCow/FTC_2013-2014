@@ -65,9 +65,9 @@ const int servo_auton_up		= 255;
 const int servo_auton_down		= 0;
 const int servo_auton_hold 		= 128;
 const int servo_omni_L_up		= 0;
-const int servo_omni_L_down		= 28;
+const int servo_omni_L_down		= 32;
 const int servo_omni_R_up		= 240;
-const int servo_omni_R_down		= 212;
+const int servo_omni_R_down		= 208;
 
 // These two are how far the wheel pod servos can be off (it's how
 // wheel pod alignment is classified).
@@ -190,21 +190,22 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 	Servo_SetPosition(servo_auton, servo_auton_hold);
-	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
-	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
+	HTGYROstartCal(sensor_protoboard);
 
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
 	}
 
 	// MAGIC_NUM: 13V.
-	if (externalBatteryAvg<13600) {
+	if (externalBatteryAvg<13500) {
 		PlaySound(soundDownwardTones);
 	}
 	// MAGIC_NUM: 8V.
-	if (nAvgBatteryLevel<7900) {
+	if (nAvgBatteryLevel<7800) {
 		PlaySound(soundDownwardTones);
 	}
 }

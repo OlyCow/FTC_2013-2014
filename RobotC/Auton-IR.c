@@ -1,41 +1,35 @@
-#pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTServo,  HTServo)
+#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_R,   tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  motorB,          motor_assist_L,   tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C1_1,     motor_BR,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     motor_lift_back,  tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C2_1,     motor_lift_front, tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C3_1,    servo_BR,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_2,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C3_3,    servo3,               tServoNone)
-#pragma config(Servo,  srvo_S1_C3_4,    servo4,               tServoNone)
-#pragma config(Servo,  srvo_S1_C3_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S1_C3_6,    servo6,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_1,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_2,    servo8,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_3,    servo9,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S1_C4_5,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_6,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_1,    servo13,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
+#pragma config(Motor,  motorA,          motor_assist_L, 	tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  motorB,          motor_assist_R, 	tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,       	tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_lift_back,	tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_lift_front,   tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_FR,   	    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      		tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, 		tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    		tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      		tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C1_1,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_2,    servo_omni_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_3,    servo_auton,          tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_4,    servo4,               tServoNone)
+#pragma config(Servo,  srvo_S1_C1_5,    servo5,       		  tServoNone)
+#pragma config(Servo,  srvo_S1_C1_6,    servo_flip_R,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_1,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo_flip_L,         tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_FL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_1,    servo_BL,             tServoStandard)
-#pragma config(Servo,  srvo_S2_C2_2,    servo_dump,           tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_18,             tServoNone)
+#pragma config(Servo,  srvo_S2_C2_1,    servo_omni_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_2,    servo20,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_3,    servo21,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_4,    servo22,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo23,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_6,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_4,    servo_flip_L,         tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_FL,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C2_6,    servo_BL,             tServoStandard)
 
 #include "includes.h"
 #include "swerve-drive.h"
@@ -45,34 +39,51 @@
 #warn "This code will explode!"
 #endif
 
-task PID(); // Sets winch servos' position, wheel pod motors' power, and lift motor's power. Others set in main.
+task Gyro(); // Constantly updates the heading of the robot.
+task PID(); // Sets lift motor's power.
 task CommLink(); // R/W to the prototype board as tightly as possible. TODO: Separate into its own library.
 task Display(); // Updates the NXT's LCD display with useful info.
 
 //---------------- README!!! ------------------------------------------------>>
-//     As defined in "enums.h", the wheel pods are "numbered": `FR`, `FL`,
-// `BL`, and `BR` (going counterclockwise starting with `FR`).
-//
-//     The code is split into a couple tasks. I.) `main` is self-explanatory.
-// II.) The `PID` loop currently runs a very simple PID loop monitoring lift
-// position, and is hard-coded to never allow the lift to go below 0. It also
-// runs a more complex PID loop for the wheel pods' continuous rotation servos,
-// which limits them to a certain amount of turns in each direction so that the
-// motor wires don't get all twisted up. III.) `CommLink` is how data is trans-
-// ferred between the SuperPro prototype board and the AVR(s?) we have. This is
-// BLACK MAGIC, DO NOT TOUCH. In the future we will want to optimize it, and
-// possibly move it into its own library. IV.) `Display` is a cyclical display
-// that provides valuable debugging information. Press the arrow buttons to go
-// to a different screen.
+//     The code is split into a couple tasks. I.) `main` contains the linear
+// autonomous program logic, and calls other convenience functions to do things.
+// If it needs to make a trivial power assignment (such as raising the flag),
+// it is done directly in the `main` loop. II.) The `PID` loop runs a simple PD
+// loop which monitors position, and has hard-coded limits/safeties. III.)
+// `CommLink` is how data is trans ferred between the SuperPro prototype board
+// and the AVRs we have. This is BLACK MAGIC, DO NOT TOUCH. Since it conflicts
+// with our use of the gyro, currently the task isn't spawned at all for autono-
+// mous or teleop. In the future it will probably be moved into its own library.
+// IV.) `Display` is a cyclical display that provides valuable debugging infor-
+// mation. Press the arrow buttons to go to different screens.
 //-------------------------------------------------------------------------->>
 
-// For main task:
+// Motor Assignments!
+tMotor omniL = motor_FL;
+tMotor omniR = motor_FR;
+
+// Program settings:
+bool IS_FIRST_TURN_L	= true;
+bool DO_DUMP_AUTON		= true;
+bool DO_ATTEMPT_RAMP	= false;
+
+// For debugging display.
+float pos_L = 0.0;
+float pos_R = 0.0;
+float pos_avg = 0.0;
+float error = 0.0;
+
+// Gyro readings:
+float heading = 0.0; // Because f_angle_z is an int.
+
+// For PID:
 float power_lift = 0.0;
 int lift_target = 0;
-float lift_pos = 0;
+float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 
 // For comms link:
 // TODO: Make more efficient by putting vars completely inside bytes, etc.
+// If I had STL at my disposal much std::vector<bool> would happen here.
 const int NXT_LINE_NUM = 6;
 typedef enum CardinalDirection {
 	CARDINAL_DIR_N	= 0,
@@ -124,199 +135,314 @@ bool header_read[6] = {false, false, false, false, false, false};
 ubyte frame_write[4] = {0x55,0x6F,0xE5,0x7A};
 ubyte frame_read[6][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
+void config_values(	bool &key,	string txt_disp,
+					bool val_L,	string txt_L,
+					bool val_R,	string txt_R);
+void DumpAutonCube();
+void LowerAutonArm();
+void MoveForward(float inches, bool doBrake=true);
+void MoveBackward(float inches, bool doBrake=true);
+void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
+void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
+void TurnLeft(int degrees);
+void TurnRight(int degrees);
+void Settle();
 
-void Dump();
-void RunPickup();
-void StopPickup();
-void MoveForward(float power);
-void MoveBackward(float power);
-void TurnLeft(float power);
-void TurnRight(float power);
-void TurnLeft(float power_L, float power_R);
-void TurnRight(float power_L, float power_R);
-void Brake();
+
 
 task main()
 {
-	bool CONFIG_isClimbing	= false;
-	bool CONFIG_isDelay		= false;
-	bool CONFIG_takeThird	= false;
-
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
 	initializeRobotVariables();
+	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
-	Task_Spawn(PID);
-	Task_Spawn(CommLink);
+	Task_Spawn(Gyro);
+	//Task_Spawn(PID);
+	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 
-	const float gingerly	= 30;
-	const float slowly		= 40;
-	const float feelingly	= 75;
-	const float quickly		= 85;
-	const int forever		= 100; // This is actually an aribitrary refresh delay.
+	string a = "Delayed start?";
+	string b = "YES";
+	string c = "NO";
+	//config_values(DO_DELAY_AT_START, a, true, b, false, c);
 
-	typedef enum Crate{
+	typedef enum Crate {
+		CRATE_UNKNOWN		= -1,
 		CRATE_OUTER_CLOSE	= 0,
 		CRATE_INNER_CLOSE	= 1,
 		CRATE_INNER_FAR		= 2,
 		CRATE_OUTER_FAR		= 3,
 		CRATE_NUM
 	};
-	Crate isCrate = CRATE_OUTER_FAR;
-	int	IR_A = 0,
-		IR_B = 0,
-		IR_C = 0,
-		IR_D = 0,
-		IR_E = 0;
-	int IR_timer = 0;
-
-	// Times. (Dead reckoning.)
-	const int delay_IR[CRATE_NUM]		= {450, 400, 900, 400};
-	const int adjust_IR[CRATE_NUM]		= {-100, -100, -500, -300};
-	const int finish_delay[CRATE_NUM]	= {1700, 1400, 800, 400};
-	const int jerk_prevention	= 500;
-	const int slant_turn		= 500;
-	const int slant_adjust		= 1500;
-	const int normal_turn		= 600;
-	const int steamroll_ramp	= 2150;
-	const int climb_adjust		= 500;
+	Crate isCrate = CRATE_UNKNOWN;
+	int dA = 0;
+	int dB = 0;
+	int dC = 0;
+	int dD = 0;
+	int dE = 0;
+	int dist_all_baskets			= 56;
+	int dist_sense_ir[CRATE_NUM]	= {9, 10, 23, 10};
+	int dist_adjust_ir[CRATE_NUM]	= {-2, -2, -6, -6};
 
 	Joystick_WaitForStart();
-	lift_target = lift_pos_pickup;
+	heading = 0.0;
+	Motor_ResetEncoder(omniL);
+	Motor_ResetEncoder(omniR);
 
-	Time_ClearTimer(IR_timer);
-	MoveForward(slowly);
-	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; i++) {
-		Time_Wait(delay_IR[i]);
-		HTIRS2readAllACStrength(sensor_IR, IR_A, IR_B, IR_C, IR_D, IR_E);
-		if (IR_C>g_IRthreshold) {
+	for (Crate i=CRATE_OUTER_CLOSE; i<CRATE_NUM; ++i) {
+		MoveForward(dist_sense_ir[i], false);
+		HTIRS2readAllACStrength(sensor_IR, dA, dB, dC, dD, dE);
+		if (dC>g_IRthreshold) {
 			isCrate = i;
-			Brake();
-			Time_Wait(jerk_prevention);
 			break;
 		}
 	}
-
-	if (adjust_IR[isCrate]<0) {
-		MoveBackward(slowly);
-	} else {
-		MoveForward(slowly);
+	if (isCrate==CRATE_UNKNOWN) {
+		isCrate = CRATE_OUTER_FAR;
 	}
-	Time_Wait(abs(adjust_IR[isCrate]));
-	Brake();
-
-	Dump();
-
-	MoveForward(quickly);
-	Time_Wait(finish_delay[isCrate]);
-	Brake();
-	TurnRight(feelingly);
-	Time_Wait(slant_turn);
-	Brake();
-	MoveForward(quickly);
-	Time_Wait(slant_adjust);
-	Brake();
-	TurnLeft(feelingly);
-	Time_Wait(normal_turn);
-	Brake();
-
-	if (CONFIG_isClimbing == true) {
-		Servo_SetPosition(servo_climb_L, servo_climb_L_open);
-		Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+	MoveForward(dist_adjust_ir[isCrate]);
+	Settle();
+	DumpAutonCube();
+	MoveBackward(dist_adjust_ir[isCrate], false);
+	int corrected_length = dist_all_baskets;
+	for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
+		corrected_length -= dist_sense_ir[i];
 	}
-
-	MoveBackward(g_FullPower);
-	Time_Wait(steamroll_ramp);
-	Brake();
-
-	if (CONFIG_isClimbing == true) {
-		MoveForward(feelingly);
-		Time_Wait(climb_adjust);
-		Brake();
-	}
-
-	//Motor_SetPower(g_FullPower, motor_flag);
-
-	// TODO: BELOW IS DEBUG ONLY! REMEBER TO DELETE IT
-	while (true) {
-		Time_Wait(forever);
-	}
+	MoveForward(corrected_length);
+	LowerAutonArm();
+	TurnRight(45);
+	MoveForward(12);
+	TurnRight(45);
+	MoveForward(36);
+	TurnRight(90);
+	ChargeForward(1200, 100, true, true);
 }
 
-void Dump()
+
+
+void config_values(	bool &key,	string txt_disp,
+					bool val_L,	string txt_L,
+					bool val_R,	string txt_R)
 {
-	Time_Wait(1000);
+	Task_Kill(Display);
+	bDisplayDiagnostics = false;
+	Display_Clear();
+
+	bool isConfig = true;
+	string arrow = "-> ";
+	string blank = "   ";
+	string disp_L = "";
+	string disp_R = "";
+	bool isL = true;
+	bool isR = false;
+
+	while (isConfig==true) {
+		Buttons_UpdateData();
+		if (Buttons_Released(NXT_BUTTON_YES)==true) {
+			isConfig = false;
+		} else if ((Buttons_Released(NXT_BUTTON_L)||Buttons_Released(NXT_BUTTON_R))==true) {
+			isL = !isL;
+			isR = !isR;
+		}
+
+		if (isL==true) {
+			disp_L = arrow + txt_L;
+		} else {
+			disp_L = blank + txt_L;
+		}
+		if (isR==true) {
+			disp_R = arrow + txt_R;
+		} else {
+			disp_R = blank + txt_R;
+		}
+
+		nxtDisplayString(0, txt_disp);
+		nxtDisplayString(2, disp_L);
+		nxtDisplayString(3, disp_R);
+
+		Time_Wait(10);
+	}
+	if (isL==true) {
+		isConfig = val_L;
+	} else if (isR==true) {
+		isConfig = val_R;
+	}
+
+	bDisplayDiagnostics = true;
+	Task_Spawn(Display);
+}
+void DumpAutonCube()
+{
+	const int lower_delay = 480;
+	const int drop_delay = 1000;
+	const int raise_delay = 500;
 	Servo_SetPosition(servo_auton, servo_auton_down);
-	Time_Wait(1000);
+	Time_Wait(lower_delay);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
+	Time_Wait(drop_delay);
 	Servo_SetPosition(servo_auton, servo_auton_up);
+	Time_Wait(raise_delay);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 }
-void RunPickup()
+void LowerAutonArm()
 {
-	Motor_SetPower(g_FullPower, motor_sweeper);
-	Motor_SetPower(g_FullPower, motor_assist_L);
-	Motor_SetPower(g_FullPower, motor_assist_R);
-	//Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	//Servo_SetPosition(servo_flip_R, servo_flip_R_up);
-	Servo_SetPosition(servo_flip_L, servo_flip_L_down);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_down);
+	const int lower_delay = 1200;
+	Servo_SetPosition(servo_auton, servo_auton_down);
+	Time_Wait(lower_delay);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 }
-void StopPickup()
+void MoveForward(float inches, bool doBrake)
 {
-	Motor_SetPower(0, motor_sweeper);
-	Motor_SetPower(0, motor_assist_L);
-	Motor_SetPower(0, motor_assist_R);
-	Servo_SetPosition(servo_flip_L, servo_flip_L_up);
-	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
+	float target = inches*152.789;
+	float power = 0.0;
+	float kP = 0.03;
+	bool isMoving = true;
+
+	Motor_ResetEncoder(omniL);
+	Motor_ResetEncoder(omniR);
+
+	while (isMoving==true){
+		pos_L = Motor_GetEncoder(omniL);
+		pos_R = -Motor_GetEncoder(omniR);
+		pos_avg = (pos_L+pos_R)/2.0;
+		error = target-pos_avg;
+		if (error>3000) {
+			power = g_FullPower;
+		} else if (error<-3000) {
+			power = -g_FullPower;
+		} else {
+			power = kP*error;
+		}
+		if (abs(power)<10) {
+			if (power>0) {
+				power = 10;
+			} else if (power<0) {
+				power = -10;
+			}
+		}
+		power = Math_Limit(power, g_FullPower);
+		Motor_SetPower(power, motor_FL);
+		Motor_SetPower(power, motor_BL);
+		Motor_SetPower(power, motor_FR);
+		Motor_SetPower(power, motor_BR);
+		if (abs(error)<50) {
+			//if (abs(vel)<20) {
+				isMoving = false;
+			//}
+		}
+	}
+	if (doBrake==true) {
+		Motor_SetPower(0, motor_FL);
+		Motor_SetPower(0, motor_BL);
+		Motor_SetPower(0, motor_FR);
+		Motor_SetPower(0, motor_BR);
+	}
 }
-void MoveForward(float power)
+void MoveBackward(float inches, bool doBrake)
 {
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(power, motor_BR);
+	MoveForward(-inches, doBrake);
 }
-void MoveBackward(float power)
+void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 {
-	Motor_SetPower(-power, motor_FR);
-	Motor_SetPower(-power, motor_FL);
-	Motor_SetPower(-power, motor_BL);
-	Motor_SetPower(-power, motor_BR);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
+	for (int i=0; i<milliseconds; ++i) {
+		Motor_SetPower(power, motor_FL);
+		Motor_SetPower(power, motor_BL);
+		Motor_SetPower(power, motor_FR);
+		Motor_SetPower(power, motor_BR);
+		Time_Wait(1);
+	}
+	if (doBrake==true) {
+		Motor_SetPower(0, motor_FL);
+		Motor_SetPower(0, motor_BL);
+		Motor_SetPower(0, motor_FR);
+		Motor_SetPower(0, motor_BR);
+	}
+	if (doLowerOmni==true) {
+		Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+		Servo_SetPosition(servo_omni_R, servo_omni_R_down);
+	}
 }
-void TurnLeft(float power)
+void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 {
-	Motor_SetPower(-power, motor_FL);
-	Motor_SetPower(-power, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
+	ChargeForward(milliseconds, power, doLowerOmni, doBrake);
 }
-void TurnRight(float power)
+void TurnLeft(int degrees)
 {
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(-power, motor_FR);
-	Motor_SetPower(-power, motor_BR);
-}
-void TurnLeft(float power_L, float power_R)
-{
-	Motor_SetPower(-power_L, motor_FL);
-	Motor_SetPower(-power_L, motor_BL);
-	Motor_SetPower(power_R, motor_FR);
-	Motor_SetPower(power_R, motor_BR);
-}
-void TurnRight(float power_L, float power_R)
-{
-	Motor_SetPower(power_L, motor_FL);
-	Motor_SetPower(power_L, motor_BL);
-	Motor_SetPower(-power_R, motor_FR);
-	Motor_SetPower(-power_R, motor_BR);
-}
-void Brake()
-{
-	Motor_SetPower(0, motor_FR);
+	bool isTurning = true;
+	float start_pos = heading;
+	float current_pos = heading;
+	float target = start_pos-(float)degrees;
+	float power = 0.0;
+	float power_neg = 0.0;
+	float kP = 5.7;
+	bool isFineTune = false;
+	int finish_timer = 0;
+
+	while (isTurning==true) {
+		current_pos = heading;
+		error = target-current_pos;
+		if (error>60) {
+			power = g_FullPower;
+		} else if (error<-60) {
+			power = -g_FullPower;
+		} else {
+			power = kP*error;
+		}
+		if (abs(power)<20) {
+			if (power>0) {
+				power = 20;
+			} else if (power<0) {
+				power = -20;
+			}
+		}
+		power_neg = -power;
+		Motor_SetPower(power, motor_FL);
+		Motor_SetPower(power, motor_BL);
+		Motor_SetPower(power_neg, motor_FR);
+		Motor_SetPower(power_neg, motor_BR);
+		if (abs(error)<1) {
+			if (isFineTune==false) {
+				Time_ClearTimer(finish_timer);
+				isFineTune = true;
+			} else if (Time_GetTime(finish_timer)>500) {
+				isTurning = false;
+			}
+		}
+	}
 	Motor_SetPower(0, motor_FL);
 	Motor_SetPower(0, motor_BL);
+	Motor_SetPower(0, motor_FR);
 	Motor_SetPower(0, motor_BR);
-	Time_Wait(100);
+}
+void TurnRight(int degrees)
+{
+	TurnLeft(-degrees);
+}
+void Settle()
+{
+	Time_Wait(500);
+}
+
+
+
+task Gyro()
+{
+	float vel_curr = 0.0;
+	float vel_prev = 0.0;
+	float dt = 0.0;
+	int timer_gyro = 0.0;
+	Time_ClearTimer(timer_gyro);
+	while (true) {
+		vel_prev = (float)vel_curr;
+		dt = (float)Time_GetTime(timer_gyro)/(float)1000.0;
+		Time_ClearTimer(timer_gyro);
+		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
+		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
+		Time_Wait(1);
+	}
 }
 
 
@@ -334,7 +460,7 @@ task PID()
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
 	const float lift_guard_divisor	= 2.2;
-	const float kP_lift_up			= 0.28;
+	const float kP_lift_up			= 0.27;
 	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
@@ -348,32 +474,40 @@ task PID()
 	Time_ClearTimer(timer_loop);
 
 	while (true) {
+		//Task_HogCPU();
 		// We need to update the timers outside of any loops.
 		t_delta = Time_GetTime(timer_loop);
 		Time_ClearTimer(timer_loop);
 
+		// Assign the power settings to the motors and servos.
+		for (int i=POD_FR; i<(int)POD_NUM; i++) {
+			g_MotorData[i].power = Math_Limit(g_MotorData[i].power, 100);
+			g_MotorData[i].power *= g_MotorData[i].fineTuneFactor;
+			Motor_SetPower(g_MotorData[i].power, Motor_Convert((WheelPod)i));
+		}
+
+		// TODO: Replace this hacked together lift resetter (or not?).
 		// The following is a PID loop for setting the lift's power. Because the lift is so
 		// fast, we are slowing it down intentionally to prevent the it from killing itself.
-		lift_pos = Motor_GetEncoder(motor_lift_back);
-		error_prev_lift = error_lift;
-		if (lift_target<0) { // Because we're safe.
-			lift_target = 0;
-		} else if (lift_target>lift_max_height) {
-			lift_target = lift_max_height;
-		}
+			lift_pos = Motor_GetEncoder(motor_lift_front);
+			error_prev_lift = error_lift;
+			if (lift_target<0) { // Because we're safe.
+				lift_target = 0;
+			} else if (lift_target>lift_max_height) {
+				lift_target = lift_max_height;
+			}
 
-		error_lift = lift_target-lift_pos;
-		error_rate_lift = (error_lift-error_prev_lift)/t_delta;
-		if (error_lift>0) {
-			term_P_lift = kP_lift_up*error_lift;
-			term_D_lift = kD_lift_up*error_rate_lift;
-		} else if (error_lift<=0) {
-			term_P_lift = kP_lift_down*error_lift;
-			term_D_lift = kD_lift_down*error_rate_lift;
-		}
-		power_lift = term_P_lift+term_D_lift;
-		power_lift = Math_Limit(power_lift, g_FullPower);
-
+			error_lift = lift_target-lift_pos;
+			error_rate_lift = (error_lift-error_prev_lift)/t_delta;
+			if (error_lift>0) {
+				term_P_lift = kP_lift_up*error_lift;
+				term_D_lift = kD_lift_up*error_rate_lift;
+			} else if (error_lift<=0) {
+				term_P_lift = kP_lift_down*error_lift;
+				term_D_lift = kD_lift_down*error_rate_lift;
+			}
+			power_lift = term_P_lift+term_D_lift;
+			power_lift = Math_Limit(power_lift, g_FullPower);
 
 		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
 		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
@@ -384,6 +518,11 @@ task PID()
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
+
+		Time_Wait(4);
+
+		//Task_ReleaseCPU();
+		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)
 	}
 }
 
@@ -650,15 +789,11 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
-		DISP_SWERVE_DEBUG,		// Encoders, target values, PID output, power levels.
-		DISP_ENCODERS,			// Raw encoder values (7? 8?).
+		DISP_ENCODERS,			// Raw encoder values.
 		DISP_COMM_STATUS,		// Each line of each frame.
 		DISP_COMM_DEBUG,
 		DISP_SENSORS,			// Might need to split this into two screens.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
-		//DISP_SERVOS,			// Show each servo's position.
-		//DISP_TASKS,				// Which tasks are running.
-		//DISP_AUTONOMOUS_INFO,	// Misc. status info.
 		DISP_NUM
 	};
 
@@ -673,24 +808,15 @@ task Display()
 		switch (isMode) {
 			case DISP_FCS :
 				break;
-			case DISP_SWERVE_DEBUG :
-				// The value of `pod_current[i]` is (should be?) between 0~360.
-				//nxtDisplayTextLine(0, "FR rot%3d tgt%3d", pod_current[POD_FR], g_ServoData[POD_FR].angle);
-				//nxtDisplayTextLine(1, "FL rot%3d tgt%3d", pod_current[POD_FL], g_ServoData[POD_FL].angle);
-				//nxtDisplayTextLine(2, "BL rot%3d tgt%3d", pod_current[POD_BL], g_ServoData[POD_BL].angle);
-				//nxtDisplayTextLine(3, "BR rot%3d tgt%3d", pod_current[POD_BR], g_ServoData[POD_BR].angle);
-				nxtDisplayTextLine(4, " pow%+4d", g_MotorData[POD_FR].power);
-				nxtDisplayTextLine(5, " pow%+4d", g_MotorData[POD_FL].power);
-				nxtDisplayTextLine(6, " pow%+4d", g_MotorData[POD_BL].power);
-				nxtDisplayTextLine(7, " pow%+4d", g_MotorData[POD_BR].power);
-				break;
 			case DISP_ENCODERS :
-				//nxtDisplayTextLine(0, "FR %+5d  (%d)", encoder_pod[POD_FR], isAligned[POD_FR]);
-				//nxtDisplayTextLine(1, "FL %+5d  (%d)", encoder_pod[POD_FL], isAligned[POD_FL]);
-				//nxtDisplayTextLine(2, "BL %+5d  (%d)", encoder_pod[POD_BL], isAligned[POD_BL]);
-				//nxtDisplayTextLine(3, "BR %+5d  (%d)", encoder_pod[POD_BR], isAligned[POD_BR]);
-				nxtDisplayTextLine(4, "Lift: %+6d", lift_pos);
-				nxtDisplayTextLine(5, "Gyro: %+6d", f_angle_z);
+				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);
+				nxtDisplayTextLine(1, "Gyro: %+6d", heading);
+				nxtDisplayTextLine(2, "FRpow %+4d", g_MotorData[POD_FR].power);
+				nxtDisplayTextLine(3, "FLpow %+4d", g_MotorData[POD_FL].power);
+				nxtDisplayTextLine(4, "Error: %i", error);
+				nxtDisplayTextLine(5, "avg pos: %i", pos_avg);
+				nxtDisplayTextLine(6, "encdr R: %i", pos_L);
+				nxtDisplayTextLine(7, "encdr L: %i", pos_R);
 				break;
 			case DISP_COMM_STATUS :
 				switch (f_isRedAlliance) {
@@ -726,7 +852,9 @@ task Display()
 			case DISP_SENSORS :
 				nxtDisplayTextLine(0, "%1d cubes", f_cubeNum);
 				nxtDisplayTextLine(1, "(%+5d,%+5d,%+3d)", f_pos_x, f_pos_y, f_pos_z);
-				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", f_angle_x, f_angle_y, f_angle_z);
+				int temp_x = f_angle_x - 30;	// TODO: Make this not ugly.
+				int temp_y = f_angle_y - 30;
+				nxtDisplayTextLine(2, "(%3d,%3d,%3d)", temp_x, temp_y, f_angle_z);
 				break;
 			case DISP_JOYSTICKS :
 				nxtDisplayCenteredTextLine(0, "--Driver I:--");
@@ -760,6 +888,6 @@ task Display()
 				Task_Kill(displayDiagnostics);
 			}
 		}
-		Time_Wait(100); // MAGIC_NUM: Prevents the LCD from updating itself to death. (Okay, maybe not that dramatic.)
+		Time_Wait(50); // MAGIC_NUM: Prevents the LCD from updating itself to death.
 	}
 }

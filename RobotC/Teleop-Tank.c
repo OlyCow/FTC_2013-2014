@@ -307,7 +307,7 @@ task main()
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
 				if (joystick_input != 0) {
-					lift_target += joystick_input*1.3; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+					lift_target += joystick_input*1.36; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
 					isLiftOverriden = true;
 				}
 			}
@@ -586,6 +586,8 @@ task PID()
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
+
+		Time_Wait(2); // MAGIC_NUM: Seems like a reasonable number.
 
 		//Task_ReleaseCPU();
 		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)

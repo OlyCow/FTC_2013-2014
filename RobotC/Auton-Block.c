@@ -434,7 +434,7 @@ task PID()
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
 
-		Time_Wait(4);
+		Time_Wait(2);
 
 		//Task_ReleaseCPU();
 		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)

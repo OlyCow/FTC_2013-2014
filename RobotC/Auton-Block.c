@@ -63,7 +63,6 @@ tMotor omniL = motor_FL;
 tMotor omniR = motor_FR;
 
 // Program settings:
-bool DO_DELAY_AT_START	= false;
 bool IS_FIRST_TURN_L	= true;
 bool DO_DUMP_AUTON		= true;
 bool DO_ATTEMPT_RAMP	= false;
@@ -159,9 +158,9 @@ task main()
 	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Gyro);
-	Task_Spawn(PID);
+	//Task_Spawn(PID);
 	//Task_Spawn(CommLink);
-	//Task_Spawn(Display);
+	Task_Spawn(Display);
 
 	string a = "Delayed start?";
 	string b = "YES";
@@ -173,17 +172,11 @@ task main()
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
 
-	if (DO_DELAY_AT_START==true) {
-		for (int i=0; i<10; i++) {
-			Time_Wait(1000);
-		}
-	}
-
 	MoveForward(7);
 	DumpAutonCube();
 	TurnLeft(15);
 	LowerAutonArm();
-	MoveForward(60);
+	MoveForward(56);
 	TurnRight(60);
 	MoveForward(26);
 	for (int i=0; i<10; ++i) {
@@ -193,7 +186,7 @@ task main()
 	TurnLeft(45);
 	MoveBackward(18);
 	TurnRight(90);
-	ChargeForward(2000, 100, true, true);
+	ChargeForward(1600, 100, true, true);
 }
 
 
@@ -284,9 +277,9 @@ void MoveForward(float inches, bool doBrake)
 		pos_R = -Motor_GetEncoder(omniR);
 		pos_avg = (pos_L+pos_R)/2.0;
 		error = target-pos_avg;
-		if (error>3000) {
+		if (error>2400) {
 			power = g_FullPower;
-		} else if (error<-3000) {
+		} else if (error<-2400) {
 			power = -g_FullPower;
 		} else {
 			power = kP*error;
@@ -324,11 +317,13 @@ void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 {
 	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
 	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
-	Motor_SetPower(power, motor_FL);
-	Motor_SetPower(power, motor_BL);
-	Motor_SetPower(power, motor_FR);
-	Motor_SetPower(power, motor_BR);
-	Time_Wait(milliseconds);
+	for (int i=0; i<milliseconds; ++i) {
+		Motor_SetPower(power, motor_FL);
+		Motor_SetPower(power, motor_BL);
+		Motor_SetPower(power, motor_FR);
+		Motor_SetPower(power, motor_BR);
+		Time_Wait(1);
+	}
 	if (doBrake==true) {
 		Motor_SetPower(0, motor_FL);
 		Motor_SetPower(0, motor_BL);
@@ -352,7 +347,7 @@ void TurnLeft(int degrees)
 	float target = start_pos-(float)degrees;
 	float power = 0.0;
 	float power_neg = 0.0;
-	float kP = 5.4;
+	float kP = 5.7;
 	bool isFineTune = false;
 	int finish_timer = 0;
 
@@ -366,11 +361,11 @@ void TurnLeft(int degrees)
 		} else {
 			power = kP*error;
 		}
-		if (abs(power)<15) {
+		if (abs(power)<20) {
 			if (power>0) {
-				power = 15;
+				power = 20;
 			} else if (power<0) {
-				power = -15;
+				power = -20;
 			}
 		}
 		power_neg = -power;

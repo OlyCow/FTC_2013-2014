@@ -514,8 +514,8 @@ task PID()
 	// Separate constants are needed for up vs. down motion of the lift because
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
-	const float lift_guard_divisor	= 1.8;
-	const float kP_lift_up			= 0.86;
+	const float lift_guard_divisor	= 2.3;
+	const float kP_lift_up			= 0.74;
 	const float kP_lift_down		= 0.17;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
@@ -580,6 +580,9 @@ task PID()
 		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
 				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
 			power_lift /= lift_guard_divisor;
+			if (lift_pos>lift_buffer_top) {
+				power_lift *= 1.6;
+			}
 		}
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.

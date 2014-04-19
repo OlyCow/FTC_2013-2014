@@ -29,7 +29,7 @@ typedef struct servoData {
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 
 // The threshold for IR values to count as detected.
-const int g_IRthreshold = 60; // arbitrary units from 0~1024.
+const int g_IRthreshold = 80; // arbitrary units from 0~1024.
 
 // TODO: This number is just a guess. Not verified at all.
 const int g_EncoderDeadband = 1; // degrees.
@@ -257,7 +257,7 @@ void dumpCubes(int num)
 task dumpCubesTask()
 {
 	// MAGIC_NUM (milliseconds).
-	const int delay[4] = {160, 340, 500, 1200}; // TODO: 2 & 3.
+	const int delay[4] = {160, 240, 320, 1200}; // TODO: 2 & 3.
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	Time_Wait(delay[f_cubeDumpNum-1]); // Array indices; off-by-one.
 	Servo_SetPosition(servo_dump, servo_dump_closed);

@@ -121,20 +121,15 @@ task main()
 
 	// MAGIC_NUM: Distances in inches, turns in degrees, delays in seconds.
 	const int delay_start					= 10;
-	const int dist_all_baskets_L			= 56;	// TODO
-	const int dist_all_baskets_R			= 56;
-	const int dist_sense_ir_L[CRATE_NUM]	= {9,	10,	23,	10};	// TODO
-	const int dist_adjust_ir_L[CRATE_NUM]	= {2,	2,	6,	6};		// TODO
+	const int dist_all_baskets_L			= 66;	// TODO
+	const int dist_all_baskets_R			= 53;
+	const int dist_sense_ir_L[CRATE_NUM]	= {13,	10,	23,	9};	// TODO
+	const int dist_adjust_ir_L[CRATE_NUM]	= {6,	6,	2,	2};		// TODO
 	const int dist_sense_ir_R[CRATE_NUM]	= {9,	10,	23,	10};
-	const int dist_adjust_ir_R[CRATE_NUM]	= {-2,	-2,	-6,	-6};
+	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-5,	-5};
 
 	Crate isCrate = CRATE_UNKNOWN;
 	Crate maxCrate = CRATE_UNKNOWN;
-	if (DO_END_AT_THREE) {
-		maxCrate = CRATE_INNER_FAR;
-	} else {
-		maxCrate = CRATE_OUTER_FAR;
-	}
 	int dA = 0;
 	int dB = 0;
 	int dC = 0;
@@ -150,7 +145,7 @@ task main()
 	b = "RIGHT";
 	c = "LEFT";
 	config_values(DO_START_ON_R, a, true, b, false, c);
-	a = "End at basket:";
+	a = "End at crate:";
 	b = "#3";
 	c = "#4";
 	config_values(DO_END_AT_THREE, a, true, b, false, c);
@@ -171,13 +166,18 @@ task main()
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
+	if (DO_END_AT_THREE) {
+		maxCrate = CRATE_INNER_FAR;
+	} else {
+		maxCrate = CRATE_OUTER_FAR;
+	}
 	if (DO_DELAY_START) {
 		for (int i=0; i<delay_start; ++i) {
 			Time_Wait(1000);
 		}
 	}
 
-	for (Crate i=CRATE_OUTER_CLOSE; i<=(maxCrate+1); ++i) {
+	for (Crate i=CRATE_OUTER_CLOSE; i<=maxCrate; ++i) {
 		if (DO_START_ON_R) {
 			MoveForward(dist_sense_ir_R[i], false);
 		} else {
@@ -208,12 +208,36 @@ task main()
 	if (DO_BACKTRACK) {
 		for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
 			if (DO_START_ON_R) {
-				MoveBackward(dist_sense_ir_R[i]);
+				if (i==isCrate) {
+					MoveBackward(dist_sense_ir_R[i]-4);
+				} else {
+					MoveBackward(dist_sense_ir_R[i]);
+				}
 			} else {
-				MoveForward(dist_sense_ir_R[i]);
+				if (i==isCrate) {
+					MoveForward(dist_sense_ir_L[i]-4);
+				} else {
+					MoveForward(dist_sense_ir_L[i]);
+				}
 			}
 		}
 		Brake();
+		LowerAutonArm();
+		if (DO_START_ON_R) {
+			TurnLeft(45);
+			MoveBackward(28);
+			TurnLeft(45);
+			MoveBackward(26);
+			TurnRight(90);
+			ChargeForward(1500, g_FullPower, true, false);
+		} else {
+			TurnRight(45);
+			MoveForward(24);
+			TurnRight(45);
+			MoveForward(24);
+			TurnRight(90);
+			ChargeForward(1500, g_FullPower, true, false);
+		}
 	} else {
 		if (DO_START_ON_R) {
 			int corrected_length = dist_all_baskets_R;
@@ -222,24 +246,31 @@ task main()
 			}
 			MoveForward(corrected_length);
 			LowerAutonArm();
+			TurnRight(45);
+			MoveForward(16);
+			TurnRight(45);
+			MoveForward(36);
+			TurnRight(90);
+			ChargeForward(1400, 100, true, true);
 		} else {
 			int corrected_length = dist_all_baskets_L;
 			for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
 				corrected_length -= dist_sense_ir_L[i];
 			}
 			MoveBackward(corrected_length);
+			LowerAutonArm();
+			TurnLeft(45);
+			MoveBackward(12);
+			TurnLeft(45);
+			MoveBackward(34);
+			TurnRight(90);
+			ChargeForward(1300, 100, true, true);
 		}
 	}
 
-
-
-	TurnRight(45);
-	MoveForward(12);
-	TurnRight(45);
-	MoveForward(36);
-	TurnRight(90);
-	ChargeForward(1200, 100, true, true);
 	if (DO_TURN_ON_RAMP) {
+		Time_Wait(1000);
+		TurnLeft(90);
 	}
 	if (DO_DEFEND_RAMP) {
 	}
@@ -290,9 +321,9 @@ void config_values(	bool &key,	string txt_disp,
 		Time_Wait(10);
 	}
 	if (isL==true) {
-		isConfig = val_L;
+		key = val_L;
 	} else if (isR==true) {
-		isConfig = val_R;
+		key = val_R;
 	}
 
 	Task_Spawn(displayDiagnostics);
@@ -430,7 +461,7 @@ void TurnLeft(int degrees)
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power_neg, motor_FR);
 		Motor_SetPower(power_neg, motor_BR);
-		if (abs(error)<1) {
+		if (abs(error)<2) {
 			if (isFineTune==false) {
 				Time_ClearTimer(finish_timer);
 				isFineTune = true;

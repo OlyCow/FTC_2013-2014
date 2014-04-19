@@ -182,10 +182,31 @@ task main()
 	MoveForward(60);
 	TurnLeft(90);
 	MoveForward(50);
+	
+Motor_ResetEncoder(omniL);
+	Motor_ResetEncoder(omniR);
 
+while(true) 
+{
+pos_L = Motor_GetEncoder(omniL);
+pos_R = -Motor_GetEncoder(omniR);
+
+int kp = -0.02;
+if
+{
+abs(pos_L) < 20;
+Motor_SetPower(pos_L * kp, FL);
+Motor_SetPower(pos_L * kp, FB);
 }
 
+if
+{
+abs(pos_R) < 20;
+Motor_SetPower(pos_R * kp, FR);
+Motor_SetPower(pos_R * kp, BR);
+}
 
+}
 
 void config_values(	bool &key,	string txt_disp,
 					bool val_L,	string txt_L,

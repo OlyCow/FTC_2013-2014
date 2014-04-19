@@ -31,7 +31,6 @@
 #pragma config(Servo,  srvo_S2_C2_5,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_BL,             tServoStandard)
 
-
 #include "includes.h"
 #include "swerve-drive.h"
 
@@ -65,35 +64,30 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // to a different screen. V.) This is an easter egg I'll probably never get to
 // implement. :P It would basically be an autonomous teleop period.
 //
-// CONTROLS:	Controller_1, Joystick_R:	Translational movement.
-//				Controller_1, Joystick_L:	Rotational movement.
-//				Controller_1, Button_Joy_R:	Reset gyro.
-//				Controller_1, Button_LT*:	Cut motor power (adjust pods).
-//				Controller_1, Button_RT*:	Fine-tune motors.
+// CONTROLS:	Controller_1, Joystick_R:	Right-side motor power.
+//				Controller_1, Joystick_L:	Left-side motor power.
+//				Controller_1, Button_LT:	Fine-tune motors.
+//				Controller_1, Button_RT:	Fine-tune motors.
 //				Controller_1, Button_LB:	Dump 4 cubes.
-//				Controller_1, Button_RB:	Dump 1 cube.
+//				Controller_1, Button_RB:	Dump 2 cubes.
 //				Controller_1, Button_A:		Toggle sweeper state.
-//				Controller_1, Button_B:		Reset gyro (eventually flag).
-//				Controller_1, Button_X:		Flag (eventually climb down).
-//				Controller_1, Button_Y:		Climb (eventually climb up).
-//				Controller_1, Direction_F:	Raise lift.
-//				Controller_1, Direction_B:	Lower lift.
-//				Controller_1, Direction_L:	Flag CCW fine-tune.
-//				Controller_1, Direction_R:	Flag CW fine-tune.
+//				Controller_1, Button_B:		Flag; fine-tune.
+//				Controller_1, Button_X*:	Flag; full power.
+//				Controller_1, Button_Y:		Raises assist rollers.
+//				Controller_1, Direction_F:	Raise lift (fine-tune).
+//				Controller_1, Direction_B:	Lower lift (fine-tune).
 //				Controller_1, Button_Start:	Toggle auton mode.
-//				Controller_1, Button_Back:	[UNUSED]
+//				Controller_1, Button_Back:	Emergency shutdown.
 //
 //				Controller_2, Joystick_L:	Lift height.
-//				Controller_2, Joystick_R:	Climbing.
+//				Controller_2, Joystick_R:	Fine-tune lift height.
 //				Controller_2, Button_LB:	Dump 4 cubes.
-//				Controller_2, Button_RB:	Dump 1 cube.
+//				Controller_2, Button_RB:	Dump 2 cubes.
 //				Controller_2, Button_LT:	Release climbing.
-//				Controller_2, Button_RT:	Release climbing.
-//				Controller_2, Button_A:		Dump auton cube.
+//				Controller_2, Button_RT:	Return climbing.
+//				Controller_2, Button_A:		Run auton servo.
 //				Controller_2, Button_B:		Lift modifier key.
-//				Controller_2, Button_Joy_L:	[UNUSED]
-//				Controller_2, Button_Joy_R:	[UNUSED]
-//				Controller_2, Button_X:		[UNUSED]
+//				Controller_2, Button_X:		Raise flag.
 //				Controller_2, Button_Y:		Turns sweeper off.
 //				Controller_2, Direction_L:	Flag CCW.
 //				Controller_2, Direction_R:	Flag CW.
@@ -102,7 +96,7 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 //				Controller_2, Button_Start:	Toggle auton mode.
 //				Controller_2, Button_Back:	Emergency shutdown.
 //
-// *: Button_LT overrides Button_RT.
+// *: Double-tapping rotates the flag 45°. TODO (not implemented)
 //-------------------------------------------------------------------------->>
 
 // For main task:
@@ -220,21 +214,6 @@ task main()
 	while (true) {
 		Joystick_UpdateData();
 
-		// TODO: Figure all of the below gyro stuff out.
-		gyro_current = 0;
-		gyro_prev = gyro_current;
-		heading = gyro_current;
-		////// TODO: Figure this out. Semaphores? Is it even necessary?
-		////Task_HogCPU();
-		////gyro_current = (float)HTGYROreadRot(sensor_protoboard);
-		////heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
-		//heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
-		//Time_ClearTimer(timer_gyro);
-		//gyro_prev = gyro_current;
-		//f_angle_z = round(heading);
-		////// TODO: Figure this out. Semaphores? Is it even necessary?
-		////Task_ReleaseCPU();
-
 		// MAGIC_NUM: No need for weird angles because omniwheels :P
 		g_ServoData[POD_FR].angle = 90;
 		g_ServoData[POD_FL].angle = 90;
@@ -258,7 +237,7 @@ task main()
 		}
 		if (Joystick_Button(BUTTON_LT)==true) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
+				g_MotorData[i].fineTuneFactor = 0.25; // NOTE: Remnant of swerve drive code.
 			}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -274,16 +253,16 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 360; // MAGIC_NUM
+			lift_target += 1440; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_target -= 320; // MAGIC_NUM
+			lift_target -= 960; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 180; // MAGIC_NUM
+			lift_target += 600; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
-			lift_target -= 120; // MAGIC_NUM
+			lift_target -= 540; // MAGIC_NUM
 			isLiftOverriden = true;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 			// Nesting these is more efficient.
@@ -307,7 +286,12 @@ task main()
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
 				if (joystick_input != 0) {
-					lift_target += joystick_input*1.36; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+					lift_target += joystick_input*1.46; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
+					isLiftOverriden = true;
+				}
+				float tune_input = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
+				if (tune_input != 0) {
+					lift_target += tune_input*0.54; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
 					isLiftOverriden = true;
 				}
 			}
@@ -320,13 +304,11 @@ task main()
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			dumpCubes(1); // Dumps one cube at a time.
+			dumpCubes(2); // MAGIC_NUM
 			// All this really does is dump for a short amount of time.
-			// TODO: Is it possible to dump 2 or 3 cubes? How should that
-			// be mapped to controls? Should the "fine-tune" be 2 cubes?
+			// We will only ever want to fine-tune with 2 cubes.
 		}
 
-		// TODO: Make sure driver 1 does indeed override driver 2. Not very urgent.
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
@@ -398,15 +380,17 @@ task main()
 			power_flag = 0;
 		}
 
-		// TODO: Make climbing work. When we get comms working, fix the controls.
 		// As usual, driver 1's controls take precedence over driver 2.
 		if (Joystick_Button(BUTTON_X)==true) {
-			// TODO: Climb "down" instead.
 			power_flag = g_FullPower;
+		} else if (Joystick_Button(BUTTON_B)==true) {
+			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_L)==true) {
 			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_R)==true) {
 			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+		} else if (Joystick_Button(BUTTON_X, CONTROLLER_2)==true) {
+			power_flag = g_FullPower;
 		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
 			power_flag = g_FullPower/(g_FineTuneFactor*2);
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
@@ -430,6 +414,12 @@ task main()
 		if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
 			Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+		}
+
+		if (Joystick_Button(BUTTON_A, CONTROLLER_2)==true) {
+			Servo_SetPosition(servo_auton, servo_auton_down);
+		} else {
+			Servo_SetPosition(servo_auton, servo_auton_hold);
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
@@ -509,14 +499,13 @@ task PID()
 	Time_ClearTimer(timer_loop);
 	int t_delta = Time_GetTime(timer_loop);
 
-	// TODO: PID tuning.
-	// MAGIC_NUM: Variables for lift PID calculations.
 	// Separate constants are needed for up vs. down motion of the lift because
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
-	const float lift_guard_divisor	= 2.3;
-	const float kP_lift_up			= 0.74;
-	const float kP_lift_down		= 0.17;
+	// MAGIC_NUM: Variables for lift PID calculations.
+	const float lift_guard_divisor	= 2.7;
+	const float kP_lift_up			= 0.92;
+	const float kP_lift_down		= 0.21;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;
@@ -574,16 +563,26 @@ task PID()
 			power_lift = Math_Limit(power_lift, g_FullPower);
 		}
 
-		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
+		// TODO: Make this condition less hard/abrupt.
 		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
 		// kill itself when it hits the ends of its range (up and down).
 		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
 				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
 			power_lift /= lift_guard_divisor;
 			if (lift_pos>lift_buffer_top) {
-				power_lift *= 1.6;
+				power_lift *= 2.2;
 			}
 		}
+		if (abs(power_lift)<15) {
+			if (abs(power_lift)<5) {
+				power_lift = 0;
+			} else if (power_lift>0) {
+				power_lift = 15;
+			} else if (power_lift<0) {
+				power_lift = -15;
+			}
+		}
+
 		Motor_SetPower(power_lift, motor_lift_front);
 		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
 
@@ -852,7 +851,6 @@ task CommLink()
 
 
 // Task for displaying data on the NXT's LCD screen.
-// TODO: Put a lot of the display stuff into loops. Do we want to?
 task Display()
 {
 	typedef enum DisplayMode {
@@ -973,6 +971,9 @@ task TimedOperations()
 	while (lift_pos>lift_tube_guard) {
 		Time_Wait(100); // MAGIC_NUM: An arbitrary delay.
 	}
+	Servo_SetPosition(servo_auton, servo_auton_down);
+	Time_Wait(500);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
 }

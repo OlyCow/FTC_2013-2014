@@ -201,12 +201,22 @@ void initializeRobotVariables()
 	}
 
 	// MAGIC_NUM: 13V.
-	if (externalBatteryAvg<13500) {
-		PlaySound(soundDownwardTones);
+	if (externalBatteryAvg<13000) {
+		for (int i=0; i<1; ++i) {
+			PlaySound(soundDownwardTones);
+			while (bSoundActive) {
+				Time_Wait(10);
+			}
+		}
 	}
 	// MAGIC_NUM: 8V.
-	if (nAvgBatteryLevel<7800) {
-		PlaySound(soundDownwardTones);
+	if (nAvgBatteryLevel<8000) {
+		for (int i=0; i<2; ++i) {
+			PlaySound(soundDownwardTones);
+			while (bSoundActive) {
+				Time_Wait(10);
+			}
+		}
 	}
 }
 void resetMotorsServos()
@@ -231,6 +241,8 @@ void resetMotorsServos()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
 	Servo_SetWinch(servo_FR, 0);
 	Servo_SetWinch(servo_FL, 0);
 	Servo_SetWinch(servo_BL, 0);
@@ -244,14 +256,10 @@ void dumpCubes(int num)
 }
 task dumpCubesTask()
 {
-	const int short_delay = 160; // MAGIC_NUM. (milliseconds)
-	const int long_delay = 1400; // MAGIC_NUM: TODO. (milliseconds)
+	// MAGIC_NUM (milliseconds).
+	const int delay[4] = {160, 340, 500, 1200}; // TODO: 2 & 3.
 	Servo_SetPosition(servo_dump, servo_dump_open);
-	if (f_cubeDumpNum<4) {
-		Time_Wait(short_delay);
-	} else {
-		Time_Wait(long_delay);
-	}
+	Time_Wait(delay[f_cubeDumpNum-1]); // Array indices; off-by-one.
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 }
 

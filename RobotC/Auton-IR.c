@@ -96,13 +96,26 @@ task main()
 	};
 
 	// MAGIC_NUM: Distances in inches, turns in degrees, delays in seconds.
-	const int delay_start					= 10;
-	const int dist_all_baskets_L			= 66;	// TODO
+	const int delay_start					= 10; // TODO
+	const int dist_all_baskets_L			= 66;
 	const int dist_all_baskets_R			= 53;
-	const int dist_sense_ir_L[CRATE_NUM]	= {13,	10,	23,	9};	// TODO
-	const int dist_adjust_ir_L[CRATE_NUM]	= {6,	6,	2,	2};		// TODO
+	const int dist_sense_ir_L[CRATE_NUM]	= {13,	10,	23,	9};
+	const int dist_adjust_ir_L[CRATE_NUM]	= {6,	6,	2,	2};
 	const int dist_sense_ir_R[CRATE_NUM]	= {9,	10,	23,	10};
 	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-5,	-5};
+	const int dist_backtrack_cushion		= 4;
+	const int dist_pass_crates_B_L			= 24;
+	const int dist_pass_crates_B_R			= 28;
+	const int dist_pass_crates_F_L			= 12;
+	const int dist_pass_crates_F_R			= 16;
+	const int dist_ramp_align_B_L			= 24;
+	const int dist_ramp_align_B_R			= 26;
+	const int dist_ramp_align_F_L			= 34;
+	const int dist_ramp_align_F_R			= 36;
+	const int time_charge_B_L				= 1500;	// milliseconds
+	const int time_charge_B_R				= 1500;	// milliseconds
+	const int time_charge_F_L				= 1300;	// milliseconds
+	const int time_charge_F_R				= 1400;	// milliseconds
 
 	Crate isCrate = CRATE_UNKNOWN;
 	Crate maxCrate = CRATE_UNKNOWN;
@@ -149,7 +162,7 @@ task main()
 	}
 	if (DO_DELAY_START) {
 		for (int i=0; i<delay_start; ++i) {
-			Time_Wait(1000);
+			Time_Wait(1000);	// MAGIC_NUM: 1 sec delay.
 		}
 	}
 
@@ -185,13 +198,13 @@ task main()
 		for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
 			if (DO_START_ON_R) {
 				if (i==isCrate) {
-					MoveBackward(dist_sense_ir_R[i]-4);
+					MoveBackward(dist_sense_ir_R[i]-dist_backtrack_cushion);
 				} else {
 					MoveBackward(dist_sense_ir_R[i]);
 				}
 			} else {
 				if (i==isCrate) {
-					MoveForward(dist_sense_ir_L[i]-4);
+					MoveForward(dist_sense_ir_L[i]-dist_backtrack_cushion);
 				} else {
 					MoveForward(dist_sense_ir_L[i]);
 				}
@@ -201,18 +214,18 @@ task main()
 		LowerAutonArm();
 		if (DO_START_ON_R) {
 			TurnLeft(45);
-			MoveBackward(28);
+			MoveBackward(dist_pass_crates_B_R);
 			TurnLeft(45);
-			MoveBackward(26);
+			MoveBackward(dist_ramp_align_B_R);
 			TurnRight(90);
-			ChargeForward(1500, g_FullPower, true, false);
+			ChargeForward(time_charge_B_R, g_FullPower, true, false);
 		} else {
 			TurnRight(45);
-			MoveForward(24);
+			MoveForward(dist_pass_crates_B_L);
 			TurnRight(45);
-			MoveForward(24);
+			MoveForward(dist_ramp_align_B_L);
 			TurnRight(90);
-			ChargeForward(1500, g_FullPower, true, false);
+			ChargeForward(time_charge_B_L, g_FullPower, true, false);
 		}
 	} else {
 		if (DO_START_ON_R) {
@@ -223,11 +236,11 @@ task main()
 			MoveForward(corrected_length);
 			LowerAutonArm();
 			TurnRight(45);
-			MoveForward(16);
+			MoveForward(dist_pass_crates_F_R);
 			TurnRight(45);
-			MoveForward(36);
+			MoveForward(dist_ramp_align_F_R);
 			TurnRight(90);
-			ChargeForward(1400, 100, true, true);
+			ChargeForward(time_charge_F_R, g_FullPower, true, false);
 		} else {
 			int corrected_length = dist_all_baskets_L;
 			for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
@@ -236,19 +249,21 @@ task main()
 			MoveBackward(corrected_length);
 			LowerAutonArm();
 			TurnLeft(45);
-			MoveBackward(12);
+			MoveBackward(dist_pass_crates_F_L);
 			TurnLeft(45);
-			MoveBackward(34);
+			MoveBackward(dist_ramp_align_F_L);
 			TurnRight(90);
-			ChargeForward(1300, 100, true, true);
+			ChargeForward(time_charge_F_L, g_FullPower, true, false);
 		}
 	}
 
 	if (DO_TURN_ON_RAMP) {
-		Time_Wait(1000);
+		// TODO: Would it be better to do this with a timer?
+		Settle();
 		TurnLeft(90);
 	}
 	if (DO_DEFEND_RAMP) {
+		// TODO: Implement this.
 	}
 }
 

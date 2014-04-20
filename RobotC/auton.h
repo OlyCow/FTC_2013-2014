@@ -23,8 +23,8 @@ void DumpAutonCube();
 void LowerAutonArm();
 void MoveForward(float inches, bool doBrake=true);
 void MoveBackward(float inches, bool doBrake=true);
-void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
-void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
+void ChargeForward(int milliseconds, int power, bool doBrake=true, bool doLowerOmni=false);
+void ChargeBackward(int milliseconds, int power, bool doBrake=true, bool doLowerOmni=false);
 void TurnLeft(int degrees);
 void TurnRight(int degrees);
 void Brake(bool doSettle=true);
@@ -154,7 +154,7 @@ void MoveBackward(float inches, bool doBrake)
 {
 	MoveForward(-inches, doBrake);
 }
-void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
+void ChargeForward(int milliseconds, int power, bool doBrake, bool doLowerOmni)
 {
 	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
 	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
@@ -176,7 +176,7 @@ void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
 		Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 	}
 }
-void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
+void ChargeBackward(int milliseconds, int power, bool doBrake, bool doLowerOmni)
 {
 	ChargeForward(milliseconds, power, doLowerOmni, doBrake);
 }

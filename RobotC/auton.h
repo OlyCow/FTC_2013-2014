@@ -249,7 +249,49 @@ void Settle()
 }
 void DefendRamp()
 {
-	// TODO: Implement.
+	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
+	Motor_ResetEncoder(omniL);
+	Motor_ResetEncoder(omniR);
+	float kP = -0.02;
+	float power_L = 0.0;
+	float power_R = 0.0;
+
+	while (true) {
+		pos_L = Motor_GetEncoder(omniL);
+		pos_R = -Motor_GetEncoder(omniR);
+
+		if (abs(pos_L)>120) {
+			power_L = kP*pos_L;
+		} else {
+			power_L = 0.0;
+			if (abs(power_L)<20) {
+				if (power_L>0) {
+					power_L = 20.0;
+				} else {
+					power_L = -20.0;
+				}
+			}
+		}
+		if (abs(pos_R)>120) {
+			power_R = kP*pos_R;
+			if (abs(power_R)<20) {
+				if (power_R>0) {
+					power_R = 20.0;
+				} else {
+					power_R = -20.0;
+				}
+			}
+		} else {
+			power_R = 0.0;
+		}
+
+		Motor_SetPower(power_L, motor_FL);
+		Motor_SetPower(power_L, motor_BL);
+		Motor_SetPower(power_R, motor_FR);
+		Motor_SetPower(power_R, motor_BR);
+		Time_Wait(8);	// MAGIC_NUM: Arbitrary delay.
+	}
 }
 
 

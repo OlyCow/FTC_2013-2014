@@ -121,7 +121,7 @@ task main()
 	DumpAutonCube();
 	TurnLeft(15);
 	LowerAutonArm();
-	MoveForward(56);
+	MoveForward(53);
 	TurnRight(60);
 	MoveForward(26);
 	for (int i=0; i<10; ++i) {

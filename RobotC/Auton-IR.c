@@ -263,7 +263,7 @@ task main()
 		TurnLeft(90);
 	}
 	if (DO_DEFEND_RAMP) {
-		// TODO: Implement this.
+		DefendRamp();
 	}
 }
 

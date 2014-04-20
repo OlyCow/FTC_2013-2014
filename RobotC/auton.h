@@ -29,6 +29,7 @@ void TurnLeft(int degrees);
 void TurnRight(int degrees);
 void Brake(bool doSettle=true);
 void Settle();
+void DefendRamp();
 
 // Definitions of functions.
 void config_values(	bool &key,	string txt_disp,
@@ -245,6 +246,10 @@ void Brake(bool doSettle)
 void Settle()
 {
 	Time_Wait(500);
+}
+void DefendRamp()
+{
+	// TODO: Implement.
 }
 
 

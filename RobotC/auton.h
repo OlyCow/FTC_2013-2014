@@ -12,8 +12,12 @@ float pos_L = 0.0;
 float pos_R = 0.0;
 float pos_avg = 0.0;
 float error = 0.0;
+float heading = 0.0; // Because f_angle_z is an int.
 
 
+
+// Forward declarations of tasks.
+task Gyro(); // Constantly updates the heading of the robot.
 
 // Forward declarations of functions.
 void config_values(	bool &key,	string txt_disp,
@@ -30,6 +34,24 @@ void TurnRight(int degrees);
 void Brake(bool doSettle=true);
 void Settle();
 void DefendRamp();
+
+// Definitions of tasks.
+task Gyro()
+{
+	float vel_curr = 0.0;
+	float vel_prev = 0.0;
+	float dt = 0.0;
+	int timer_gyro = 0.0;
+	Time_ClearTimer(timer_gyro);
+	while (true) {
+		vel_prev = (float)vel_curr;
+		dt = (float)Time_GetTime(timer_gyro)/(float)1000.0;
+		Time_ClearTimer(timer_gyro);
+		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
+		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
+		Time_Wait(1);
+	}
+}
 
 // Definitions of functions.
 void config_values(	bool &key,	string txt_disp,

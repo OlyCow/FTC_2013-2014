@@ -39,7 +39,6 @@
 #warn "This code will explode!"
 #endif
 
-task Gyro(); // Constantly updates the heading of the robot.
 task PID(); // Sets lift motor's power.
 task Display(); // Updates the NXT's LCD display with useful info.
 
@@ -64,9 +63,6 @@ bool DO_DUMP_AUTON		= true;
 bool DO_TURN_ON_RAMP	= false;
 bool DO_DEFEND_RAMP		= false;
 
-// Gyro readings:
-float heading = 0.0; // Because f_angle_z is an int.
-
 // For PID:
 float power_lift = 0.0;
 int lift_target = 0;
@@ -86,13 +82,13 @@ task main()
 	Task_Spawn(Display);
 
 	// MAGIC_NUM: Distances in inches, turns in degrees, delays in seconds.
-	const int delay_start					= 15;
-	const int dist_dump_L					= 7;
-	const int dist_dump_R					= 11;	// TODO
-	const int dist_ramp_L					= 26;	// TODO
-	const int dist_ramp_R					= 23;	// TODO
-	const int delay_charge_L				= 1300;	// milliseconds TODO
-	const int delay_charge_R				= 1400;	// milliseconds TODO
+	const int delay_start			= 15;
+	const int dist_dump_L			= 7;
+	const int dist_dump_R			= 11;	// TODO
+	const int dist_ramp_L			= 26;	// TODO
+	const int dist_ramp_R			= 23;	// TODO
+	const int delay_charge_L		= 1300;	// milliseconds TODO
+	const int delay_charge_R		= 1400;	// milliseconds TODO
 
 	string a="", b="", c="";
 	a = "Delay start?";
@@ -103,11 +99,11 @@ task main()
 	b = "RIGHT";
 	c = "LEFT";
 	config_values(DO_START_ON_R, a, true, b, false, c);
-	a = "Move____after IR.";
-	b = "STRAIGHT";
-	c = "BACKWARD";
-	config_values(DO_DUMP_AUTON, a, true, b, false, c);
 	a = "Dump auton cube?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_DUMP_AUTON, a, true, b, false, c);
+	a = "Turn 90 on ramp?";
 	b = "YES";
 	c = "NO";
 	config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
@@ -159,25 +155,6 @@ task main()
 	}
 	if (DO_DEFEND_RAMP) {
 		DefendRamp();
-	}
-}
-
-
-
-task Gyro()
-{
-	float vel_curr = 0.0;
-	float vel_prev = 0.0;
-	float dt = 0.0;
-	int timer_gyro = 0.0;
-	Time_ClearTimer(timer_gyro);
-	while (true) {
-		vel_prev = (float)vel_curr;
-		dt = (float)Time_GetTime(timer_gyro)/(float)1000.0;
-		Time_ClearTimer(timer_gyro);
-		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
-		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
-		Time_Wait(1);
 	}
 }
 
@@ -322,6 +299,7 @@ task Display()
 					text = "- passive ramp";
 				}
 				nxtDisplayTextLine(6, text);
+				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);
 				nxtDisplayTextLine(1, "Gyro: %+6d", heading);

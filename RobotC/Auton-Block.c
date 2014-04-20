@@ -39,7 +39,6 @@
 #warn "This code will explode!"
 #endif
 
-task Gyro(); // Constantly updates the heading of the robot.
 task PID(); // Sets lift motor's power.
 task Display(); // Updates the NXT's LCD display with useful info.
 
@@ -57,45 +56,22 @@ task Display(); // Updates the NXT's LCD display with useful info.
 // mation. Press the arrow buttons to go to different screens.
 //-------------------------------------------------------------------------->>
 
-// Motor Assignments!
-tMotor omniL = motor_FL;
-tMotor omniR = motor_FR;
-
 // Program settings:
-bool IS_FIRST_TURN_L	= true;
+bool DO_START_ON_R		= false;
 bool DO_DUMP_AUTON		= true;
+bool DO_PATROL_BLOCK	= true;
 bool DO_ATTEMPT_RAMP	= false;
-
-// For debugging display.
-float pos_L = 0.0;
-float pos_R = 0.0;
-float pos_avg = 0.0;
-float error = 0.0;
-
-// Gyro readings:
-float heading = 0.0; // Because f_angle_z is an int.
+bool DO_TURN_ON_RAMP	= false;
+bool DO_DEFEND_RAMP		= false;
 
 // For PID:
 float power_lift = 0.0;
 int lift_target = 0;
 float lift_pos = 0.0; // Really should be an int; using a float so I don't have to cast all the time.
 
-// Wrapped functions:
-void config_values(	bool &key,	string txt_disp,
-					bool val_L,	string txt_L,
-					bool val_R,	string txt_R);
-void DumpAutonCube();
-void LowerAutonArm();
-void MoveForward(float inches, bool doBrake=true);
-void MoveBackward(float inches, bool doBrake=true);
-void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
-void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake=true);
-void TurnLeft(int degrees);
-void TurnRight(int degrees);
-void Settle();
 
 
-
+#include "auton.h"
 task main()
 {
 	initializeGlobalVariables(); // Defined in "initialize.h", this intializes all struct members.
@@ -104,13 +80,33 @@ task main()
 	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(Gyro);
-	//Task_Spawn(PID);
 	Task_Spawn(Display);
 
-	string a = "Delayed start?";
-	string b = "YES";
-	string c = "NO";
-	//config_values(DO_DELAY_AT_START, a, true, b, false, c);
+	string a="", b="", c="";
+	a = "Start on____side.";
+	b = "RIGHT";
+	c = "LEFT";
+	config_values(DO_START_ON_R, a, true, b, false, c);
+	a = "Dump auton cube?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_DUMP_AUTON, a, true, b, false, c);
+	a = "Block by moving?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_PATROL_BLOCK, a, true, b, false, c);
+	a = "Attempt ramp?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_ATTEMPT_RAMP, a, true, b, false, c);
+	a = "Turn 90 on ramp?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
+	a = "Hold ramp pos?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_DEFEND_RAMP, a, true, b, false, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
@@ -132,232 +128,6 @@ task main()
 	MoveBackward(18);
 	TurnRight(90);
 	ChargeForward(1600, 100, true, true);
-}
-
-
-
-void config_values(	bool &key,	string txt_disp,
-					bool val_L,	string txt_L,
-					bool val_R,	string txt_R)
-{
-	Task_Kill(Display);
-	bDisplayDiagnostics = false;
-	Display_Clear();
-
-	bool isConfig = true;
-	string arrow = "-> ";
-	string blank = "   ";
-	string disp_L = "";
-	string disp_R = "";
-	bool isL = true;
-	bool isR = false;
-
-	while (isConfig==true) {
-		Buttons_UpdateData();
-		if (Buttons_Released(NXT_BUTTON_YES)==true) {
-			isConfig = false;
-		} else if ((Buttons_Released(NXT_BUTTON_L)||Buttons_Released(NXT_BUTTON_R))==true) {
-			isL = !isL;
-			isR = !isR;
-		}
-
-		if (isL==true) {
-			disp_L = arrow + txt_L;
-		} else {
-			disp_L = blank + txt_L;
-		}
-		if (isR==true) {
-			disp_R = arrow + txt_R;
-		} else {
-			disp_R = blank + txt_R;
-		}
-
-		nxtDisplayString(0, txt_disp);
-		nxtDisplayString(2, disp_L);
-		nxtDisplayString(3, disp_R);
-
-		Time_Wait(10);
-	}
-	if (isL==true) {
-		isConfig = val_L;
-	} else if (isR==true) {
-		isConfig = val_R;
-	}
-
-	bDisplayDiagnostics = true;
-	Task_Spawn(Display);
-}
-void DumpAutonCube()
-{
-	const int lower_delay = 480;
-	const int drop_delay = 1000;
-	const int raise_delay = 500;
-	Servo_SetPosition(servo_auton, servo_auton_down);
-	Time_Wait(lower_delay);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
-	Time_Wait(drop_delay);
-	Servo_SetPosition(servo_auton, servo_auton_up);
-	Time_Wait(raise_delay);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
-}
-void LowerAutonArm()
-{
-	const int lower_delay = 1200;
-	Servo_SetPosition(servo_auton, servo_auton_down);
-	Time_Wait(lower_delay);
-	Servo_SetPosition(servo_auton, servo_auton_hold);
-}
-void MoveForward(float inches, bool doBrake)
-{
-	float target = inches*152.789;
-	float power = 0.0;
-	float kP = 0.08;
-	bool isMoving = true;
-
-	Motor_ResetEncoder(omniL);
-	Motor_ResetEncoder(omniR);
-
-	while (isMoving==true){
-		pos_L = Motor_GetEncoder(omniL);
-		pos_R = -Motor_GetEncoder(omniR);
-		pos_avg = (pos_L+pos_R)/2.0;
-		error = target-pos_avg;
-		if (error>2400) {
-			power = g_FullPower;
-		} else if (error<-2400) {
-			power = -g_FullPower;
-		} else {
-			power = kP*error;
-		}
-		if (abs(power)<10) {
-			if (power>0) {
-				power = 10;
-			} else if (power<0) {
-				power = -10;
-			}
-		}
-		power = Math_Limit(power, g_FullPower);
-		Motor_SetPower(power, motor_FL);
-		Motor_SetPower(power, motor_BL);
-		Motor_SetPower(power, motor_FR);
-		Motor_SetPower(power, motor_BR);
-		if (abs(error)<50) {
-			//if (abs(vel)<20) {
-				isMoving = false;
-			//}
-		}
-	}
-	if (doBrake==true) {
-		Motor_SetPower(0, motor_FL);
-		Motor_SetPower(0, motor_BL);
-		Motor_SetPower(0, motor_FR);
-		Motor_SetPower(0, motor_BR);
-	}
-}
-void MoveBackward(float inches, bool doBrake)
-{
-	MoveForward(-inches, doBrake);
-}
-void ChargeForward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
-{
-	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
-	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
-	for (int i=0; i<milliseconds; ++i) {
-		Motor_SetPower(power, motor_FL);
-		Motor_SetPower(power, motor_BL);
-		Motor_SetPower(power, motor_FR);
-		Motor_SetPower(power, motor_BR);
-		Time_Wait(1);
-	}
-	if (doBrake==true) {
-		Motor_SetPower(0, motor_FL);
-		Motor_SetPower(0, motor_BL);
-		Motor_SetPower(0, motor_FR);
-		Motor_SetPower(0, motor_BR);
-	}
-	if (doLowerOmni==true) {
-		Servo_SetPosition(servo_omni_L, servo_omni_L_down);
-		Servo_SetPosition(servo_omni_R, servo_omni_R_down);
-	}
-}
-void ChargeBackward(int milliseconds, int power, bool doLowerOmni, bool doBrake)
-{
-	ChargeForward(milliseconds, power, doLowerOmni, doBrake);
-}
-void TurnLeft(int degrees)
-{
-	bool isTurning = true;
-	float start_pos = heading;
-	float current_pos = heading;
-	float target = start_pos-(float)degrees;
-	float power = 0.0;
-	float power_neg = 0.0;
-	float kP = 5.7;
-	bool isFineTune = false;
-	int finish_timer = 0;
-
-	while (isTurning==true) {
-		current_pos = heading;
-		error = target-current_pos;
-		if (error>60) {
-			power = g_FullPower;
-		} else if (error<-60) {
-			power = -g_FullPower;
-		} else {
-			power = kP*error;
-		}
-		if (abs(power)<20) {
-			if (power>0) {
-				power = 20;
-			} else if (power<0) {
-				power = -20;
-			}
-		}
-		power_neg = -power;
-		Motor_SetPower(power, motor_FL);
-		Motor_SetPower(power, motor_BL);
-		Motor_SetPower(power_neg, motor_FR);
-		Motor_SetPower(power_neg, motor_BR);
-		if (abs(error)<1) {
-			if (isFineTune==false) {
-				Time_ClearTimer(finish_timer);
-				isFineTune = true;
-			} else if (Time_GetTime(finish_timer)>500) {
-				isTurning = false;
-			}
-		}
-	}
-	Motor_SetPower(0, motor_FL);
-	Motor_SetPower(0, motor_BL);
-	Motor_SetPower(0, motor_FR);
-	Motor_SetPower(0, motor_BR);
-}
-void TurnRight(int degrees)
-{
-	TurnLeft(-degrees);
-}
-void Settle()
-{
-	Time_Wait(500);
-}
-
-
-
-task Gyro()
-{
-	float vel_curr = 0.0;
-	float vel_prev = 0.0;
-	float dt = 0.0;
-	int timer_gyro = 0.0;
-	Time_ClearTimer(timer_gyro);
-	while (true) {
-		vel_prev = (float)vel_curr;
-		dt = (float)Time_GetTime(timer_gyro)/(float)1000.0;
-		Time_ClearTimer(timer_gyro);
-		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
-		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
-		Time_Wait(1);
-	}
 }
 
 
@@ -449,13 +219,18 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
+		DISP_SETTINGS,
 		DISP_ENCODERS,			// Raw encoder values.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		DISP_NUM
 	};
 
 	Task_Spawn(displayDiagnostics); // Explicit here: this is only spawned when buttons are pressed.
-	DisplayMode isMode = DISP_FCS;
+	DisplayMode isMode = DISP_SETTINGS;
+	if (isMode != DISP_FCS) {
+		Task_Kill(displayDiagnostics);
+	}
+	// We don't need to wait for start.
 
 	// We don't need to wait for start. ;)
 
@@ -464,6 +239,46 @@ task Display()
 
 		switch (isMode) {
 			case DISP_FCS :
+				break;
+			case DISP_SETTINGS :
+				string text = "Auton Settings:";
+				nxtDisplayCenteredTextLine(0, text);
+				if (DO_START_ON_R) {
+					text = "- start on R";
+				} else {
+					text = "- start on L";
+				}
+				nxtDisplayTextLine(2, text);
+				if (DO_DUMP_AUTON) {
+					text = "- dump auton";
+				} else {
+					text = "- do not dump";
+				}
+				nxtDisplayTextLine(3, text);
+				if (DO_PATROL_BLOCK) {
+					text = "- moving block";
+				} else {
+					text = "- passive block";
+				}
+				nxtDisplayTextLine(4, text);
+				if (DO_ATTEMPT_RAMP) {
+					text = "- attempt ramp";
+				} else {
+					text = "- all-out block";
+				}
+				nxtDisplayTextLine(5, text);
+				if (DO_TURN_ON_RAMP) {
+					text = "- turn on ramp";
+				} else {
+					text = "- stay still";
+				}
+				nxtDisplayTextLine(6, text);
+				if (DO_DEFEND_RAMP) {
+					text = "- defend pos";
+				} else {
+					text = "- passive ramp";
+				}
+				nxtDisplayTextLine(7, text);
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);

@@ -39,7 +39,6 @@
 #warn "This code will explode!"
 #endif
 
-task Gyro(); // Constantly updates the heading of the robot.
 task PID(); // Sets lift motor's power.
 task Display(); // Updates the NXT's LCD display with useful info.
 
@@ -64,9 +63,6 @@ bool DO_END_AT_THREE	= false;
 bool DO_BACKTRACK		= false;
 bool DO_TURN_ON_RAMP	= false;
 bool DO_DEFEND_RAMP		= false;
-
-// Gyro readings:
-float heading = 0.0; // Because f_angle_z is an int.
 
 // For PID:
 float power_lift = 0.0;
@@ -264,25 +260,6 @@ task main()
 	}
 	if (DO_DEFEND_RAMP) {
 		DefendRamp();
-	}
-}
-
-
-
-task Gyro()
-{
-	float vel_curr = 0.0;
-	float vel_prev = 0.0;
-	float dt = 0.0;
-	int timer_gyro = 0.0;
-	Time_ClearTimer(timer_gyro);
-	while (true) {
-		vel_prev = (float)vel_curr;
-		dt = (float)Time_GetTime(timer_gyro)/(float)1000.0;
-		Time_ClearTimer(timer_gyro);
-		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
-		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
-		Time_Wait(1);
 	}
 }
 

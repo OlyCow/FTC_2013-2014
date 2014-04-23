@@ -77,7 +77,7 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 //				Controller_1, Direction_F:	Raise lift (fine-tune).
 //				Controller_1, Direction_B:	Lower lift (fine-tune).
 //				Controller_1, Button_Start:	Toggle auton mode.
-//				Controller_1, Button_Back:	Emergency shutdown.
+//				Controller_1, Button_Back:	Emergency lift shutdown.
 //
 //				Controller_2, Joystick_L:	Lift height.
 //				Controller_2, Joystick_R:	Fine-tune lift height.
@@ -94,7 +94,7 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 //				Controller_2, Direction_F:	Sweep outwards/off.
 //				Controller_2, Direction_B:	Sweep inwards.
 //				Controller_2, Button_Start:	Toggle auton mode.
-//				Controller_2, Button_Back:	Emergency shutdown.
+//				Controller_2, Button_Back:	Emergency lift shutdown.
 //
 // *: Double-tapping rotates the flag 45°. TODO (not implemented)
 //-------------------------------------------------------------------------->>
@@ -102,8 +102,8 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // For main task:
 bool isResettingLift = false;
 float power_flag = 0.0;
-bool isLiftOverriden = false;
-const int liftOverrideDifference = 800; // MAGIC_NUM: TODO: find appropriate value.
+bool isLiftManual = true;
+bool isLiftAscending = false;
 
 // For PID:
 float power_lift = 0.0;
@@ -180,7 +180,7 @@ task main()
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	//Task_Spqwn(CommLink);
+	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
@@ -238,17 +238,21 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 1440; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target += lift_tgt_up_fast;
+			isLiftManual = true;
+			isLiftAscending = true;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_target -= 960; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target -= lift_tgt_down_fast;
+			isLiftManual = true;
+			isLiftAscending = false;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 600; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target += lift_tgt_up_slow;
+			isLiftManual = true;
+			isLiftAscending = true;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
-			lift_target -= 540; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target -= lift_tgt_down_slow;
+			isLiftManual = true;
+			isLiftAscending = false;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 			// Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
@@ -256,28 +260,38 @@ task main()
 					lift_target = lift_pos_top;
 					sweepMode = SWEEP_EJECT;
 					Time_ClearTimer(timer_eject);
-					isLiftOverriden = false;
+					isLiftManual = false;
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 					sweepMode = SWEEP_IN;
-					isLiftOverriden = false;
+					isLiftManual = false;
 				}
 			}
 			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
 				isResettingLift = true;
 				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
-				isLiftOverriden = true;
+				isLiftManual = true;
 			} else {
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
 				if (joystick_input != 0) {
-					lift_target += joystick_input*1.46; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-					isLiftOverriden = true;
+					lift_target += joystick_input*lift_joystick_fast;
+					isLiftManual = true;
+					if (joystick_input>0) {
+						isLiftAscending = true;
+					} else {
+						isLiftAscending = false;
+					}
 				}
 				float tune_input = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
 				if (tune_input != 0) {
-					lift_target += tune_input*0.54; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-					isLiftOverriden = true;
+					lift_target += tune_input*lift_joystick_slow;
+					isLiftManual = true;
+					if (tune_input>0) {
+						isLiftAscending = true;
+					} else {
+						isLiftAscending = false;
+					}
 				}
 			}
 		}
@@ -444,7 +458,7 @@ task main()
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
 		// TODO: Make this less of a kludge. This may even be unnecessary given the limit switch.
-		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
+		if (Joystick_Button(BUTTON_BACK)||Joystick_Button(BUTTON_BACK, CONTROLLER_2) {
 			isResettingLift = true;
 			power_lift = 0.0;
 		} else {
@@ -526,9 +540,11 @@ task PID()
 				lift_target = lift_max_height;
 			}
 
-			if (isLiftOverriden==true && abs(lift_target-lift_pos)>liftOverrideDifference) {
-				lift_target = lift_pos;
-				isLiftOverriden = false;
+			if (isLiftManual && isLiftAscending && (power_lift<0)) {
+				if (isLiftAscending && (power_lift<0)) || ((!isLiftAscending) && (power_lift>0))) {
+					lift_target = lift_pos;
+					// isLiftManual = false; // NOTE: We may need this line (may be magic).
+				}
 			}
 
 			error_lift = lift_target-lift_pos;
@@ -559,13 +575,13 @@ task PID()
 		// limits on what the correction term needs to be to turn the lift off. Fortunately,
 		// the oscillations can be mitigated somewhat by turning down the P-term in the PID
 		// loop, just like how normal PID is tuned.
-		if (abs(power_lift)<10) {
-			if (abs(power_lift)<5) {
+		if (abs(power_lift)<lift_boost_range) {
+			if (abs(power_lift)<lift_error_range) {
 				power_lift = 0;
 			} else if (power_lift>0) {
-				power_lift = 10;
+				power_lift = lift_boost_range; // Set to the threshold of motor humming.
 			} else if (power_lift<0) {
-				power_lift = -10;
+				power_lift = -lift_boost_range; // Set to the threshold of motor humming.
 			}
 		}
 

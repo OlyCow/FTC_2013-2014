@@ -43,11 +43,15 @@ const float flagFineTuneFactor = 0.18;
 motorData g_MotorData[POD_NUM];
 servoData g_ServoData[POD_NUM];
 
-// MAGIC_NUM: Lift target adjustment values,
+// MAGIC_NUM: Lift target adjustment values.
 const int lift_tgt_up_fast		= 1440;
 const int lift_tgt_up_slow		= 600;
 const int lift_tgt_down_fast	= 960;
 const int lift_tgt_down_slow	= 540;
+const float lift_joystick_fast	= 1.26;
+const float lift_joystick_slow	= 0.43;
+const int lift_error_range		= 5;	// Motor power.
+const int lift_boost_range		= 15;	// Motor power.
 
 // MAGIC_NUM: Various servo/encoder (motor) positions.
 const int lift_pos_pickup		= 0;

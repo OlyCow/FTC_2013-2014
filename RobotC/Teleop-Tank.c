@@ -180,36 +180,26 @@ task main()
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	//Task_Spawn(CommLink);
+	//Task_Spqwn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
 	// Variables for disabling things.
 	int original_counter_limit = nNoMessageCounterLimit;
-	nNoMessageCounterLimit = 210; // 250 * 4ms = 1000ms = 1sec
+	nNoMessageCounterLimit = 210; // 210 * 4ms < 1000ms = 1sec
 	//nNoMessageCounterLimit = original_counter_limit;	// Add this back in when (if?) you need to use it.
-
-	// Variables for heading/gyro processing.
-	float heading = 0.0; // Because f_angle_z is an int.
-	float gyro_current = 0.0; // For trapezoidal approximation.
-	float gyro_prev = 0.0; // For trapezoidal approximation.
-
-	// Timers.
-	int timer_gyro = 0.0;
-
+	
 	// Tank-mode power levels.
 	float power_L = 0.0;
 	float power_R = 0.0;
 
 	// Misc. variables.
 	SweepMode sweepMode = SWEEP_DOWN;
-	float power_climb = 0.0;
 	const int eject_delay = 1200;
 	int timer_eject = 0;
 	Time_ClearTimer(timer_eject);
 
 	Joystick_WaitForStart();
-	Time_ClearTimer(timer_gyro);
 
 	while (true) {
 		Joystick_UpdateData();
@@ -230,14 +220,9 @@ task main()
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
 		// while holding both triggers stops movement? The `if... else if...` structure
 		// is also a problem, since BUTTON_LT will take precedence over BUTTON_RT.
-		if (Joystick_Button(BUTTON_RT)==true) {
+		if (Joystick_Button(BUTTON_RT)||Joystick_Button(BUTTON_LT)) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0.25;
-			}
-		}
-		if (Joystick_Button(BUTTON_LT)==true) {
-			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0.25; // NOTE: Remnant of swerve drive code.
+				g_MotorData[i].fineTuneFactor = g_FineTuneFactor;
 			}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -381,37 +366,32 @@ task main()
 		}
 
 		// As usual, driver 1's controls take precedence over driver 2.
+		power_flag = g_FullPower;
 		if (Joystick_Button(BUTTON_X)==true) {
-			power_flag = g_FullPower;
+			// power_flag *= 1.0; // Equivalent to doing nothing.
 		} else if (Joystick_Button(BUTTON_B)==true) {
-			power_flag = g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_L)==true) {
-			power_flag = g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_R)==true) {
-			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Button(BUTTON_X, CONTROLLER_2)==true) {
-			power_flag = g_FullPower;
+			// power_flag *= 1.0; // Equivalent to doing nothing.
 		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
-			power_flag = g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
-			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else {
 			power_flag = 0;
 		}
-		if (Joystick_Button(BUTTON_Y)==true) {
-			power_climb = g_FullPower; // Climb "up".
-		} else {
-			// This gracefully handles the "else" condition (sets climbing power to 0.
-			power_climb = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
-		}
 
 		if (lift_pos<lift_tube_guard) {
-			if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
+			if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
 				Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 				Servo_SetPosition(servo_climb_R, servo_climb_R_open);
 			}
 		}
-		if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
+		if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
 			Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 		}
@@ -503,9 +483,10 @@ task PID()
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
 	// MAGIC_NUM: Variables for lift PID calculations.
-	const float lift_guard_divisor	= 2.7;
-	const float kP_lift_up			= 0.92;
-	const float kP_lift_down		= 0.21;
+	const float lift_guard_bottom	= 2.7;
+	const float lift_guard_top		= 1.2;
+	const float kP_lift_up			= 0.74;
+	const float kP_lift_down		= 0.18;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;
@@ -563,29 +544,35 @@ task PID()
 			power_lift = Math_Limit(power_lift, g_FullPower);
 		}
 
-		// TODO: Make this condition less hard/abrupt.
+		// TODO: Make these conditions less hard/abrupt.
 		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
-		// kill itself when it hits the ends of its range (up and down).
-		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
-				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
-			power_lift /= lift_guard_divisor;
-			if (lift_pos>lift_buffer_top) {
-				power_lift *= 2.2;
-			}
+		// kill itself when it hits the extreme ends of its range (up and down).
+		if ((power_lift<0)&&(lift_pos<lift_buffer_bottom)) {
+			power_lift /= lift_guard_bottom;
+		} else if ((power_lift>0)&&(lift_pos>lift_buffer_top)) {
+			power_lift /= lift_buffer_top;
 		}
-		if (abs(power_lift)<15) {
+		
+		// TODO: Implement an I-term or something to eliminate steady-state error, instead of
+		// using this artificial boost to the motor power. This implementation has a tendency
+		// to start oscillating depending on the battery power, because there are arbitrary
+		// limits on what the correction term needs to be to turn the lift off. Fortunately,
+		// the oscillations can be mitigated somewhat by turning down the P-term in the PID
+		// loop, just like how normal PID is tuned.
+		if (abs(power_lift)<10) {
 			if (abs(power_lift)<5) {
 				power_lift = 0;
 			} else if (power_lift>0) {
-				power_lift = 15;
+				power_lift = 10;
 			} else if (power_lift<0) {
-				power_lift = -15;
+				power_lift = -10;
 			}
 		}
 
 		Motor_SetPower(power_lift, motor_lift_front);
-		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
+		Motor_SetPower(power_lift, motor_lift_back); // The two motors run the same direction.
 
+		// We added a delay here so the PID loop doesn't to hog the CPU clock.
 		Time_Wait(2); // MAGIC_NUM: Seems like a reasonable number.
 
 		//Task_ReleaseCPU();

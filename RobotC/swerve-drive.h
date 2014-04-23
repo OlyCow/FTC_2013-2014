@@ -34,27 +34,35 @@ const int g_IRthreshold = 80; // arbitrary units from 0~1024.
 // TODO: This number is just a guess. Not verified at all.
 const int g_EncoderDeadband = 1; // degrees.
 
+// The standard fine-tune factor is too large; the flag has no weight.
+const float flagFineTuneFactor = 0.18;
+
 // Transfers data between tasks. These have physical significance,
 // such as the positioning of each pod (relative to the center of
 // the robot. Both are initialized in `initializeRobotVariables()`.
 motorData g_MotorData[POD_NUM];
 servoData g_ServoData[POD_NUM];
 
-// Various servo/encoder (motor) positions.
-// MAGIC_NUM: TODO (all).
+// MAGIC_NUM: Lift target adjustment values,
+const int lift_tgt_up_fast		= 1440;
+const int lift_tgt_up_slow		= 600;
+const int lift_tgt_down_fast	= 960;
+const int lift_tgt_down_slow	= 540;
+
+// MAGIC_NUM: Various servo/encoder (motor) positions.
 const int lift_pos_pickup		= 0;
 const int lift_pos_dump			= 2600; // TODO
-const int lift_pos_top			= 3500;	// TODO
+const int lift_pos_top			= 3400;
 const int lift_max_height		= 3600;
 const int lift_sweeper_guard	= 150;	// TODO
 const int lift_buffer_top		= 2500;
 const int lift_buffer_bottom	= 1200;
 const int lift_tube_guard		= 1000;
 
-const int servo_climb_L_open	= 255;	// TODO
-const int servo_climb_L_closed	= 0;	// TODO
-const int servo_climb_R_open	= 0;	// TODO
-const int servo_climb_R_closed	= 255;	// TODO
+const int servo_climb_L_open	= 255;
+const int servo_climb_L_closed	= 0;
+const int servo_climb_R_open	= 0;
+const int servo_climb_R_closed	= 255;
 const int servo_dump_open		= 31;
 const int servo_dump_closed		= 0;
 const int servo_flip_L_up		= 213;
@@ -68,11 +76,6 @@ const int servo_omni_L_up		= 0;
 const int servo_omni_L_down		= 32;
 const int servo_omni_R_up		= 240;
 const int servo_omni_R_down		= 208;
-
-// These two are how far the wheel pod servos can be off (it's how
-// wheel pod alignment is classified).
-const int align_far_limit		= 30;
-const int align_medium_limit	= 15;
 
 // Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
 int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.
@@ -257,7 +260,7 @@ void dumpCubes(int num)
 task dumpCubesTask()
 {
 	// MAGIC_NUM (milliseconds).
-	const int delay[4] = {160, 240, 320, 1200}; // TODO: 2 & 3.
+	const int delay[4] = {160, 240, 320, 1200}; // TODO: 3-cube delay.
 	Servo_SetPosition(servo_dump, servo_dump_open);
 	Time_Wait(delay[f_cubeDumpNum-1]); // Array indices; off-by-one.
 	Servo_SetPosition(servo_dump, servo_dump_closed);

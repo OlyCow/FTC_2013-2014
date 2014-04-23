@@ -67,7 +67,7 @@ task MonitorStall()
 	int change_R		= 0;
 	int timer_stall		= 0;
 	Time_ClearTimer(timer_stall);
-	
+
 	while (true) {
 		omni_L_pos_prev = omni_L_pos;
 		omni_R_pos_prev = omni_R_pos;
@@ -82,7 +82,7 @@ task MonitorStall()
 				Time_ClearTimer(timer_stall);
 				isCheckingStall = true;
 			} else {
-				if (Time_ClearTimer>stall_delay) {
+				if (Time_GetTime(timer_stall)>stall_delay) {
 					isStalled = true;
 				}
 			}
@@ -211,7 +211,7 @@ void MoveForward(float inches, bool doBrake)
 			break;
 		}
 	}
-	
+
 	Task_Kill(MonitorStall);
 	isStalled = false;
 	if (doBrake==true) {
@@ -264,7 +264,7 @@ void TurnLeft(int degrees)
 	int finish_timer = 0;
 	int timer_timeout = 0;
 	int timeout_threshold = 5000; // MAGIC_NUM: 5 seconds. Plenty, no?
-	
+
 	Task_Spawn(MonitorStall);
 	Time_ClearTimer(timer_timeout);
 
@@ -302,7 +302,7 @@ void TurnLeft(int degrees)
 			break;
 		}
 	}
-	
+
 	Task_Kill(MonitorStall);
 	isStalled = false;
 	Motor_SetPower(0, motor_FL);

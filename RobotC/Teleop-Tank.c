@@ -188,7 +188,7 @@ task main()
 	int original_counter_limit = nNoMessageCounterLimit;
 	nNoMessageCounterLimit = 210; // 210 * 4ms < 1000ms = 1sec
 	//nNoMessageCounterLimit = original_counter_limit;	// Add this back in when (if?) you need to use it.
-	
+
 	// Tank-mode power levels.
 	float power_L = 0.0;
 	float power_R = 0.0;
@@ -458,7 +458,7 @@ task main()
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
 		// TODO: Make this less of a kludge. This may even be unnecessary given the limit switch.
-		if (Joystick_Button(BUTTON_BACK)||Joystick_Button(BUTTON_BACK, CONTROLLER_2) {
+		if (Joystick_Button(BUTTON_BACK) || Joystick_Button(BUTTON_BACK, CONTROLLER_2)) {
 			isResettingLift = true;
 			power_lift = 0.0;
 		} else {
@@ -541,7 +541,7 @@ task PID()
 			}
 
 			if (isLiftManual && isLiftAscending && (power_lift<0)) {
-				if (isLiftAscending && (power_lift<0)) || ((!isLiftAscending) && (power_lift>0))) {
+				if ((isLiftAscending && (power_lift<0)) || ((!isLiftAscending) && (power_lift>0))) {
 					lift_target = lift_pos;
 					// isLiftManual = false; // NOTE: We may need this line (may be magic).
 				}
@@ -568,7 +568,7 @@ task PID()
 		} else if ((power_lift>0)&&(lift_pos>lift_buffer_top)) {
 			power_lift /= lift_buffer_top;
 		}
-		
+
 		// TODO: Implement an I-term or something to eliminate steady-state error, instead of
 		// using this artificial boost to the motor power. This implementation has a tendency
 		// to start oscillating depending on the battery power, because there are arbitrary

@@ -13,11 +13,13 @@ float pos_R = 0.0;
 float pos_avg = 0.0;
 float error = 0.0;
 float heading = 0.0; // Because f_angle_z is an int.
+bool isStalled = false;
 
 
 
 // Forward declarations of tasks.
 task Gyro(); // Constantly updates the heading of the robot.
+task MonitorStall(); // Makes sure the motors don't burn out.
 
 // Forward declarations of functions.
 void config_values(	bool &key,	string txt_disp,
@@ -50,6 +52,42 @@ task Gyro()
 		vel_curr = (float)HTGYROreadRot(sensor_protoboard);
 		heading += ((float)vel_prev+(float)vel_curr)*(float)0.5*(float)dt;
 		Time_Wait(1);
+	}
+}
+task MonitorStall()
+{
+	bool isCheckingStall = false;
+	const int stall_threshold = 10; // encoder counts
+	const int stall_delay = 500; // milliseconds
+	int omni_L_pos		= 0;
+	int omni_R_pos		= 0;
+	int omni_L_pos_prev	= 0;
+	int omni_R_pos_prev	= 0;
+	int change_L		= 0;
+	int change_R		= 0;
+	int timer_stall		= 0;
+	Time_ClearTimer(timer_stall);
+	
+	while (true) {
+		omni_L_pos_prev = omni_L_pos;
+		omni_R_pos_prev = omni_R_pos;
+		omni_L_pos = Motor_GetEncoder(omniL);
+		omni_R_pos = Motor_GetEncoder(omniR);
+		change_L = omni_L_pos - omni_L_pos_prev;
+		change_R = omni_R_pos - omni_R_pos_prev;
+		change_L = abs(change_L);
+		change_R = abs(change_R);
+		if ((change_L<stall_threshold) || (change_R<stall_threshold)) {
+			if (!isCheckingStall) {
+				Time_ClearTimer(timer_stall);
+				isCheckingStall = true;
+			} else {
+				if (Time_ClearTimer>stall_delay) {
+					isStalled = true;
+				}
+			}
+		}
+		Time_Wait(10);
 	}
 }
 
@@ -131,11 +169,15 @@ void MoveForward(float inches, bool doBrake)
 	float power = 0.0;
 	float kP = 0.03;
 	bool isMoving = true;
+	int timer_timeout = 0;
+	int timeout_threshold = 5000; // MAGIC_NUM: 5 seconds. Plenty, no?
+	Time_ClearTimer(timer_timeout);
 
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
+	Task_Spawn(MonitorStall);
 
-	while (isMoving==true){
+	while (isMoving && (Time_GetTime(timer_timeout)<timeout_threshold)){
 		pos_L = Motor_GetEncoder(omniL);
 		pos_R = -Motor_GetEncoder(omniR);
 		pos_avg = (pos_L+pos_R)/2.0;
@@ -165,7 +207,13 @@ void MoveForward(float inches, bool doBrake)
 				isMoving = false;
 			//}
 		}
+		if (isStalled) {
+			break;
+		}
 	}
+	
+	Task_Kill(MonitorStall);
+	isStalled = false;
 	if (doBrake==true) {
 		Motor_SetPower(0, motor_FL);
 		Motor_SetPower(0, motor_BL);
@@ -214,8 +262,13 @@ void TurnLeft(int degrees)
 	float kP = 5.7;
 	bool isFineTune = false;
 	int finish_timer = 0;
+	int timer_timeout = 0;
+	int timeout_threshold = 5000; // MAGIC_NUM: 5 seconds. Plenty, no?
+	
+	Task_Spawn(MonitorStall);
+	Time_ClearTimer(timer_timeout);
 
-	while (isTurning==true) {
+	while (isTurning && (Time_GetTime(timer_timeout)<timeout_threshold)) {
 		current_pos = heading;
 		error = target-current_pos;
 		if (error>60) {
@@ -245,7 +298,13 @@ void TurnLeft(int degrees)
 				isTurning = false;
 			}
 		}
+		if (isStalled) {
+			break;
+		}
 	}
+	
+	Task_Kill(MonitorStall);
+	isStalled = false;
 	Motor_SetPower(0, motor_FL);
 	Motor_SetPower(0, motor_BL);
 	Motor_SetPower(0, motor_FR);

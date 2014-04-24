@@ -53,13 +53,23 @@ const float lift_joystick_slow	= 0.43;
 const int lift_error_range		= 5;	// Motor power.
 const int lift_boost_range		= 15;	// Motor power.
 
-// MAGIC_NUM: Various servo/encoder (motor) positions.
+//// MAGIC_NUM: Various servo/encoder (motor) positions.
+//const int lift_pos_pickup		= 0;
+//const int lift_pos_dump			= 2600; // TODO
+//const int lift_pos_top			= 3400;
+//const int lift_max_height		= 3600;
+//const int lift_sweeper_guard	= 150;	// TODO
+//const int lift_buffer_top		= 2500;
+//const int lift_buffer_bottom	= 1200;
+//const int lift_tube_guard		= 1000;
+
+// MAGIC_NUM NOTE TODO VERY DANGEROUS :)
 const int lift_pos_pickup		= 0;
 const int lift_pos_dump			= 2600; // TODO
-const int lift_pos_top			= 3400;
-const int lift_max_height		= 3600;
+const int lift_pos_top			= 3300;
+const int lift_max_height		= 3500;
 const int lift_sweeper_guard	= 150;	// TODO
-const int lift_buffer_top		= 2500;
+const int lift_buffer_top		= 3500;
 const int lift_buffer_bottom	= 1200;
 const int lift_tube_guard		= 1000;
 

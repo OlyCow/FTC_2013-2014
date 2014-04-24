@@ -57,8 +57,8 @@ task Gyro()
 task MonitorStall()
 {
 	bool isCheckingStall = false;
-	const int stall_threshold = 10; // encoder counts
-	const int stall_delay = 500; // milliseconds
+	const int stall_threshold = 2; // encoder counts
+	const int stall_delay = 1000; // milliseconds
 	int omni_L_pos		= 0;
 	int omni_R_pos		= 0;
 	int omni_L_pos_prev	= 0;
@@ -147,7 +147,7 @@ void DumpAutonCube()
 {
 	const int lower_delay = 480;
 	const int drop_delay = 1000;
-	const int raise_delay = 500;
+	const int raise_delay = 1000;
 	Servo_SetPosition(servo_auton, servo_auton_down);
 	Time_Wait(lower_delay);
 	Servo_SetPosition(servo_auton, servo_auton_hold);
@@ -170,14 +170,14 @@ void MoveForward(float inches, bool doBrake)
 	float kP = 0.03;
 	bool isMoving = true;
 	int timer_timeout = 0;
-	int timeout_threshold = 5000; // MAGIC_NUM: 5 seconds. Plenty, no?
+	int timeout_threshold = 4000; // MAGIC_NUM: 5 seconds. Plenty, no?
 	Time_ClearTimer(timer_timeout);
 
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
-	Task_Spawn(MonitorStall);
+	//Task_Spawn(MonitorStall);
 
-	while (isMoving && (Time_GetTime(timer_timeout)<timeout_threshold)){
+	while (isMoving){
 		pos_L = Motor_GetEncoder(omniL);
 		pos_R = -Motor_GetEncoder(omniR);
 		pos_avg = (pos_L+pos_R)/2.0;
@@ -207,12 +207,26 @@ void MoveForward(float inches, bool doBrake)
 				isMoving = false;
 			//}
 		}
-		if (isStalled) {
-			break;
+		if (Time_GetTime(timer_timeout)>timeout_threshold) {
+			isMoving = false;
+			while (true) {
+				Motor_SetPower(0, motor_FL);
+				Motor_SetPower(0, motor_BL);
+				Motor_SetPower(0, motor_FR);
+				Motor_SetPower(0, motor_BR);
+				if (!bSoundActive) {
+					PlaySound(soundFastUpwardTones);
+				}
+				Time_Wait(50);
+			}
 		}
+		//if (isStalled) {
+		//	break;
+		//}
+		nxtDisplayCenteredBigTextLine(3, "%d", Time_GetTime(timer_timeout));
 	}
 
-	Task_Kill(MonitorStall);
+	//Task_Kill(MonitorStall);
 	isStalled = false;
 	if (doBrake==true) {
 		Motor_SetPower(0, motor_FL);
@@ -263,9 +277,9 @@ void TurnLeft(int degrees)
 	bool isFineTune = false;
 	int finish_timer = 0;
 	int timer_timeout = 0;
-	int timeout_threshold = 5000; // MAGIC_NUM: 5 seconds. Plenty, no?
+	int timeout_threshold = 3000; // MAGIC_NUM: 3 seconds. Plenty, no?
 
-	Task_Spawn(MonitorStall);
+	//Task_Spawn(MonitorStall);
 	Time_ClearTimer(timer_timeout);
 
 	while (isTurning && (Time_GetTime(timer_timeout)<timeout_threshold)) {
@@ -298,12 +312,25 @@ void TurnLeft(int degrees)
 				isTurning = false;
 			}
 		}
-		if (isStalled) {
-			break;
+		//if (isStalled) {
+		//	break;
+		//}
+		if (Time_GetTime(timer_timeout)>timeout_threshold) {
+			isTurning = false;
+			while (true) {
+				Motor_SetPower(0, motor_FL);
+				Motor_SetPower(0, motor_BL);
+				Motor_SetPower(0, motor_FR);
+				Motor_SetPower(0, motor_BR);
+				if (!bSoundActive) {
+					PlaySound(soundFastUpwardTones);
+				}
+				Time_Wait(50);
+			}
 		}
 	}
 
-	Task_Kill(MonitorStall);
+	//Task_Kill(MonitorStall);
 	isStalled = false;
 	Motor_SetPower(0, motor_FL);
 	Motor_SetPower(0, motor_BL);

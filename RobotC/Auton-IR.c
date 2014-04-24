@@ -98,14 +98,14 @@ task main()
 	const int dist_sense_ir_L[CRATE_NUM]	= {13,	10,	23,	9};
 	const int dist_adjust_ir_L[CRATE_NUM]	= {6,	6,	2,	2};
 	const int dist_sense_ir_R[CRATE_NUM]	= {9,	10,	23,	10};
-	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-5,	-5};
+	const int dist_adjust_ir_R[CRATE_NUM]	= {-2,	-2,	-5,	-5};
 	const int dist_backtrack_cushion		= 4;
 	const int dist_pass_crates_B_L			= 24;
 	const int dist_pass_crates_B_R			= 28;
 	const int dist_pass_crates_F_L			= 12;
 	const int dist_pass_crates_F_R			= 16;
 	const int dist_ramp_align_B_L			= 24;
-	const int dist_ramp_align_B_R			= 26;
+	const int dist_ramp_align_B_R			= 27;
 	const int dist_ramp_align_F_L			= 34;
 	const int dist_ramp_align_F_R			= 36;
 	const int time_charge_B_L				= 1500;	// milliseconds
@@ -207,7 +207,6 @@ task main()
 			}
 		}
 		Brake();
-		LowerAutonArm();
 		if (DO_START_ON_R) {
 			TurnLeft(45);
 			MoveBackward(dist_pass_crates_B_R);
@@ -230,7 +229,6 @@ task main()
 				corrected_length -= dist_sense_ir_R[i];
 			}
 			MoveForward(corrected_length);
-			LowerAutonArm();
 			TurnRight(45);
 			MoveForward(dist_pass_crates_F_R);
 			TurnRight(45);
@@ -243,7 +241,6 @@ task main()
 				corrected_length -= dist_sense_ir_L[i];
 			}
 			MoveBackward(corrected_length);
-			LowerAutonArm();
 			TurnLeft(45);
 			MoveBackward(dist_pass_crates_F_L);
 			TurnLeft(45);

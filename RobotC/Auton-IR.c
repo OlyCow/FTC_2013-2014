@@ -95,11 +95,12 @@ task main()
 	const int delay_start					= 10; // TODO
 	const int dist_all_baskets_L			= 66;
 	const int dist_all_baskets_R			= 53;
-	const int dist_sense_ir_L[CRATE_NUM]	= {13,	10,	23,	9};
-	const int dist_adjust_ir_L[CRATE_NUM]	= {6,	6,	2,	2};
-	const int dist_sense_ir_R[CRATE_NUM]	= {9,	10,	23,	10};
-	const int dist_adjust_ir_R[CRATE_NUM]	= {-2,	-2,	-5,	-5};
-	const int dist_backtrack_cushion		= 4;
+	const int dist_sense_ir_L[CRATE_NUM]	= {14,	11,	24,	11};
+	const int dist_adjust_ir_L[CRATE_NUM]	= {7,	7,	0,	0};
+	const int dist_sense_ir_R[CRATE_NUM]	= {7,	10,	23,	10}; // TODO: 3 and 4
+	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-5,	-5}; // TODO: 3 and 4
+	const int dist_backtrack_cushion_L		= 9;
+	const int dist_backtrack_cushion_R		= 5;
 	const int dist_pass_crates_B_L			= 24;
 	const int dist_pass_crates_B_R			= 28;
 	const int dist_pass_crates_F_L			= 12;
@@ -187,20 +188,20 @@ task main()
 	if (DO_START_ON_R) {
 		MoveBackward(dist_adjust_ir_R[isCrate], false);
 	} else {
-		MoveBackward(dist_adjust_ir_L[isCrate], false);
+		MoveForward(dist_adjust_ir_L[isCrate], false);
 	}
 
 	if (DO_BACKTRACK) {
 		for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
 			if (DO_START_ON_R) {
 				if (i==isCrate) {
-					MoveBackward(dist_sense_ir_R[i]-dist_backtrack_cushion);
+					MoveBackward(dist_sense_ir_R[i]-dist_backtrack_cushion_R);
 				} else {
 					MoveBackward(dist_sense_ir_R[i]);
 				}
 			} else {
 				if (i==isCrate) {
-					MoveForward(dist_sense_ir_L[i]-dist_backtrack_cushion);
+					MoveForward(dist_sense_ir_L[i]-dist_backtrack_cushion_L);
 				} else {
 					MoveForward(dist_sense_ir_L[i]);
 				}
@@ -208,9 +209,9 @@ task main()
 		}
 		Brake();
 		if (DO_START_ON_R) {
-			TurnLeft(45);
+			TurnLeft(55);
 			MoveBackward(dist_pass_crates_B_R);
-			TurnLeft(45);
+			TurnLeft(35);
 			MoveBackward(dist_ramp_align_B_R);
 			TurnRight(90);
 			ChargeForward(time_charge_B_R, g_FullPower, true, false);

@@ -304,7 +304,7 @@ void TurnLeft(int degrees)
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power_neg, motor_FR);
 		Motor_SetPower(power_neg, motor_BR);
-		if (abs(error)<2) {
+		if (abs(error)<2.5) {
 			if (isFineTune==false) {
 				Time_ClearTimer(finish_timer);
 				isFineTune = true;

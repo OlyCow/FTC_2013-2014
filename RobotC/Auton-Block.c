@@ -59,10 +59,6 @@ task Display(); // Updates the NXT's LCD display with useful info.
 // Program settings:
 bool DO_START_ON_R		= false;
 bool DO_DUMP_AUTON		= true;
-bool DO_PATROL_BLOCK	= true;
-bool DO_ATTEMPT_RAMP	= false;
-bool DO_TURN_ON_RAMP	= false;
-bool DO_DEFEND_RAMP		= false;
 
 // For PID:
 float power_lift = 0.0;
@@ -82,48 +78,37 @@ task main()
 	Task_Spawn(Gyro);
 	Task_Spawn(Display);
 
-	//string a="", b="", c="";
-	//a = "Start on____side.";
-	//b = "RIGHT";
-	//c = "LEFT";
-	//config_values(DO_START_ON_R, a, true, b, false, c);
-	//a = "Dump auton cube?";
-	//b = "YES";
-	//c = "NO";
-	//config_values(DO_DUMP_AUTON, a, true, b, false, c);
-	//a = "Block by moving?";
-	//b = "YES";
-	//c = "NO";
-	//config_values(DO_PATROL_BLOCK, a, true, b, false, c);
-	//a = "Attempt ramp?";
-	//b = "YES";
-	//c = "NO";
-	//config_values(DO_ATTEMPT_RAMP, a, true, b, false, c);
-	//a = "Turn 90 on ramp?";
-	//b = "YES";
-	//c = "NO";
-	//config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
-	//a = "Hold ramp pos?";
-	//b = "YES";
-	//c = "NO";
-	//config_values(DO_DEFEND_RAMP, a, true, b, false, c);
+	string a="", b="", c="";
+	a = "Start on____side.";
+	b = "RIGHT";
+	c = "LEFT";
+	config_values(DO_START_ON_R, a, true, b, false, c);
+	a = "Dump auton cube?";
+	b = "YES";
+	c = "NO";
+	config_values(DO_DUMP_AUTON, a, true, b, false, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
 
-	MoveForward(7);
-	DumpAutonCube();
-	TurnLeft(15);
-	MoveForward(26);
-	TurnRight(15);
-	MoveForward(26);
-	TurnRight(45);
-	MoveForward(22);
-	TurnRight(45);
-	MoveForward(30);
-	MoveForward(30);
+	if (DO_START_ON_R) {
+		MoveBackward(7);
+		DumpAutonCube();
+	} else {
+		MoveForward(7);
+		DumpAutonCube();
+		TurnLeft(15);
+		MoveForward(26);
+		TurnRight(15);
+		MoveForward(28);
+		TurnRight(45);
+		MoveForward(22);
+		TurnRight(45);
+		MoveForward(30);
+		MoveForward(6);
+	}
 }
 
 
@@ -251,30 +236,6 @@ task Display()
 					text = "- do not dump";
 				}
 				nxtDisplayTextLine(3, text);
-				if (DO_PATROL_BLOCK) {
-					text = "- moving block";
-				} else {
-					text = "- passive block";
-				}
-				nxtDisplayTextLine(4, text);
-				if (DO_ATTEMPT_RAMP) {
-					text = "- attempt ramp";
-				} else {
-					text = "- all-out block";
-				}
-				nxtDisplayTextLine(5, text);
-				if (DO_TURN_ON_RAMP) {
-					text = "- turn on ramp";
-				} else {
-					text = "- stay still";
-				}
-				nxtDisplayTextLine(6, text);
-				if (DO_DEFEND_RAMP) {
-					text = "- defend pos";
-				} else {
-					text = "- passive ramp";
-				}
-				nxtDisplayTextLine(7, text);
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);

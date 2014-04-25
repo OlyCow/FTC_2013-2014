@@ -82,31 +82,31 @@ task main()
 	Task_Spawn(Gyro);
 	Task_Spawn(Display);
 
-	string a="", b="", c="";
-	a = "Start on____side.";
-	b = "RIGHT";
-	c = "LEFT";
-	config_values(DO_START_ON_R, a, true, b, false, c);
-	a = "Dump auton cube?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_DUMP_AUTON, a, true, b, false, c);
-	a = "Block by moving?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_PATROL_BLOCK, a, true, b, false, c);
-	a = "Attempt ramp?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_ATTEMPT_RAMP, a, true, b, false, c);
-	a = "Turn 90 on ramp?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
-	a = "Hold ramp pos?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_DEFEND_RAMP, a, true, b, false, c);
+	//string a="", b="", c="";
+	//a = "Start on____side.";
+	//b = "RIGHT";
+	//c = "LEFT";
+	//config_values(DO_START_ON_R, a, true, b, false, c);
+	//a = "Dump auton cube?";
+	//b = "YES";
+	//c = "NO";
+	//config_values(DO_DUMP_AUTON, a, true, b, false, c);
+	//a = "Block by moving?";
+	//b = "YES";
+	//c = "NO";
+	//config_values(DO_PATROL_BLOCK, a, true, b, false, c);
+	//a = "Attempt ramp?";
+	//b = "YES";
+	//c = "NO";
+	//config_values(DO_ATTEMPT_RAMP, a, true, b, false, c);
+	//a = "Turn 90 on ramp?";
+	//b = "YES";
+	//c = "NO";
+	//config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
+	//a = "Hold ramp pos?";
+	//b = "YES";
+	//c = "NO";
+	//config_values(DO_DEFEND_RAMP, a, true, b, false, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
@@ -116,18 +116,14 @@ task main()
 	MoveForward(7);
 	DumpAutonCube();
 	TurnLeft(15);
-	LowerAutonArm();
-	MoveForward(53);
-	TurnRight(60);
 	MoveForward(26);
-	for (int i=0; i<10; ++i) {
-		Time_Wait(1000);
-	}
-	MoveBackward(24);
-	TurnLeft(45);
-	MoveBackward(18);
-	TurnRight(90);
-	ChargeForward(1600, 100, true, true);
+	TurnRight(15);
+	MoveForward(26);
+	TurnRight(45);
+	MoveForward(22);
+	TurnRight(45);
+	MoveForward(30);
+	MoveForward(30);
 }
 
 

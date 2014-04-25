@@ -191,9 +191,9 @@ void MoveForward(float inches, bool doBrake)
 		}
 		if (abs(power)<10) {
 			if (power>0) {
-				power = 10;
+				power = 15;
 			} else if (power<0) {
-				power = -10;
+				power = -15;
 			}
 		}
 		power = Math_Limit(power, g_FullPower);
@@ -201,7 +201,7 @@ void MoveForward(float inches, bool doBrake)
 		Motor_SetPower(power, motor_BL);
 		Motor_SetPower(power, motor_FR);
 		Motor_SetPower(power, motor_BR);
-		if (abs(error)<50) {
+		if (abs(error)<150) {
 			// TODO: Add this back in if distances aren't accurate enough.
 			//if (abs(vel)<20) {
 				isMoving = false;

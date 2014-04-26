@@ -57,12 +57,8 @@ task Display(); // Updates the NXT's LCD display with useful info.
 //-------------------------------------------------------------------------->>
 
 // Program settings:
-bool DO_DELAY_START		= false;
-bool DO_START_ON_R		= true;
-bool DO_END_AT_THREE	= false;
-bool DO_BACKTRACK		= false;
-bool DO_TURN_ON_RAMP	= false;
-bool DO_DEFEND_RAMP		= false;
+bool DO_START_ANGLED	= true;
+bool DO_DELAY			= true;
 
 // For PID:
 float power_lift = 0.0;
@@ -82,182 +78,39 @@ task main()
 	Task_Spawn(Gyro);
 	Task_Spawn(Display);
 
-	typedef enum Crate {
-		CRATE_UNKNOWN		= -1,
-		CRATE_OUTER_CLOSE	= 0,
-		CRATE_INNER_CLOSE	= 1,
-		CRATE_INNER_FAR		= 2,
-		CRATE_OUTER_FAR		= 3,
-		CRATE_NUM
-	};
-
-	// MAGIC_NUM: Distances in inches, turns in degrees, delays in seconds.
-	const int delay_start					= 10; // TODO
-	const int dist_all_baskets_L			= 66;
-	const int dist_all_baskets_R			= 53;
-	const int dist_sense_ir_L[CRATE_NUM]	= {14,	11,	24,	11};
-	const int dist_adjust_ir_L[CRATE_NUM]	= {7,	7,	0,	0};
-	const int dist_sense_ir_R[CRATE_NUM]	= {7,	10,	23,	6}; // TODO: 4
-	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-3,	0}; // TODO: 4
-	const int dist_backtrack_cushion_L		= 9;
-	const int dist_backtrack_cushion_R		= 4;
-	const int dist_pass_crates_B_L			= 24;
-	const int dist_pass_crates_B_R			= 28;
-	const int dist_pass_crates_F_L			= 12;
-	const int dist_pass_crates_F_R			= 16;
-	const int dist_ramp_align_B_L			= 24;
-	const int dist_ramp_align_B_R			= 27;
-	const int dist_ramp_align_F_L			= 34;
-	const int dist_ramp_align_F_R			= 36;
-	const int time_charge_B_L				= 1500;	// milliseconds
-	const int time_charge_B_R				= 1500;	// milliseconds
-	const int time_charge_F_L				= 1300;	// milliseconds
-	const int time_charge_F_R				= 1400;	// milliseconds
-
-	Crate isCrate = CRATE_UNKNOWN;
-	Crate maxCrate = CRATE_UNKNOWN;
-	int dA = 0;
-	int dB = 0;
-	int dC = 0;
-	int dD = 0;
-	int dE = 0;
-
 	string a="", b="", c="";
-	a = "Delay start?";
+	a = "Start angled?";
+	b = "NO";
+	c = "YES";
+	config_values(DO_START_ANGLED, a, false, b, true, c);
+	a = "Delay 3 seconds?";
 	b = "YES";
 	c = "NO";
-	config_values(DO_DELAY_START, a, true, b, false, c);
-	a = "Start on____side.";
-	b = "RIGHT";
-	c = "LEFT";
-	config_values(DO_START_ON_R, a, true, b, false, c);
-	a = "End at crate:";
-	b = "#3";
-	c = "#4";
-	config_values(DO_END_AT_THREE, a, true, b, false, c);
-	a = "Move____after IR.";
-	b = "STRAIGHT";
-	c = "BACKWARD";
-	config_values(DO_BACKTRACK, a, false, b, true, c);
-	a = "Turn 90 on ramp?";
-	b = "NO";
-	c = "YES";
-	config_values(DO_TURN_ON_RAMP, a, false, b, true, c);
-	a = "Hold ramp pos?";
-	b = "NO";
-	c = "YES";
-	config_values(DO_DEFEND_RAMP, a, false, b, true, c);
+	config_values(DO_DELAY, a, true, b, false, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
-	if (DO_END_AT_THREE) {
-		maxCrate = CRATE_INNER_FAR;
-	} else {
-		maxCrate = CRATE_OUTER_FAR;
-	}
-	if (DO_DELAY_START) {
-		for (int i=0; i<delay_start; ++i) {
-			Time_Wait(1000);	// MAGIC_NUM: 1 sec delay.
-		}
+
+	if (DO_DELAY) {
+		Time_Wait(3000);
 	}
 
-	for (Crate i=CRATE_OUTER_CLOSE; i<=maxCrate; ++i) {
-		if (DO_START_ON_R) {
-			MoveForward(dist_sense_ir_R[i], false);
-		} else {
-			MoveBackward(dist_sense_ir_L[i], false);
-		}
-		HTIRS2readAllACStrength(sensor_IR, dA, dB, dC, dD, dE);
-		if (dC>g_IRthreshold) {
-			isCrate = i;
-			break;
-		}
-	}
-	if (isCrate==CRATE_UNKNOWN) {
-		isCrate = maxCrate;
-	}
-	if (DO_START_ON_R) {
-		MoveForward(dist_adjust_ir_R[isCrate]);
-	} else {
-		MoveBackward(dist_adjust_ir_L[isCrate]);
-	}
-	Settle();
-	DumpAutonCube();
-	if (DO_START_ON_R) {
-		MoveBackward(dist_adjust_ir_R[isCrate], false);
-	} else {
-		MoveForward(dist_adjust_ir_L[isCrate], false);
-	}
-
-	if (DO_BACKTRACK) {
-		for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
-			if (DO_START_ON_R) {
-				if (i==isCrate) {
-					MoveBackward(dist_sense_ir_R[i]-dist_backtrack_cushion_R);
-				} else {
-					MoveBackward(dist_sense_ir_R[i]);
-				}
-			} else {
-				if (i==isCrate) {
-					MoveForward(dist_sense_ir_L[i]-dist_backtrack_cushion_L);
-				} else {
-					MoveForward(dist_sense_ir_L[i]);
-				}
-			}
-		}
-		Brake();
-		if (DO_START_ON_R) {
-			TurnLeft(50);
-			MoveBackward(dist_pass_crates_B_R);
-			TurnLeft(40);
-			MoveBackward(dist_ramp_align_B_R);
-			TurnRight(90);
-			ChargeForward(time_charge_B_R, g_FullPower, true, false);
-		} else {
-			TurnRight(50);
-			MoveForward(dist_pass_crates_B_L);
-			TurnRight(40);
-			MoveForward(dist_ramp_align_B_L);
-			TurnRight(90);
-			ChargeForward(time_charge_B_L, g_FullPower, true, false);
-		}
-	} else {
-		if (DO_START_ON_R) {
-			int corrected_length = dist_all_baskets_R;
-			for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
-				corrected_length -= dist_sense_ir_R[i];
-			}
-			MoveForward(corrected_length);
-			TurnRight(45);
-			MoveForward(dist_pass_crates_F_R);
-			TurnRight(45);
-			MoveForward(dist_ramp_align_F_R);
-			TurnRight(90);
-			ChargeForward(time_charge_F_R, g_FullPower, true, false);
-		} else {
-			int corrected_length = dist_all_baskets_L;
-			for (int i=CRATE_OUTER_CLOSE; i<=isCrate; ++i) {
-				corrected_length -= dist_sense_ir_L[i];
-			}
-			MoveBackward(corrected_length);
-			TurnLeft(45);
-			MoveBackward(dist_pass_crates_F_L);
-			TurnLeft(45);
-			MoveBackward(dist_ramp_align_F_L);
-			TurnRight(90);
-			ChargeForward(time_charge_F_L, g_FullPower, true, false);
-		}
-	}
-
-	if (DO_TURN_ON_RAMP) {
-		// TODO: Would it be better to do this with a timer?
-		Settle();
-		TurnLeft(90);
-	}
-	if (DO_DEFEND_RAMP) {
-		DefendRamp();
+	if (DO_START_ANGLED) {
+		MoveForward(23);
+		TurnLeft(14);
+		MoveForward(32);
+		TurnRight(45);
+		MoveForward(35);
+		TurnRight(45);
+		ChargeForward(2222, g_FullPower, true, false);
+	} else {	// TODO
+		MoveForward(54);
+		TurnRight(45);
+		MoveForward(22);
+		TurnRight(45);
+		MoveForward(36);
 	}
 }
 
@@ -350,7 +203,7 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
-		DISP_SETTINGS,			// The current autonomous configuration.
+		DISP_SETTINGS,
 		DISP_ENCODERS,			// Raw encoder values.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		DISP_NUM
@@ -363,6 +216,8 @@ task Display()
 	}
 	// We don't need to wait for start.
 
+	// We don't need to wait for start. ;)
+
 	while (true) {
 		Buttons_UpdateData();
 
@@ -372,42 +227,18 @@ task Display()
 			case DISP_SETTINGS :
 				string text = "Auton Settings:";
 				nxtDisplayCenteredTextLine(0, text);
-				if (DO_DELAY_START) {
-					text = "- delayed start";
+				if (DO_START_ANGLED) {
+					text = "- start angled";
 				} else {
-					text = "- normal start";
+					text = "- no angle";
 				}
 				nxtDisplayTextLine(2, text);
-				if (DO_START_ON_R) {
-					text = "- start on R";
+				if (DO_DELAY) {
+					text = "- delay 3 sec";
 				} else {
-					text = "- start on L";
+					text = "- no delay";
 				}
 				nxtDisplayTextLine(3, text);
-				if (DO_END_AT_THREE) {
-					text = "- end @ crate 3";
-				} else {
-					text = "- end @ crate 4";
-				}
-				nxtDisplayTextLine(4, text);
-				if (DO_BACKTRACK) {
-					text = "- backtrack";
-				} else {
-					text = "- go straight";
-				}
-				nxtDisplayTextLine(5, text);
-				if (DO_TURN_ON_RAMP) {
-					text = "- turn on ramp";
-				} else {
-					text = "- stay still";
-				}
-				nxtDisplayTextLine(6, text);
-				if (DO_DEFEND_RAMP) {
-					text = "- defend pos";
-				} else {
-					text = "- passive ramp";
-				}
-				nxtDisplayTextLine(7, text);
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);

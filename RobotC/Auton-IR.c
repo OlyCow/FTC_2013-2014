@@ -97,10 +97,10 @@ task main()
 	const int dist_all_baskets_R			= 53;
 	const int dist_sense_ir_L[CRATE_NUM]	= {14,	11,	24,	11};
 	const int dist_adjust_ir_L[CRATE_NUM]	= {7,	7,	0,	0};
-	const int dist_sense_ir_R[CRATE_NUM]	= {7,	10,	23,	10}; // TODO: 3 and 4
-	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-5,	-5}; // TODO: 3 and 4
+	const int dist_sense_ir_R[CRATE_NUM]	= {7,	10,	23,	6}; // TODO: 4
+	const int dist_adjust_ir_R[CRATE_NUM]	= {0,	0,	-3,	0}; // TODO: 4
 	const int dist_backtrack_cushion_L		= 9;
-	const int dist_backtrack_cushion_R		= 5;
+	const int dist_backtrack_cushion_R		= 4;
 	const int dist_pass_crates_B_L			= 24;
 	const int dist_pass_crates_B_R			= 28;
 	const int dist_pass_crates_F_L			= 12;
@@ -140,13 +140,13 @@ task main()
 	c = "BACKWARD";
 	config_values(DO_BACKTRACK, a, false, b, true, c);
 	a = "Turn 90 on ramp?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
+	b = "NO";
+	c = "YES";
+	config_values(DO_TURN_ON_RAMP, a, false, b, true, c);
 	a = "Hold ramp pos?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_DEFEND_RAMP, a, true, b, false, c);
+	b = "NO";
+	c = "YES";
+	config_values(DO_DEFEND_RAMP, a, false, b, true, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
@@ -209,16 +209,16 @@ task main()
 		}
 		Brake();
 		if (DO_START_ON_R) {
-			TurnLeft(55);
+			TurnLeft(50);
 			MoveBackward(dist_pass_crates_B_R);
-			TurnLeft(35);
+			TurnLeft(40);
 			MoveBackward(dist_ramp_align_B_R);
 			TurnRight(90);
 			ChargeForward(time_charge_B_R, g_FullPower, true, false);
 		} else {
-			TurnRight(45);
+			TurnRight(50);
 			MoveForward(dist_pass_crates_B_L);
-			TurnRight(45);
+			TurnRight(40);
 			MoveForward(dist_ramp_align_B_L);
 			TurnRight(90);
 			ChargeForward(time_charge_B_L, g_FullPower, true, false);

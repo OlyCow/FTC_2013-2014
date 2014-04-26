@@ -49,7 +49,7 @@ const int lift_tgt_up_slow		= 600;
 const int lift_tgt_down_fast	= 960;
 const int lift_tgt_down_slow	= 540;
 const float lift_joystick_fast	= 1.26;
-const float lift_joystick_slow	= 0.43;
+const float lift_joystick_slow	= 0.41;
 const int lift_error_range		= 5;	// Motor power.
 const int lift_boost_range		= 15;	// Motor power.
 
@@ -67,10 +67,10 @@ const int lift_boost_range		= 15;	// Motor power.
 const int lift_pos_pickup		= 0;
 const int lift_pos_dump			= 2600; // TODO
 const int lift_pos_top			= 3300;
-const int lift_max_height		= 3500;
+const int lift_max_height		= 3400;
 const int lift_sweeper_guard	= 150;	// TODO
 const int lift_buffer_top		= 3500;
-const int lift_buffer_bottom	= 1200;
+const int lift_buffer_bottom	= 1600;
 const int lift_tube_guard		= 1000;
 
 const int servo_climb_L_open	= 255;

@@ -497,10 +497,10 @@ task PID()
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
 	// MAGIC_NUM: Variables for lift PID calculations.
-	const float lift_guard_bottom	= 2.7;
+	const float lift_guard_bottom	= 2.2;
 	const float lift_guard_top		= 1.2;
 	const float kP_lift_up			= 0.74;
-	const float kP_lift_down		= 0.18;
+	const float kP_lift_down		= 0.19;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;

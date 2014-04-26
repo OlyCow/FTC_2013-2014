@@ -31,7 +31,6 @@
 #pragma config(Servo,  srvo_S2_C2_5,    servo_FL,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_BL,             tServoStandard)
 
-
 #include "includes.h"
 #include "swerve-drive.h"
 
@@ -65,51 +64,46 @@ task TimedOperations(); // Anything depending on match time (release climbing, e
 // to a different screen. V.) This is an easter egg I'll probably never get to
 // implement. :P It would basically be an autonomous teleop period.
 //
-// CONTROLS:	Controller_1, Joystick_R:	Translational movement.
-//				Controller_1, Joystick_L:	Rotational movement.
-//				Controller_1, Button_Joy_R:	Reset gyro.
-//				Controller_1, Button_LT*:	Cut motor power (adjust pods).
-//				Controller_1, Button_RT*:	Fine-tune motors.
+// CONTROLS:	Controller_1, Joystick_R:	Right-side motor power.
+//				Controller_1, Joystick_L:	Left-side motor power.
+//				Controller_1, Button_LT:	Fine-tune motors.
+//				Controller_1, Button_RT:	Fine-tune motors.
 //				Controller_1, Button_LB:	Dump 4 cubes.
-//				Controller_1, Button_RB:	Dump 1 cube.
+//				Controller_1, Button_RB:	Dump 2 cubes.
 //				Controller_1, Button_A:		Toggle sweeper state.
-//				Controller_1, Button_B:		Reset gyro (eventually flag).
-//				Controller_1, Button_X:		Flag (eventually climb down).
-//				Controller_1, Button_Y:		Climb (eventually climb up).
-//				Controller_1, Direction_F:	Raise lift.
-//				Controller_1, Direction_B:	Lower lift.
-//				Controller_1, Direction_L:	Flag CCW fine-tune.
-//				Controller_1, Direction_R:	Flag CW fine-tune.
+//				Controller_1, Button_B:		Flag; fine-tune.
+//				Controller_1, Button_X*:	Flag; full power.
+//				Controller_1, Button_Y:		Raises assist rollers.
+//				Controller_1, Direction_F:	Raise lift (fine-tune).
+//				Controller_1, Direction_B:	Lower lift (fine-tune).
 //				Controller_1, Button_Start:	Toggle auton mode.
-//				Controller_1, Button_Back:	[UNUSED]
+//				Controller_1, Button_Back:	Emergency lift shutdown.
 //
 //				Controller_2, Joystick_L:	Lift height.
-//				Controller_2, Joystick_R:	Climbing.
+//				Controller_2, Joystick_R:	Fine-tune lift height.
 //				Controller_2, Button_LB:	Dump 4 cubes.
-//				Controller_2, Button_RB:	Dump 1 cube.
+//				Controller_2, Button_RB:	Dump 2 cubes.
 //				Controller_2, Button_LT:	Release climbing.
-//				Controller_2, Button_RT:	Release climbing.
-//				Controller_2, Button_A:		Dump auton cube.
+//				Controller_2, Button_RT:	Return climbing.
+//				Controller_2, Button_A:		Run auton servo.
 //				Controller_2, Button_B:		Lift modifier key.
-//				Controller_2, Button_Joy_L:	[UNUSED]
-//				Controller_2, Button_Joy_R:	[UNUSED]
-//				Controller_2, Button_X:		[UNUSED]
+//				Controller_2, Button_X:		Raise flag.
 //				Controller_2, Button_Y:		Turns sweeper off.
 //				Controller_2, Direction_L:	Flag CCW.
 //				Controller_2, Direction_R:	Flag CW.
 //				Controller_2, Direction_F:	Sweep outwards/off.
 //				Controller_2, Direction_B:	Sweep inwards.
 //				Controller_2, Button_Start:	Toggle auton mode.
-//				Controller_2, Button_Back:	Emergency shutdown.
+//				Controller_2, Button_Back:	Emergency lift shutdown.
 //
-// *: Button_LT overrides Button_RT.
+// *: Double-tapping rotates the flag 45°. TODO (not implemented)
 //-------------------------------------------------------------------------->>
 
 // For main task:
 bool isResettingLift = false;
 float power_flag = 0.0;
-bool isLiftOverriden = false;
-const int liftOverrideDifference = 800; // MAGIC_NUM: TODO: find appropriate value.
+bool isLiftManual = true;
+bool isLiftAscending = false;
 
 // For PID:
 float power_lift = 0.0;
@@ -186,22 +180,14 @@ task main()
 	initializeRobotVariables();
 	Task_Kill(displayDiagnostics); // This is set separately in the "Display" task.
 	Task_Spawn(PID);
-	Task_Spawn(CommLink);
+	//Task_Spawn(CommLink);
 	Task_Spawn(Display);
 	Task_Spawn(TimedOperations); // Immediately start this once the match starts.
 
 	// Variables for disabling things.
 	int original_counter_limit = nNoMessageCounterLimit;
-	nNoMessageCounterLimit = 250; // 250 * 4ms = 1000ms = 1sec
+	nNoMessageCounterLimit = 210; // 210 * 4ms < 1000ms = 1sec
 	//nNoMessageCounterLimit = original_counter_limit;	// Add this back in when (if?) you need to use it.
-
-	// Variables for heading/gyro processing.
-	float heading = 0.0; // Because f_angle_z is an int.
-	float gyro_current = 0.0; // For trapezoidal approximation.
-	float gyro_prev = 0.0; // For trapezoidal approximation.
-
-	// Timers.
-	int timer_gyro = 0.0;
 
 	// Tank-mode power levels.
 	float power_L = 0.0;
@@ -209,31 +195,14 @@ task main()
 
 	// Misc. variables.
 	SweepMode sweepMode = SWEEP_DOWN;
-	float power_climb = 0.0;
 	const int eject_delay = 1200;
 	int timer_eject = 0;
 	Time_ClearTimer(timer_eject);
 
 	Joystick_WaitForStart();
-	Time_ClearTimer(timer_gyro);
 
 	while (true) {
 		Joystick_UpdateData();
-
-		// TODO: Figure all of the below gyro stuff out.
-		gyro_current = 0;
-		gyro_prev = gyro_current;
-		heading = gyro_current;
-		////// TODO: Figure this out. Semaphores? Is it even necessary?
-		////Task_HogCPU();
-		////gyro_current = (float)HTGYROreadRot(sensor_protoboard);
-		////heading -= (float)(gyro_current+gyro_prev)*(float)Time_GetTime(timer_gyro)/2000.0; // Trapezoid.
-		//heading -= (float)gyro_current*(float)(Time_GetTime(timer_gyro))/1000.0;
-		//Time_ClearTimer(timer_gyro);
-		//gyro_prev = gyro_current;
-		//f_angle_z = round(heading);
-		////// TODO: Figure this out. Semaphores? Is it even necessary?
-		////Task_ReleaseCPU();
 
 		// MAGIC_NUM: No need for weird angles because omniwheels :P
 		g_ServoData[POD_FR].angle = 90;
@@ -251,14 +220,9 @@ task main()
 		// Ideally, this should be made more intuitive. Maybe a single trigger = slow,
 		// while holding both triggers stops movement? The `if... else if...` structure
 		// is also a problem, since BUTTON_LT will take precedence over BUTTON_RT.
-		if (Joystick_Button(BUTTON_RT)==true) {
+		if (Joystick_Button(BUTTON_RT)||Joystick_Button(BUTTON_LT)) {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0.25;
-			}
-		}
-		if (Joystick_Button(BUTTON_LT)==true) {
-			for (int i=POD_FR; i<(int)POD_NUM; i++) {
-				g_MotorData[i].fineTuneFactor = 0; // Equivalent to zeroing motor power.
+				g_MotorData[i].fineTuneFactor = g_FineTuneFactor;
 			}
 		} else {
 			for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -274,17 +238,21 @@ task main()
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Direction(DIRECTION_F)==true) {
-			lift_target += 180; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target += lift_tgt_up_fast;
+			isLiftManual = true;
+			isLiftAscending = true;
 		} else if (Joystick_Direction(DIRECTION_B)==true) {
-			lift_target -= 120; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target -= lift_tgt_down_fast;
+			isLiftManual = true;
+			isLiftAscending = false;
 		} else if (((Joystick_Direction(DIRECTION_FL))||(Joystick_Direction(DIRECTION_FR)))==true) {
-			lift_target += 80; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target += lift_tgt_up_slow;
+			isLiftManual = true;
+			isLiftAscending = true;
 		} else if (((Joystick_Direction(DIRECTION_BL))||(Joystick_Direction(DIRECTION_BR)))==true) {
-			lift_target -= 50; // MAGIC_NUM
-			isLiftOverriden = true;
+			lift_target -= lift_tgt_down_slow;
+			isLiftManual = true;
+			isLiftAscending = false;
 		} else if ((Joystick_Direction(DIRECTION_L))||(Joystick_Direction(DIRECTION_R))!=true) {
 			// Nesting these is more efficient.
 			if (Joystick_Button(BUTTON_B, CONTROLLER_2)==true) {
@@ -292,23 +260,38 @@ task main()
 					lift_target = lift_pos_top;
 					sweepMode = SWEEP_EJECT;
 					Time_ClearTimer(timer_eject);
-					isLiftOverriden = false;
+					isLiftManual = false;
 				} else if (Joystick_DirectionPressed(DIRECTION_B, CONTROLLER_2)==true) {
 					lift_target = lift_pos_pickup;
 					sweepMode = SWEEP_IN;
-					isLiftOverriden = false;
+					isLiftManual = false;
 				}
 			}
 			if (Joystick_Button(BUTTON_JOYL, CONTROLLER_2)==true) {
 				isResettingLift = true;
 				power_lift = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2)/g_FineTuneFactor;
-				isLiftOverriden = true;
+				isLiftManual = true;
 			} else {
 				isResettingLift = false; // This is important! Or it never stops resetting.
 				float joystick_input = Joystick_GenericInput(JOYSTICK_L, AXIS_Y, CONTROLLER_2);
 				if (joystick_input != 0) {
-					lift_target += joystick_input*1.3; // MAGIC_NUM: to make this more realistic. Just a constant scale(-down?).
-					isLiftOverriden = true;
+					lift_target += joystick_input*lift_joystick_fast;
+					isLiftManual = true;
+					if (joystick_input>0) {
+						isLiftAscending = true;
+					} else {
+						isLiftAscending = false;
+					}
+				}
+				float tune_input = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
+				if (tune_input != 0) {
+					lift_target += tune_input*lift_joystick_slow;
+					isLiftManual = true;
+					if (tune_input>0) {
+						isLiftAscending = true;
+					} else {
+						isLiftAscending = false;
+					}
 				}
 			}
 		}
@@ -320,13 +303,11 @@ task main()
 		if ((Joystick_ButtonReleased(BUTTON_RB))||(Joystick_ButtonReleased(BUTTON_RB, CONTROLLER_2))==true) {
 			dumpCubes(4); // MAGIC_NUM.
 		} else if ((Joystick_ButtonReleased(BUTTON_LB))||(Joystick_ButtonReleased(BUTTON_LB, CONTROLLER_2))==true) {
-			dumpCubes(1); // Dumps one cube at a time.
+			dumpCubes(2); // MAGIC_NUM
 			// All this really does is dump for a short amount of time.
-			// TODO: Is it possible to dump 2 or 3 cubes? How should that
-			// be mapped to controls? Should the "fine-tune" be 2 cubes?
+			// We will only ever want to fine-tune with 2 cubes.
 		}
 
-		// TODO: Make sure driver 1 does indeed override driver 2. Not very urgent.
 		//// TODO: Figure this out. Semaphores? Is it even necessary?
 		//Task_HogCPU();
 		if (Joystick_Button(BUTTON_B, CONTROLLER_2)==false) {
@@ -398,38 +379,41 @@ task main()
 			power_flag = 0;
 		}
 
-		// TODO: Make climbing work. When we get comms working, fix the controls.
 		// As usual, driver 1's controls take precedence over driver 2.
+		power_flag = g_FullPower;
 		if (Joystick_Button(BUTTON_X)==true) {
-			// TODO: Climb "down" instead.
-			power_flag = g_FullPower;
+			// power_flag *= 1.0; // Equivalent to doing nothing.
+		} else if (Joystick_Button(BUTTON_B)==true) {
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_L)==true) {
-			power_flag = g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_R)==true) {
-			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
+		} else if (Joystick_Button(BUTTON_X, CONTROLLER_2)==true) {
+			// power_flag *= 1.0; // Equivalent to doing nothing.
 		} else if (Joystick_Direction(DIRECTION_L, CONTROLLER_2)==true) {
-			power_flag = g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else if (Joystick_Direction(DIRECTION_R, CONTROLLER_2)==true) {
-			power_flag = -g_FullPower/(g_FineTuneFactor*2);
+			power_flag *= flagFineTuneFactor;
 		} else {
 			power_flag = 0;
 		}
-		if (Joystick_Button(BUTTON_Y)==true) {
-			power_climb = g_FullPower; // Climb "up".
-		} else {
-			// This gracefully handles the "else" condition (sets climbing power to 0.
-			power_climb = Joystick_GenericInput(JOYSTICK_R, AXIS_Y, CONTROLLER_2);
-		}
 
 		if (lift_pos<lift_tube_guard) {
-			if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
+			if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
 				Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 				Servo_SetPosition(servo_climb_R, servo_climb_R_open);
 			}
 		}
-		if (Joystick_Button(BUTTON_RT, CONTROLLER_2)==true) {
+		if (Joystick_Button(BUTTON_LT, CONTROLLER_2)==true) {
 			Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 			Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+		}
+
+		if (Joystick_Button(BUTTON_A, CONTROLLER_2)==true) {
+			Servo_SetPosition(servo_auton, servo_auton_down);
+		} else {
+			Servo_SetPosition(servo_auton, servo_auton_hold);
 		}
 
 		// Set motor and servo values (lift motor is set in PID()):
@@ -474,7 +458,7 @@ task main()
 
 		// While the "back" button is pressed on controller 2, go into shutdown mode.
 		// TODO: Make this less of a kludge. This may even be unnecessary given the limit switch.
-		if (Joystick_Button(BUTTON_BACK, CONTROLLER_2)==true) {
+		if (Joystick_Button(BUTTON_BACK) || Joystick_Button(BUTTON_BACK, CONTROLLER_2)) {
 			isResettingLift = true;
 			power_lift = 0.0;
 		} else {
@@ -509,14 +493,14 @@ task PID()
 	Time_ClearTimer(timer_loop);
 	int t_delta = Time_GetTime(timer_loop);
 
-	// TODO: PID tuning.
-	// MAGIC_NUM: Variables for lift PID calculations.
 	// Separate constants are needed for up vs. down motion of the lift because
 	// gravity significantly affects how the lift behaves (lowering the lift is
 	// almost twice as fast as raising the lift with the same amount of power).
-	const float lift_guard_divisor	= 2.2;
-	const float kP_lift_up			= 0.27;
-	const float kP_lift_down		= 0.17;
+	// MAGIC_NUM: Variables for lift PID calculations.
+	const float lift_guard_bottom	= 2.2;
+	const float lift_guard_top		= 1.2;
+	const float kP_lift_up			= 0.74;
+	const float kP_lift_down		= 0.19;
 	const float kD_lift_up			= 0.0;
 	const float kD_lift_down		= 0.0;
 	float error_lift		= 0.0;
@@ -556,9 +540,11 @@ task PID()
 				lift_target = lift_max_height;
 			}
 
-			if (isLiftOverriden==true && abs(lift_target-lift_pos)>liftOverrideDifference) {
-				lift_target = lift_pos;
-				isLiftOverriden = false;
+			if (isLiftManual && isLiftAscending && (power_lift<0)) {
+				if ((isLiftAscending && (power_lift<0)) || ((!isLiftAscending) && (power_lift>0))) {
+					lift_target = lift_pos;
+					// isLiftManual = false; // NOTE: We may need this line (may be magic).
+				}
 			}
 
 			error_lift = lift_target-lift_pos;
@@ -574,15 +560,36 @@ task PID()
 			power_lift = Math_Limit(power_lift, g_FullPower);
 		}
 
-		// TODO: Fine tune this (maybe not make it a "hard"/abrupt condition?).
+		// TODO: Make these conditions less hard/abrupt.
 		// Our lift is so fast, we slow it down within a buffer zone to make sure it doesn't
-		// kill itself when it hits the ends of its range (up and down).
-		if (	(power_lift>0 && lift_pos>lift_buffer_top	) ||
-				(power_lift<0 && lift_pos<lift_buffer_bottom) ) {
-			power_lift /= lift_guard_divisor;
+		// kill itself when it hits the extreme ends of its range (up and down).
+		if ((power_lift<0)&&(lift_pos<lift_buffer_bottom)) {
+			power_lift /= lift_guard_bottom;
+		} else if ((power_lift>0)&&(lift_pos>lift_buffer_top)) {
+			power_lift /= lift_buffer_top;
 		}
+
+		// TODO: Implement an I-term or something to eliminate steady-state error, instead of
+		// using this artificial boost to the motor power. This implementation has a tendency
+		// to start oscillating depending on the battery power, because there are arbitrary
+		// limits on what the correction term needs to be to turn the lift off. Fortunately,
+		// the oscillations can be mitigated somewhat by turning down the P-term in the PID
+		// loop, just like how normal PID is tuned.
+		if (abs(power_lift)<lift_boost_range) {
+			if (abs(power_lift)<lift_error_range) {
+				power_lift = 0;
+			} else if (power_lift>0) {
+				power_lift = lift_boost_range; // Set to the threshold of motor humming.
+			} else if (power_lift<0) {
+				power_lift = -lift_boost_range; // Set to the threshold of motor humming.
+			}
+		}
+
 		Motor_SetPower(power_lift, motor_lift_front);
-		Motor_SetPower(power_lift, motor_lift_back); // The two motors should run the same direction.
+		Motor_SetPower(power_lift, motor_lift_back); // The two motors run the same direction.
+
+		// We added a delay here so the PID loop doesn't to hog the CPU clock.
+		Time_Wait(2); // MAGIC_NUM: Seems like a reasonable number.
 
 		//Task_ReleaseCPU();
 		//Task_EndTimeslice(); // TODO: Is this command superfluous? (This needs a check on the forums.)
@@ -847,7 +854,6 @@ task CommLink()
 
 
 // Task for displaying data on the NXT's LCD screen.
-// TODO: Put a lot of the display stuff into loops. Do we want to?
 task Display()
 {
 	typedef enum DisplayMode {
@@ -968,6 +974,9 @@ task TimedOperations()
 	while (lift_pos>lift_tube_guard) {
 		Time_Wait(100); // MAGIC_NUM: An arbitrary delay.
 	}
+	Servo_SetPosition(servo_auton, servo_auton_down);
+	Time_Wait(500);
+	Servo_SetPosition(servo_auton, servo_auton_hold);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
 }

@@ -94,16 +94,20 @@ task main()
 	Motor_ResetEncoder(omniR);
 
 	if (DO_START_ON_R) {
-		MoveBackward(7);
+		MoveBackward(22);
 		DumpAutonCube();
+		TurnRight(15);
+		MoveBackward(26);
+		TurnRight(315);
+		MoveForward(28);
 	} else {
 		MoveForward(7);
 		DumpAutonCube();
 		TurnLeft(15);
 		MoveForward(26);
-		TurnRight(15);
-		MoveForward(28);
-		TurnRight(45);
+		TurnRight(20);
+		MoveForward(27);
+		TurnRight(40);
 		MoveForward(22);
 		TurnRight(45);
 		MoveForward(30);

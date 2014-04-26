@@ -1,5 +1,7 @@
 #pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  HTMotor)
 #pragma config(Hubs,  S2, HTMotor,  HTServo,  none,     none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
+#pragma config(Sensor, S2,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustomFastSkipStates9V)
 #pragma config(Motor,  motorA,          motor_assist_L, tmotorNXT, PIDControl, encoder)
@@ -22,7 +24,7 @@
 #pragma config(Servo,  srvo_S2_C2_2,    servo_FR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_3,    servo_flip_R,         tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S2_C2_5,    servo11,              tServoNone)
+#pragma config(Servo,  srvo_S2_C2_5,    servo_auton,          tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_6,    servo_climb_R,        tServoStandard)
 
 #include "includes.h"

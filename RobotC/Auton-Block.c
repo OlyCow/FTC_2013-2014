@@ -57,11 +57,8 @@ task Display(); // Updates the NXT's LCD display with useful info.
 //-------------------------------------------------------------------------->>
 
 // Program settings:
-bool DO_DELAY_START		= false;
-bool DO_START_ON_R		= true;
+bool DO_START_ON_R		= false;
 bool DO_DUMP_AUTON		= true;
-bool DO_TURN_ON_RAMP	= false;
-bool DO_DEFEND_RAMP		= false;
 
 // For PID:
 float power_lift = 0.0;
@@ -81,20 +78,7 @@ task main()
 	Task_Spawn(Gyro);
 	Task_Spawn(Display);
 
-	// MAGIC_NUM: Distances in inches, turns in degrees, delays in seconds.
-	const int delay_start			= 15;
-	const int dist_dump_L			= 7;
-	const int dist_dump_R			= 11;	// TODO
-	const int dist_ramp_L			= 26;	// TODO
-	const int dist_ramp_R			= 23;	// TODO
-	const int delay_charge_L		= 1300;	// milliseconds TODO
-	const int delay_charge_R		= 1400;	// milliseconds TODO
-
 	string a="", b="", c="";
-	a = "Delay start?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_DELAY_START, a, true, b, false, c);
 	a = "Start on____side.";
 	b = "RIGHT";
 	c = "LEFT";
@@ -103,58 +87,31 @@ task main()
 	b = "YES";
 	c = "NO";
 	config_values(DO_DUMP_AUTON, a, true, b, false, c);
-	a = "Turn 90 on ramp?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_TURN_ON_RAMP, a, true, b, false, c);
-	a = "Hold ramp pos?";
-	b = "YES";
-	c = "NO";
-	config_values(DO_DEFEND_RAMP, a, true, b, false, c);
 
 	Joystick_WaitForStart();
 	heading = 0.0;
 	Motor_ResetEncoder(omniL);
 	Motor_ResetEncoder(omniR);
-	if (DO_DELAY_START) {
-		for (int i=0; i<delay_start; ++i) {
-			Time_Wait(1000);
-		}
-	}
 
 	if (DO_START_ON_R) {
-		MoveBackward(dist_dump_R);
-	} else {
-		MoveForward(dist_dump_L);
-	}
-	if (DO_DUMP_AUTON) {
+		MoveBackward(22);
 		DumpAutonCube();
-	}
-	if (DO_START_ON_R) {
-		TurnLeft(15);
-	} else {
 		TurnRight(15);
-	}
-	if (DO_DUMP_AUTON) {
-		LowerAutonArm();
-	}
-	if (DO_START_ON_R) {
-		MoveBackward(dist_ramp_R);
-		TurnRight(75);
-		ChargeForward(delay_charge_R, g_FullPower, true, false);
+		MoveBackward(26);
+		TurnRight(315);
+		MoveForward(28);
 	} else {
-		MoveForward(dist_ramp_L);
-		TurnRight(105);
-		ChargeForward(delay_charge_L, g_FullPower, true, false);
-	}
-
-	if (DO_TURN_ON_RAMP) {
-		// TODO: Would it be better to do this with a timer?
-		Settle();
-		TurnLeft(90);
-	}
-	if (DO_DEFEND_RAMP) {
-		DefendRamp();
+		MoveForward(7);
+		DumpAutonCube();
+		TurnLeft(15);
+		MoveForward(26);
+		TurnRight(20);
+		MoveForward(27);
+		TurnRight(40);
+		MoveForward(22);
+		TurnRight(45);
+		MoveForward(30);
+		MoveForward(6);
 	}
 }
 
@@ -247,7 +204,7 @@ task Display()
 {
 	typedef enum DisplayMode {
 		DISP_FCS,				// Default FCS screen.
-		DISP_SETTINGS,			// The current autonomous configuration.
+		DISP_SETTINGS,
 		DISP_ENCODERS,			// Raw encoder values.
 		DISP_JOYSTICKS,			// For convenience. TODO: Add buttons, D-pad, etc.?
 		DISP_NUM
@@ -260,6 +217,8 @@ task Display()
 	}
 	// We don't need to wait for start.
 
+	// We don't need to wait for start. ;)
+
 	while (true) {
 		Buttons_UpdateData();
 
@@ -269,36 +228,18 @@ task Display()
 			case DISP_SETTINGS :
 				string text = "Auton Settings:";
 				nxtDisplayCenteredTextLine(0, text);
-				if (DO_DELAY_START) {
-					text = "- delayed start";
-				} else {
-					text = "- normal start";
-				}
-				nxtDisplayTextLine(2, text);
 				if (DO_START_ON_R) {
 					text = "- start on R";
 				} else {
 					text = "- start on L";
 				}
-				nxtDisplayTextLine(3, text);
+				nxtDisplayTextLine(2, text);
 				if (DO_DUMP_AUTON) {
 					text = "- dump auton";
 				} else {
 					text = "- do not dump";
 				}
-				nxtDisplayTextLine(4, text);
-				if (DO_TURN_ON_RAMP) {
-					text = "- turn on ramp";
-				} else {
-					text = "- stay still";
-				}
-				nxtDisplayTextLine(5, text);
-				if (DO_DEFEND_RAMP) {
-					text = "- defend pos";
-				} else {
-					text = "- passive ramp";
-				}
-				nxtDisplayTextLine(6, text);
+				nxtDisplayTextLine(3, text);
 				break;
 			case DISP_ENCODERS :
 				nxtDisplayTextLine(0, "Lift: %+6d", lift_pos);

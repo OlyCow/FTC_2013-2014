@@ -10,6 +10,7 @@
 #include "Drivers\IR seeker v2.h"
 #include "Drivers\prototype board.h"
 
+#include "Headers\Math.h" // TODO! (some)
 #include "Headers\Motor.h" // TODO! (high-level stuff)
 #include "Headers\Servo.h" // TODO! (high-level stuff)
 #include "Headers\Sensor.h" // TODO!
@@ -21,7 +22,6 @@
 #include "Headers\Buttons.h" // TODO! (some)
 #include "Headers\Display.h" // TODO! (some)
 #include "Headers\Sound.h" // TODO!
-#include "Headers\Math.h" // TODO! (some)
 #include "Headers\Vectors-2D.h"
 #include "Headers\Vectors-3D.h" // TODO! (unnecessary?)
 #include "Headers\Bit.h"

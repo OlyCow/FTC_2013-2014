@@ -1,35 +1,29 @@
-#pragma config(Hubs,  S1, HTServo,  HTServo,  HTMotor,  HTMotor)
+#pragma config(Hubs,  S1, HTServo,  HTMotor,  HTMotor,  none)
 #pragma config(Hubs,  S2, HTServo,  HTServo,  HTMotor,  HTMotor)
 #pragma config(Sensor, S3,     sensor_IR,      sensorI2CCustomFastSkipStates9V)
 #pragma config(Sensor, S4,     sensor_protoboard, sensorI2CCustom9V)
-#pragma config(Motor,  motorA,          motor_assist_L,   tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  motorB,          motor_assist_R,   tmotorNXT, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_1,     motor_BR,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     motor_lift_back,  tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C4_1,     motor_lift_front, tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C4_2,     motor_FR,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,       tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,         tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C1_1,    servo_flip_R,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_2,    servo_auton,          tServoStandard)
-#pragma config(Servo,  srvo_S1_C1_3,    servo3,               tServoNone)
+#pragma config(Motor,  motorA,          motor_assist_L, 	tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  motorB,          motor_assist_R, 	tmotorNXT, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     motor_BR,       	tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_2,     motor_lift_back,	tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     motor_lift_front,   tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     motor_FR,   	    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_1,     motor_FL,      		tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C3_2,     motor_sweeper, 		tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S2_C4_1,     motor_flag,    		tmotorTetrix, openLoop, reversed)
+#pragma config(Motor,  mtr_S2_C4_2,     motor_BL,      		tmotorTetrix, openLoop, encoder)
+#pragma config(Servo,  srvo_S1_C1_1,    servo_climb_R,        tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_2,    servo_omni_R,         tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_3,    servo_auton,          tServoStandard)
 #pragma config(Servo,  srvo_S1_C1_4,    servo4,               tServoNone)
-#pragma config(Servo,  srvo_S1_C1_5,    servo5,               tServoNone)
-#pragma config(Servo,  srvo_S1_C1_6,    servo_omni_R,         tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_1,    servo7,               tServoNone)
-#pragma config(Servo,  srvo_S1_C2_2,    servo8,               tServoNone)
-#pragma config(Servo,  srvo_S1_C2_3,    servo_climb_R,        tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_4,    servo10,              tServoNone)
-#pragma config(Servo,  srvo_S1_C2_5,    servo_FR,             tServoStandard)
-#pragma config(Servo,  srvo_S1_C2_6,    servo_BR,             tServoStandard)
+#pragma config(Servo,  srvo_S1_C1_5,    servo5,       		  tServoNone)
+#pragma config(Servo,  srvo_S1_C1_6,    servo_flip_R,         tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_1,    servo_dump,           tServoStandard)
-#pragma config(Servo,  srvo_S2_C1_2,    servo14,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_3,    servo15,              tServoNone)
+#pragma config(Servo,  srvo_S2_C1_2,    servo_FR,             tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_3,    servo_BR,             tServoStandard)
 #pragma config(Servo,  srvo_S2_C1_4,    servo16,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_5,    servo17,              tServoNone)
-#pragma config(Servo,  srvo_S2_C1_6,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_5,    servo_climb_L,        tServoStandard)
+#pragma config(Servo,  srvo_S2_C1_6,    servo_18,             tServoNone)
 #pragma config(Servo,  srvo_S2_C2_1,    servo_omni_L,         tServoStandard)
 #pragma config(Servo,  srvo_S2_C2_2,    servo20,              tServoNone)
 #pragma config(Servo,  srvo_S2_C2_3,    servo21,              tServoNone)
@@ -57,14 +51,34 @@ task main()
 	Task_Spawn(PID);
 
 	const int TEST_INTERVAL			= 200;
-	const int LIFT_TEST_POS			= 1200;
-	const int LIFT_TEST_INTERVAL	= 1300; // How much time to wait for lift to reach pos.
+	const int AUTON_TEST_DELAY		= 1000;
+	const int OMNI_TEST_DELAY		= 1000;
+	const int LIFT_TEST_POS			= 2600;
+	const int LIFT_TEST_INTERVAL	= 2000; // How much time to wait for lift to reach pos.
+	const int DUMP_SINGLE_DELAY		= 500;
+	const int DUMP_MULTIPLE_DELAY	= 1500;
 	const int PICKUP_LOWER_DELAY    = 1000;
 	const int PICKUP_TEST_DELAY     = 1000;
 	const int PICKUP_REVERSE_DELAY  = 1000;
 	const int PICKUP_RAISE_DELAY    = 1000;
 	const int FLAG_TEST_DELAY		= 1000;
-	const int AUTON_TEST_DELAY		= 1000;
+	const int CLIMBING_DELAY		= 2000;
+
+	// Flip autonomous servo.
+	Servo_SetPosition(servo_auton, 255);
+	Time_Wait(AUTON_TEST_DELAY);
+	Servo_SetPosition(servo_auton, 0);
+	Time_Wait(AUTON_TEST_DELAY);
+	Servo_SetPosition(servo_auton, 128);
+
+	// Test the two omniwheel servos.
+	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
+	Time_Wait(OMNI_TEST_DELAY);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Time_Wait(TEST_INTERVAL);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
+	Time_Wait(OMNI_TEST_DELAY);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
 
 	// Move each drive motor back and forth.
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
@@ -81,6 +95,9 @@ task main()
 	lift_target = LIFT_TEST_POS;
 	Time_Wait(LIFT_TEST_INTERVAL);
 	dumpCubes(1); // MAGIC_NUM: Just a short test.
+	Time_Wait(DUMP_SINGLE_DELAY);
+	dumpCubes(4);
+	Time_Wait(DUMP_MULTIPLE_DELAY);
 	lift_target = lift_pos_pickup;
 	Time_Wait(LIFT_TEST_INTERVAL);
 
@@ -117,17 +134,31 @@ task main()
 	Time_Wait(FLAG_TEST_DELAY);
 	Motor_SetPower(0, motor_flag);
 
-	// Flip autonomous servo.
-	Servo_SetPosition(servo_auton, 255);
-	Time_Wait(AUTON_TEST_DELAY);
-	Servo_SetPosition(servo_auton, 0);
-	Time_Wait(AUTON_TEST_DELAY);
-	Servo_SetPosition(servo_auton, 128);
+	// Play loud warning noise.
+	for (int i=0; i<3; i++) {
+		PlaySound(soundBeepBeep);
+		while (bSoundActive==true) {
+			Time_Wait(100);	// MAGIC_NUM: Arbitrary delay.
+		}
+	}
+	// Release climbing on non-NXT side.
+	Servo_SetPosition(servo_climb_R, servo_climb_R_open);
+	Time_Wait(CLIMBING_DELAY);
+	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Time_Wait(CLIMBING_DELAY);
 
 	// Play loud warning noise.
-	//TODO
-	// Release climbing on non-NXt side.
+	for (int i=0; i<3; i++) {
+		PlaySound(soundBeepBeep);
+		while (bSoundActive==true) {
+			Time_Wait(100);	// MAGIC_NUM: Arbitrary delay.
+		}
+	}
 	// Release climbing on other side.
+	Servo_SetPosition(servo_climb_L, servo_climb_L_open);
+	Time_Wait(CLIMBING_DELAY);
+	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
+	Time_Wait(CLIMBING_DELAY);
 }
 
 
@@ -155,7 +186,6 @@ task PID()
 	float term_P_lift		= 0.0;
 	float term_D_lift		= 0.0;
 
-	Joystick_WaitForStart();
 	Time_ClearTimer(timer_loop);
 
 	while (true) {

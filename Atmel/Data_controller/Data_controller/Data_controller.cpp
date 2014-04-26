@@ -1,12 +1,14 @@
+// Ï×¸øÕÔµ¤Öñ
 // For collecting most of the data used in teleop (temp, IMU, etc.).
 #include "Data_controller.h"
 
 
 
 // Variables that are shared inside interrupts.
-volatile uint16_t comm_x = 0;
-volatile uint16_t comm_y = 0;
-volatile uint16_t comm_z = 0;
+volatile uint8_t comm_x = 0;
+volatile uint8_t comm_y = 0;
+volatile uint8_t comm_z_L = 0;
+volatile uint8_t comm_z_H = 0;
 volatile bool is_gyro_resetting = false;
 volatile bool is_comm_ready = false;
 enum LED_STATE {
@@ -35,12 +37,21 @@ int main()
 	TCCR1B |= (1 << CS10); // Set CS10 in control registry.
 	uint64_t SYSTEM_TIME = 0; // In microseconds.
 	
+	int comm_x_temp = 0;
+	int comm_y_temp = 0;
+	int comm_z_temp = 0;
 	double t_prev = 0.0; // TODO: Wrap all timers into a library.
 	double t_current = 0.0;
 	double dt = t_current - t_prev;
 	double rot_x = 0.0;
 	double rot_y = 0.0;
 	double rot_z = 0.0;
+	int vel_x_signed = 0;
+	int vel_y_signed = 0;
+	int vel_z_signed = 0;
+	int vel_x_signed_prev = 0;
+	int vel_y_signed_prev = 0;
+	int vel_z_signed_prev = 0;
 	uint16_t vel_x = 0; // TODO: switch all of these over to unions.
 	uint16_t vel_y = 0;
 	uint16_t vel_z = 0;
@@ -50,10 +61,11 @@ int main()
 	uint8_t vel_y_H = 0;
 	uint8_t vel_z_L = 0;
 	uint8_t vel_z_H = 0;
-	uint16_t vel_x_offset = 0;
-	uint16_t vel_y_offset = 0;
-	uint16_t vel_z_offset = 0;
-	const double bit_to_gyro = 250.0/32768.0;
+	int vel_x_offset = 0;
+	int vel_y_offset = 0;
+	int vel_z_offset = 0;
+	const double bit_to_gyro = 500.0/32768.0; // Also in MPU-6050 Register Map "Gyroscope Measurements".
+	const double usec_to_sec = 1.0/1000000.0;
 	short LED_timer = 0;
 	
 	// Initialize SPI.
@@ -62,41 +74,83 @@ int main()
 			(0<<DORD) |	// 0=MSB transmitted first.
 			(0<<CPOL) |	// Setting both of these to 0 ="mode 0".
 			(0<<CPHA));
+	// TODO: Is this necessary? (Re-pulling up the SS' pin.)
+	PORTB |= (1<<PINB2);
 	
 	// Initialize TWI.
 	i2c_init();
 	
 	// Initialize and calibrate gyro.
 	MPU::initialize();
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x01);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_1, 0x03);
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_PWR_MGMT_2, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x00);
-	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x00);
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_CONFIG, 0x01); // NOTE: This could be a very bad idea.
+	MPU::write(MPU6050_ADDRESS, MPU6050_RA_GYRO_CONFIG, 0x08); // +/- 500 deg/sec
 	MPU::write(MPU6050_ADDRESS, MPU6050_RA_ACCEL_CONFIG, 0x00);
-	// TODO: Make this calibration better (take an average?).
-	_delay_ms(100); // MAGIC_NUM: 
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
-	MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-	vel_x_offset = (vel_x_H<<8) + vel_x_L;
-	vel_y_offset = (vel_y_H<<8) + vel_y_L;
-	vel_z_offset = (vel_z_H<<8) + vel_z_L;
+	//// TODO: Make this calibration better.
+	//_delay_us(500); // MAGIC_NUM: We can afford some delay here to get things right.
+	//double offset_x_sum = 0.0;
+	//double offset_y_sum = 0.0;
+	//double offset_z_sum = 0.0;
+	//// MAGIC_NUM: 100 is a decent number of samples :P
+	//for (int i=0; i<10; ++i) {
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+		//MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+		//vel_x = (vel_x_H<<8) + vel_x_L;
+		//vel_y = (vel_y_H<<8) + vel_y_L;
+		//vel_z = (vel_z_H<<8) + vel_z_L;
+		//offset_x_sum += MPU::convert_complement(vel_x);
+		//offset_y_sum += MPU::convert_complement(vel_y);
+		//offset_z_sum += MPU::convert_complement(vel_z);
+		//_delay_us(10); // MAGIC_NUM
+	//}
+	//vel_x_offset = offset_x_sum/10.0; // MAGIC_NUM: number of samples.
+	//vel_y_offset = offset_y_sum/10.0; // MAGIC_NUM: number of samples.
+	//vel_z_offset = offset_z_sum/10.0; // MAGIC_NUM: number of samples.
+
+	_delay_us(500); // MAGIC_NUM
+	for (int i=0; i<10; i++) { // MAGIC_NUM: NOTE: flush out bad readings?
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
+		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
+		vel_x = (vel_x_H<<8) + vel_x_L;
+		vel_y = (vel_y_H<<8) + vel_y_L;
+		vel_z = (vel_z_H<<8) + vel_z_L;
+		vel_x_offset = MPU::convert_complement(vel_x);
+		vel_y_offset = MPU::convert_complement(vel_y);
+		vel_z_offset = MPU::convert_complement(vel_z);
+	}
+	
+	vel_x_signed_prev = vel_x_offset;
+	vel_y_signed_prev = vel_y_offset;
+	vel_z_signed_prev = vel_z_offset;
 	
 	// Set up interrupts.
 	PCMSK0 |= (1<<PCINT2);
-	PCICR |= (1<<PCIE2);
+	PCICR |= (1<<PCIE0);
 	PCIFR |= (1<<PCIF0);
 	sei();
 	
 	// Wait to make sure we've established communication with the Comm_controller.
-	while (is_comm_ready != true) {;}
+	while (is_comm_ready != true) {
+		_delay_us(100);	// MAGIC_NUM: I have no clue what I'm doing.
+	}
+	alertA();
+	// TODO: (SOMETIMES) THE ABOVE BLOCKS WHEN BOOTING RIGHT AFTER TURNING THE NXT OFF.
+	// THEN TO HAVE IT WORK AGAIN, TURN OFF THE NXT, WAIT A WHILE, THEN TURN IT BACK ON.
 
 	// TODO: Set up any interrupts that haven't been setup yet.
 	
     while (true) {
+		alertB();
+		
 		// Update system timer. TODO: Encapsulate timers into a class.
 		SYSTEM_TIME += TCNT1;
 		TCNT1 = 0;
@@ -118,31 +172,112 @@ int main()
 			// read
 		
 		// Gyro handling.
+		if (is_gyro_resetting == true) {
+			rot_x = 0;
+			rot_y = 0;
+			rot_z = 0;
+			is_gyro_resetting = false;
+		}
+		
 		// TODO: It *might* be more efficient to calculate x, y, and z one-at-a-time.
+		vel_x_signed_prev = vel_x_signed;
+		vel_y_signed_prev = vel_y_signed;
+		vel_z_signed_prev = vel_z_signed;
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_L, vel_x_L); // TODO: Condense into a single "burst read".
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_XOUT_H, vel_x_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_L, vel_y_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_YOUT_H, vel_y_H);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_L, vel_z_L);
 		MPU::read(MPU6050_ADDRESS, MPU6050_RA_GYRO_ZOUT_H, vel_z_H);
-		vel_x = (vel_x_H<<8) + vel_x_L - vel_x_offset;
-		vel_y = (vel_y_H<<8) + vel_y_L - vel_y_offset;
-		vel_z = (vel_z_H<<8) + vel_z_L - vel_z_offset;
-		rot_x += ((double)(vel_x-32768)*dt) * bit_to_gyro;
-		rot_y += ((double)(vel_y-32768)*dt) * bit_to_gyro;
-		rot_z += ((double)(vel_z-32768)*dt) * bit_to_gyro;
-		if (is_gyro_resetting == true) {
-			rot_x = 0;
-			rot_x = 0;
-			rot_x = 0;
-			is_gyro_resetting = false;
+		vel_x = (vel_x_H<<8) + vel_x_L;
+		vel_y = (vel_y_H<<8) + vel_y_L;
+		vel_z = (vel_z_H<<8) + vel_z_L;
+		vel_x_signed = MPU::convert_complement(vel_x);
+		vel_y_signed = MPU::convert_complement(vel_y);
+		vel_z_signed = MPU::convert_complement(vel_z);
+		vel_x_signed -= vel_x_offset;
+		vel_y_signed -= vel_y_offset;
+		vel_z_signed -= vel_z_offset;
+		if (fabs(vel_x_signed)<240) {	// MAGIC_NUM: seems like a nice small number :P
+			vel_x_signed = 0;
 		}
-		// TODO: Split into three atomic blocks?
+		if (fabs(vel_y_signed)<240) {	// MAGIC_NUM: seems like a nice small number :P
+			vel_y_signed = 0;
+		}
+		if (fabs(vel_z_signed)<240) {	// MAGIC_NUM: seems like a nice small number :P
+			vel_z_signed = 0;
+		}
+
+		// Yeah trapezoids. Also dividing is too much brain-work. Since we're multiplying already...
+		double rect_x = (double)vel_x_signed;
+		double rect_y = (double)vel_y_signed;
+		double rect_z = (double)vel_z_signed;
+		rect_x += (double)vel_x_signed_prev;
+		rect_y += (double)vel_y_signed_prev;
+		rect_z += (double)vel_z_signed_prev;
+		rect_x /= 2.0;
+		rect_y /= 2.0;
+		rect_z /= 2.0;
+		rect_x *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rect_y *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rect_z *= (bit_to_gyro * (double)dt * usec_to_sec);
+		rot_x += rect_x;
+		rot_y += rect_y;
+		rot_z += rect_z;
+		rot_x = fmod(rot_x, 360);
+		rot_y = fmod(rot_y, 360);
+		rot_z = fmod(rot_z, 360);
+		if (rot_z<0) {
+			rot_z += 360.0;	// Making sure we're positive.
+		}
+		
+		if (rot_x>=30.0) {
+			comm_x_temp = 30;
+			} else if (rot_x<=(-30.0)) {
+			comm_x_temp = -30;
+			} else {
+			comm_x_temp = static_cast<int>(round(rot_x));
+		}
+		comm_x_temp += 30;
+		if (rot_y>=30.0) {
+			comm_y_temp = 30;
+			} else if (rot_y<=(-30.0)) {
+			comm_y_temp = -30;
+			} else {
+			comm_y_temp = static_cast<int>(round(rot_y));
+		}
+		comm_y_temp += 30;
+		comm_z_temp = static_cast<int>(round(rot_z));
+		
+		// TODO: Split into four atomic blocks?
+		// Pros:	Interrupts can happen before all three vars get assigned.
+		// Cons:	Possibly more overhead and too much delay from capturing
+		//			and releasing the processor (and might miss the SS window).
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-			comm_x = static_cast<int>(round(rot_x)) % 360;
-			comm_y = static_cast<int>(round(rot_y)) % 360;
-			comm_z = static_cast<int>(round(rot_z)) % 360;
+			comm_x = static_cast<uint8_t>(comm_x_temp);
+			comm_y = static_cast<uint8_t>(comm_y_temp);
+			comm_z_L = static_cast<uint8_t>(comm_z_temp & 0x00FF);
+			comm_z_H = static_cast<uint8_t>((comm_z_temp & 0x0100) >>8);
 		}
+		
+		
+		
+		// TODO: DELETE THIS (TESTING)
+		if (fabs(rot_z)<0.5) {
+			alertD();
+		} else {
+			clearD();
+		}
+		
+		// TODO: This is extremely hackish (and possibly dangerous).
+		// Delete at some point. Also there's no real debouncing.
+		if ((PINB&(1<<PINB1))==0) {
+			// Here's some hackish debouncing :P
+			_delay_ms(10);
+			is_gyro_resetting = true;
+		}
+
+		
 		
 		// Debugging LEDs and pushbutton.
 			// read and debounce button
@@ -172,13 +307,14 @@ int main()
 
 ISR(PCINT0_vect)
 {
-	if ((PINB & (0<<PINB2)) != 0) {
+	if ((PINB & (1<<PINB2)) != 0) {
 		return; // We only care if the SS' pin is pulled low.
 	} else {
-		while ((PINB & (0<<PINB2)) == 0) {
-			uint8_t spi_W = STATUS_W_INIT;
-			uint8_t spi_R = 0;
-			
+		
+		uint8_t spi_W = STATUS_W_INIT;
+		uint8_t spi_R = 0;
+		
+		while ((PINB & (1<<PINB2)) == 0) {
 			SPDR = spi_W;
 			while(!(SPSR & (1<<SPIF))) {;} // Wait until all the data is received.
 			spi_R = SPDR;
@@ -200,8 +336,11 @@ ISR(PCINT0_vect)
 				case STATUS_R_REQ_GYRO_Y :
 					spi_W = comm_y;
 					break;
-				case STATUS_R_REQ_GYRO_Z :
-					spi_W = comm_z;
+				case STATUS_R_REQ_GYRO_Z_L :
+					spi_W = comm_z_L;
+					break;
+				case STATUS_R_REQ_GYRO_Z_H :
+					spi_W = comm_z_H;
 					break;
 				case STATUS_R_END :
 					spi_W = STATUS_W_ACK;
@@ -209,7 +348,7 @@ ISR(PCINT0_vect)
 					
 				// Status setting codes:
 				case STATUS_R_RESET_GYRO :
-					is_gyro_resetting = true;
+					//is_gyro_resetting = true;
 					spi_W = STATUS_W_ACK;
 					break;
 				case STATUS_R_LED_A_ON :
@@ -260,12 +399,23 @@ ISR(PCINT0_vect)
 					LED_state[LED_D] = LED_OFF;
 					spi_W = STATUS_W_ACK;
 					break;
+					
+				default :
+					// TODO: Should probably do something other than break...
+					break;
 			}
 		}
 	}
 }
 
-
+void alertA() { PORTD |= 1<<PORTD5; }
+void clearA() { PORTD &= ~(1<<PORTD5); }
+void alertB() { PORTD |= 1<<PORTD6; }
+void clearB() { PORTD &= ~(1<<PORTD6); }
+void alertC() { PORTD |= 1<<PORTD7; }
+void clearC() { PORTD &= ~(1<<PORTD7); }
+void alertD() { PORTB |= 1<<PORTB0; }
+void clearD() { PORTB &= ~(1<<PORTB0); }
 
 void setupPins()
 {
@@ -318,7 +468,7 @@ void setupPins()
 	PORTB = ((0<<PINB0) |
 			 (1<<PINB1) |
 			 (1<<PINB2) |	// We DO want SS to be pulled up.
-			 (0<<PINB3) | // SPI doesn't need pull-up.
+			 (0<<PINB3) |	// SPI doesn't need pull-up.
 			 (0<<PINB4) |
 			 (0<<PINB5) |
 			 (0<<PINB6) |	// Unused pins shouldn't be pulled up.

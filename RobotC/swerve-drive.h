@@ -29,10 +29,13 @@ typedef struct servoData {
 const tHTIRS2DSPMode g_IRsensorMode = DSP_1200;
 
 // The threshold for IR values to count as detected.
-const int g_IRthreshold = 60; // arbitrary units from 0~1024.
+const int g_IRthreshold = 80; // arbitrary units from 0~1024.
 
 // TODO: This number is just a guess. Not verified at all.
 const int g_EncoderDeadband = 1; // degrees.
+
+// The standard fine-tune factor is too large; the flag has no weight.
+const float flagFineTuneFactor = 0.18;
 
 // Transfers data between tasks. These have physical significance,
 // such as the positioning of each pod (relative to the center of
@@ -40,21 +43,40 @@ const int g_EncoderDeadband = 1; // degrees.
 motorData g_MotorData[POD_NUM];
 servoData g_ServoData[POD_NUM];
 
-// Various servo/encoder (motor) positions.
-// MAGIC_NUM: TODO (all).
+// MAGIC_NUM: Lift target adjustment values.
+const int lift_tgt_up_fast		= 1440;
+const int lift_tgt_up_slow		= 600;
+const int lift_tgt_down_fast	= 960;
+const int lift_tgt_down_slow	= 540;
+const float lift_joystick_fast	= 1.26;
+const float lift_joystick_slow	= 0.41;
+const int lift_error_range		= 5;	// Motor power.
+const int lift_boost_range		= 15;	// Motor power.
+
+//// MAGIC_NUM: Various servo/encoder (motor) positions.
+//const int lift_pos_pickup		= 0;
+//const int lift_pos_dump			= 2600; // TODO
+//const int lift_pos_top			= 3400;
+//const int lift_max_height		= 3600;
+//const int lift_sweeper_guard	= 150;	// TODO
+//const int lift_buffer_top		= 2500;
+//const int lift_buffer_bottom	= 1200;
+//const int lift_tube_guard		= 1000;
+
+// MAGIC_NUM NOTE TODO VERY DANGEROUS :)
 const int lift_pos_pickup		= 0;
 const int lift_pos_dump			= 2600; // TODO
-const int lift_pos_top			= 3500;	// TODO
-const int lift_max_height		= 3600;
+const int lift_pos_top			= 3300;
+const int lift_max_height		= 3400;
 const int lift_sweeper_guard	= 150;	// TODO
-const int lift_buffer_top		= 2500;
-const int lift_buffer_bottom	= 1200;
+const int lift_buffer_top		= 3500;
+const int lift_buffer_bottom	= 1600;
 const int lift_tube_guard		= 1000;
 
-const int servo_climb_L_open	= 255;	// TODO
-const int servo_climb_L_closed	= 0;	// TODO
-const int servo_climb_R_open	= 0;	// TODO
-const int servo_climb_R_closed	= 255;	// TODO
+const int servo_climb_L_open	= 255;
+const int servo_climb_L_closed	= 0;
+const int servo_climb_R_open	= 0;
+const int servo_climb_R_closed	= 255;
 const int servo_dump_open		= 31;
 const int servo_dump_closed		= 0;
 const int servo_flip_L_up		= 213;
@@ -65,14 +87,9 @@ const int servo_auton_up		= 255;
 const int servo_auton_down		= 0;
 const int servo_auton_hold 		= 128;
 const int servo_omni_L_up		= 0;
-const int servo_omni_L_down		= 28;
+const int servo_omni_L_down		= 32;
 const int servo_omni_R_up		= 240;
-const int servo_omni_R_down		= 212;
-
-// These two are how far the wheel pod servos can be off (it's how
-// wheel pod alignment is classified).
-const int align_far_limit		= 30;
-const int align_medium_limit	= 15;
+const int servo_omni_R_down		= 208;
 
 // Transfers the cubes to dump to `dumpCubesTask` (can't pass to tasks).
 int f_cubeDumpNum = 4; // MAGIC_NUM: by default, dump all cubes.
@@ -190,22 +207,33 @@ void initializeRobotVariables()
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
 	Servo_SetPosition(servo_auton, servo_auton_hold);
-	Servo_SetPosition(servo_omni_L, servo_omni_L_down);
-	Servo_SetPosition(servo_omni_R, servo_omni_R_down);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
 
 	HTIRS2setDSPMode(sensor_IR, g_IRsensorMode);
+	HTGYROstartCal(sensor_protoboard);
 
 	for (int i=POD_FR; i<(int)POD_NUM; i++) {
 		Motor_ResetEncoder(Motor_Convert((WheelPod)i));
 	}
 
 	// MAGIC_NUM: 13V.
-	if (externalBatteryAvg<13600) {
-		PlaySound(soundDownwardTones);
+	if (externalBatteryAvg<13000) {
+		for (int i=0; i<1; ++i) {
+			PlaySound(soundDownwardTones);
+			while (bSoundActive) {
+				Time_Wait(10);
+			}
+		}
 	}
 	// MAGIC_NUM: 8V.
-	if (nAvgBatteryLevel<7900) {
-		PlaySound(soundDownwardTones);
+	if (nAvgBatteryLevel<8000) {
+		for (int i=0; i<2; ++i) {
+			PlaySound(soundDownwardTones);
+			while (bSoundActive) {
+				Time_Wait(10);
+			}
+		}
 	}
 }
 void resetMotorsServos()
@@ -230,6 +258,8 @@ void resetMotorsServos()
 	Servo_SetPosition(servo_flip_R, servo_flip_R_up);
 	Servo_SetPosition(servo_climb_L, servo_climb_L_closed);
 	Servo_SetPosition(servo_climb_R, servo_climb_R_closed);
+	Servo_SetPosition(servo_omni_L, servo_omni_L_up);
+	Servo_SetPosition(servo_omni_R, servo_omni_R_up);
 	Servo_SetWinch(servo_FR, 0);
 	Servo_SetWinch(servo_FL, 0);
 	Servo_SetWinch(servo_BL, 0);
@@ -243,14 +273,10 @@ void dumpCubes(int num)
 }
 task dumpCubesTask()
 {
-	const int short_delay = 160; // MAGIC_NUM. (milliseconds)
-	const int long_delay = 1400; // MAGIC_NUM: TODO. (milliseconds)
+	// MAGIC_NUM (milliseconds).
+	const int delay[4] = {160, 240, 320, 1200}; // TODO: 3-cube delay.
 	Servo_SetPosition(servo_dump, servo_dump_open);
-	if (f_cubeDumpNum<4) {
-		Time_Wait(short_delay);
-	} else {
-		Time_Wait(long_delay);
-	}
+	Time_Wait(delay[f_cubeDumpNum-1]); // Array indices; off-by-one.
 	Servo_SetPosition(servo_dump, servo_dump_closed);
 }
 
